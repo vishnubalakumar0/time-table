@@ -1,0 +1,1762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Staff Allocation & Timetable Generator</title>
+
+    <!-- React and ReactDOM from CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+    <!-- Babel Standalone for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- jsPDF and html2canvas for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #667eea;
+            --primary-dark: #5568d3;
+            --secondary: #764ba2;
+            --success: #48bb78;
+            --danger: #f56565;
+            --warning: #ed8936;
+            --bg: #ffffff;
+            --bg-secondary: #f7fafc;
+            --text: #2d3748;
+            --text-secondary: #4a5568;
+            --border: #e2e8f0;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="dark"] {
+            --primary: #7c3aed;
+            --primary-dark: #6d28d9;
+            --secondary: #a855f7;
+            --bg: #1a202c;
+            --bg-secondary: #2d3748;
+            --text: #f7fafc;
+            --text-secondary: #cbd5e0;
+            --border: #4a5568;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            min-height: 100vh;
+            color: var(--text);
+            transition: all 0.3s ease;
+        }
+
+        .app-container {
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .login-container {
+            max-width: 450px;
+            margin: 100px auto;
+            background: var(--bg);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px var(--shadow);
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: var(--bg);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px var(--shadow);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-size: 20px;
+            transition: background 0.3s;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            background: var(--bg);
+            color: var(--text);
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .tabs {
+            display: flex;
+            background: var(--bg-secondary);
+            border-bottom: 2px solid var(--border);
+            overflow-x: auto;
+        }
+
+        .tab {
+            flex: 1;
+            min-width: 150px;
+            padding: 15px 20px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab:hover {
+            background: var(--bg);
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            background: var(--bg);
+        }
+
+        .tab-content {
+            padding: 30px;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .card h3 {
+            margin-bottom: 15px;
+            color: var(--primary);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: var(--bg);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: var(--bg-secondary);
+        }
+
+        .timetable-grid {
+            display: grid;
+            grid-template-columns: 100px repeat(6, 1fr);
+            gap: 2px;
+            background: var(--border);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        .timetable-cell {
+            background: var(--bg);
+            padding: 15px 10px;
+            text-align: center;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 13px;
+        }
+
+        .timetable-header {
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+            padding: 10px;
+        }
+
+        .timetable-day {
+            background: var(--bg-secondary);
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .subject-core { background: #e6f7ff; color: #0066cc; }
+        .subject-elective { background: #fff4e6; color: #cc6600; }
+        .subject-lab { background: #e6ffe6; color: #00cc00; }
+        .subject-other { background: #ffe6f0; color: #cc0066; }
+        .subject-free { background: #f0f0f0; color: #666; }
+
+        [data-theme="dark"] .subject-core { background: #003366; color: #66b3ff; }
+        [data-theme="dark"] .subject-elective { background: #663300; color: #ffb366; }
+        [data-theme="dark"] .subject-lab { background: #006600; color: #66ff66; }
+        [data-theme="dark"] .subject-other { background: #660033; color: #ff66b3; }
+        [data-theme="dark"] .subject-free { background: #333; color: #999; }
+
+        .subject-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .teacher-name {
+            font-size: 11px;
+            opacity: 0.8;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+
+        .alert-error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #fc8181;
+        }
+
+        .alert-warning {
+            background: #feebc8;
+            color: #7c2d12;
+            border: 1px solid: #fbd38d;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+
+            .timetable-grid {
+                font-size: 11px;
+            }
+
+            .timetable-cell {
+                padding: 8px 4px;
+                min-height: 60px;
+            }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+            color: var(--text-secondary);
+        }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+
+            .dashboard-container {
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // ==================== STORAGE UTILITY ====================
+        const Storage = {
+            get: (key) => {
+                try {
+                    const item = localStorage.getItem(key);
+                    return item ? JSON.parse(item) : null;
+                } catch (error) {
+                    console.error('Error reading from localStorage:', error);
+                    return null;
+                }
+            },
+            set: (key, value) => {
+                try {
+                    localStorage.setItem(key, JSON.stringify(value));
+                } catch (error) {
+                    console.error('Error writing to localStorage:', error);
+                }
+            },
+            remove: (key) => {
+                localStorage.removeItem(key);
+            }
+        };
+
+        // ==================== INITIAL DATA ====================
+        const initializeData = () => {
+            if (!Storage.get('classes')) {
+                Storage.set('classes', []);
+            }
+            if (!Storage.get('staff')) {
+                Storage.set('staff', [
+                    { id: 1, name: 'Admin User', username: 'admin', password: 'admin123', role: 'admin' },
+                    { id: 2, name: 'Dr. Alice Smith', username: 'alice', password: 'staff123', role: 'staff', freePeriodMode: 'manual', manualFreePeriods: 5 },
+                    { id: 3, name: 'Student User', username: 'student', password: 'student123', role: 'student', className: '' }
+                ]);
+            }
+            if (!Storage.get('subjects')) {
+                Storage.set('subjects', []);
+            }
+            if (!Storage.get('timetable')) {
+                Storage.set('timetable', null);
+            }
+        };
+
+        // ==================== TIMETABLE GENERATOR ====================
+        class TimetableGenerator {
+            constructor(classes, staff, subjects) {
+                this.classes = classes;
+                this.staff = staff;
+                this.subjects = subjects;
+                this.classTimetables = {};
+                this.staffTimetables = {};
+                this.teacherBusySlots = {};
+                this.teacherWeeklyCount = {};
+                this.DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+                this.PERIODS = 6;
+            }
+
+            validate() {
+                const errors = [];
+
+                // Check if data exists
+                if (this.classes.length === 0) errors.push('No classes added');
+                if (this.staff.filter(s => s.role === 'staff').length === 0) errors.push('No staff added');
+                if (this.subjects.length === 0) errors.push('No subjects added');
+
+                if (errors.length > 0) return { valid: false, errors };
+
+                // Validate class hours = 30
+                const classHours = {};
+                this.subjects.forEach(subject => {
+                    classHours[subject.className] = (classHours[subject.className] || 0) + subject.hoursPerWeek;
+                });
+
+                this.classes.forEach(cls => {
+                    const hours = classHours[cls.name] || 0;
+                    if (hours !== 30) {
+                        errors.push(`Class ${cls.name}: Total hours = ${hours}, must be 30`);
+                    }
+                });
+
+                // Validate teacher workload
+                const teacherHours = {};
+                this.subjects.forEach(subject => {
+                    teacherHours[subject.teacher] = (teacherHours[subject.teacher] || 0) + subject.hoursPerWeek;
+                });
+
+                this.staff.filter(s => s.role === 'staff').forEach(teacher => {
+                    const totalHours = teacherHours[teacher.name] || 0;
+                    if (teacher.freePeriodMode === 'manual') {
+                        const maxHours = 30 - teacher.manualFreePeriods;
+                        if (totalHours > maxHours) {
+                            errors.push(`${teacher.name}: Assigned ${totalHours}h exceeds max ${maxHours}h`);
+                        }
+                    }
+                });
+
+                // Validate continuous subjects
+                this.subjects.filter(s => s.isContinuous).forEach(subject => {
+                    if (![2, 3].includes(subject.blockSize)) {
+                        errors.push(`${subject.name}: Block size must be 2 or 3`);
+                    }
+                    if (subject.hoursPerWeek % subject.blockSize !== 0) {
+                        errors.push(`${subject.name}: Hours not divisible by block size`);
+                    }
+                });
+
+                return { valid: errors.length === 0, errors };
+            }
+
+            generate() {
+                this._initialize();
+
+                for (const cls of this.classes) {
+                    if (!this._generateClassTimetable(cls.name)) {
+                        return { success: false, error: `Failed to generate timetable for ${cls.name}` };
+                    }
+                }
+
+                this._generateStaffTimetables();
+
+                return {
+                    success: true,
+                    classTimetables: this.classTimetables,
+                    staffTimetables: this.staffTimetables
+                };
+            }
+
+            _initialize() {
+                this.classes.forEach(cls => {
+                    this.classTimetables[cls.name] = this.DAYS.map(() => Array(this.PERIODS).fill(null));
+                });
+
+                this.staff.filter(s => s.role === 'staff').forEach(teacher => {
+                    this.teacherBusySlots[teacher.name] = {};
+                    this.teacherWeeklyCount[teacher.name] = 0;
+                });
+            }
+
+            _generateClassTimetable(className) {
+                const classSubjects = this.subjects.filter(s => s.className === className);
+
+                // Reset placed hours
+                classSubjects.forEach(s => s.placedHours = 0);
+
+                // Step 1: Place labs
+                const labs = classSubjects.filter(s => s.isContinuous);
+                for (const lab of labs) {
+                    if (!this._placeContinuousSubject(className, lab)) {
+                        return false;
+                    }
+                }
+
+                // Step 2: Place core subjects
+                const coreSubjects = classSubjects.filter(s => s.subjectType === 'Core' && !s.isContinuous);
+                coreSubjects.sort((a, b) => b.hoursPerWeek - a.hoursPerWeek);
+
+                for (const subject of coreSubjects) {
+                    if (!this._placeRegularSubject(className, subject, true)) {
+                        return false;
+                    }
+                }
+
+                // Step 3: Place electives and others
+                const others = classSubjects.filter(s => ['Elective', 'Other'].includes(s.subjectType) && !s.isContinuous);
+                for (const subject of others) {
+                    if (!this._placeRegularSubject(className, subject, false)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            _placeContinuousSubject(className, subject) {
+                const blocksNeeded = subject.hoursPerWeek / subject.blockSize;
+                let blocksPlaced = 0;
+
+                // Generate possible slots
+                const possibleSlots = [];
+                this.DAYS.forEach(day => {
+                    for (let start = 0; start <= this.PERIODS - subject.blockSize; start++) {
+                        // Prefer middle/end periods, avoid P1
+                        if (start === 0 && Math.random() < 0.8) continue;
+                        possibleSlots.push({ day, start });
+                    }
+                });
+
+                // Randomize
+                this._shuffle(possibleSlots);
+
+                for (const {day, start} of possibleSlots) {
+                    if (blocksPlaced >= blocksNeeded) break;
+
+                    // Check if block can be placed
+                    let canPlace = true;
+                    for (let i = 0; i < subject.blockSize; i++) {
+                        const period = start + i;
+                        const dayIndex = this.DAYS.indexOf(day);
+
+                        if (this.classTimetables[className][dayIndex][period]) {
+                            canPlace = false;
+                            break;
+                        }
+
+                        const slotKey = `${day}-P${period + 1}`;
+                        if (this.teacherBusySlots[subject.teacher]?.[slotKey]) {
+                            canPlace = false;
+                            break;
+                        }
+
+                        if (!this._checkTeacherLimit(subject.teacher)) {
+                            canPlace = false;
+                            break;
+                        }
+                    }
+
+                    if (canPlace) {
+                        // Place the block
+                        for (let i = 0; i < subject.blockSize; i++) {
+                            const period = start + i;
+                            const dayIndex = this.DAYS.indexOf(day);
+                            const slotKey = `${day}-P${period + 1}`;
+
+                            this.classTimetables[className][dayIndex][period] = {
+                                subject: subject.name,
+                                teacher: subject.teacher,
+                                type: subject.subjectType
+                            };
+
+                            if (!this.teacherBusySlots[subject.teacher]) {
+                                this.teacherBusySlots[subject.teacher] = {};
+                            }
+                            this.teacherBusySlots[subject.teacher][slotKey] = true;
+                            this.teacherWeeklyCount[subject.teacher]++;
+                        }
+                        blocksPlaced++;
+                    }
+                }
+
+                return blocksPlaced === blocksNeeded;
+            }
+
+            _placeRegularSubject(className, subject, preferMorning) {
+                const hoursToPlace = subject.hoursPerWeek;
+                let placed = 0;
+                const subjectCountPerDay = {};
+                this.DAYS.forEach(day => subjectCountPerDay[day] = 0);
+
+                // Generate possible slots
+                const possibleSlots = [];
+                this.DAYS.forEach(day => {
+                    for (let period = 0; period < this.PERIODS; period++) {
+                        // Prefer morning for core subjects
+                        if (preferMorning && period > 2 && Math.random() < 0.4) continue;
+                        possibleSlots.push({ day, period });
+                    }
+                });
+
+                // Randomize
+                this._shuffle(possibleSlots);
+
+                for (const {day, period} of possibleSlots) {
+                    if (placed >= hoursToPlace) break;
+
+                    const dayIndex = this.DAYS.indexOf(day);
+                    const slotKey = `${day}-P${period + 1}`;
+
+                    // Check constraints
+                    if (this.classTimetables[className][dayIndex][period]) continue;
+                    if (this.teacherBusySlots[subject.teacher]?.[slotKey]) continue;
+                    if (!this._checkTeacherLimit(subject.teacher)) continue;
+                    if (subjectCountPerDay[day] >= 2) continue;
+
+                    // Avoid back-to-back
+                    if (period > 0) {
+                        const prev = this.classTimetables[className][dayIndex][period - 1];
+                        if (prev?.subject === subject.name && Math.random() < 0.7) continue;
+                    }
+
+                    // Place subject
+                    this.classTimetables[className][dayIndex][period] = {
+                        subject: subject.name,
+                        teacher: subject.teacher,
+                        type: subject.subjectType
+                    };
+
+                    if (!this.teacherBusySlots[subject.teacher]) {
+                        this.teacherBusySlots[subject.teacher] = {};
+                    }
+                    this.teacherBusySlots[subject.teacher][slotKey] = true;
+                    this.teacherWeeklyCount[subject.teacher]++;
+                    subjectCountPerDay[day]++;
+                    placed++;
+                }
+
+                return placed === hoursToPlace;
+            }
+
+            _checkTeacherLimit(teacherName) {
+                const teacher = this.staff.find(s => s.name === teacherName);
+                if (!teacher) return false;
+
+                const maxHours = teacher.freePeriodMode === 'manual' 
+                    ? 30 - teacher.manualFreePeriods 
+                    : 30;
+
+                return this.teacherWeeklyCount[teacherName] < maxHours;
+            }
+
+            _generateStaffTimetables() {
+                this.staff.filter(s => s.role === 'staff').forEach(teacher => {
+                    this.staffTimetables[teacher.name] = this.DAYS.map(() => 
+                        Array(this.PERIODS).fill({ subject: 'FREE', class: '-', type: 'free' })
+                    );
+                });
+
+                this.classes.forEach(cls => {
+                    this.DAYS.forEach((day, dayIndex) => {
+                        this.classTimetables[cls.name][dayIndex].forEach((slot, period) => {
+                            if (slot) {
+                                this.staffTimetables[slot.teacher][dayIndex][period] = {
+                                    subject: slot.subject,
+                                    class: cls.name,
+                                    type: slot.type
+                                };
+                            }
+                        });
+                    });
+                });
+            }
+
+            _shuffle(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+            }
+        }
+
+        // ==================== PDF EXPORT ====================
+        const exportToPDF = (elementId, filename) => {
+            const element = document.getElementById(elementId);
+            html2canvas(element, {
+                scale: 2,
+                logging: false,
+                backgroundColor: '#ffffff'
+            }).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF({
+                    orientation: 'landscape',
+                    unit: 'px',
+                    format: [canvas.width, canvas.height]
+                });
+                pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+                pdf.save(filename);
+            });
+        };
+
+        // ==================== COMPONENTS ====================
+
+        // Login Component
+        const Login = ({ onLogin }) => {
+            const [username, setUsername] = useState('');
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState('');
+
+            const handleLogin = (e) => {
+                e.preventDefault();
+                const staff = Storage.get('staff') || [];
+                const user = staff.find(s => s.username === username && s.password === password);
+
+                if (user) {
+                    onLogin(user);
+                } else {
+                    setError('Invalid credentials');
+                }
+            };
+
+            return (
+                <div className="login-container">
+                    <h1 style={{ textAlign: 'center', marginBottom: '30px', color: 'var(--primary)' }}>
+                        🏫 Smart Timetable Generator
+                    </h1>
+
+                    {error && <div className="alert alert-error">{error}</div>}
+
+                    <form onSubmit={handleLogin}>
+                        <div className="form-group">
+                            <label>Username</label>
+                            <input
+                                type="text"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                placeholder="Enter username"
+                                required
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>Password</label>
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="Enter password"
+                                required
+                            />
+                        </div>
+
+                        <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
+                            Login
+                        </button>
+                    </form>
+
+                    <div style={{ marginTop: '30px', padding: '15px', background: 'var(--bg-secondary)', borderRadius: '8px', fontSize: '13px' }}>
+                        <strong>Demo Credentials:</strong><br />
+                        Admin: admin / admin123<br />
+                        Staff: alice / staff123<br />
+                        Student: student / student123
+                    </div>
+                </div>
+            );
+        };
+
+        // Theme Toggle
+        const ThemeToggle = () => {
+            const [theme, setTheme] = useState('light');
+
+            useEffect(() => {
+                document.documentElement.setAttribute('data-theme', theme);
+            }, [theme]);
+
+            return (
+                <button 
+                    className="theme-toggle"
+                    onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+                    title="Toggle theme"
+                >
+                    {theme === 'light' ? '🌙' : '☀️'}
+                </button>
+            );
+        };
+
+
+        // Timetable Grid Component
+        const TimetableGrid = ({ timetable, className, periods = 6 }) => {
+            const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+            if (!timetable || !timetable[className]) {
+                return <div className="loading">No timetable generated yet</div>;
+            }
+
+            const grid = timetable[className];
+
+            return (
+                <div id="timetable-export" className="timetable-grid">
+                    <div className="timetable-header">Day/Period</div>
+                    {[...Array(periods)].map((_, i) => (
+                        <div key={i} className="timetable-header">P{i + 1}</div>
+                    ))}
+
+                    {DAYS.map((day, dayIndex) => (
+                        <React.Fragment key={day}>
+                            <div className="timetable-day">{day}</div>
+                            {grid[dayIndex].map((slot, periodIndex) => (
+                                <div 
+                                    key={periodIndex} 
+                                    className={`timetable-cell subject-${slot ? slot.type.toLowerCase() : 'free'}`}
+                                >
+                                    {slot ? (
+                                        <>
+                                            <div className="subject-name">{slot.subject}</div>
+                                            <div className="teacher-name">{slot.teacher}</div>
+                                        </>
+                                    ) : (
+                                        <div style={{ color: '#999' }}>-</div>
+                                    )}
+                                </div>
+                            ))}
+                        </React.Fragment>
+                    ))}
+                </div>
+            );
+        };
+
+        // Staff Timetable Grid
+        const StaffTimetableGrid = ({ timetable, staffName, periods = 6 }) => {
+            const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+            if (!timetable || !timetable[staffName]) {
+                return <div className="loading">No timetable generated yet</div>;
+            }
+
+            const grid = timetable[staffName];
+
+            return (
+                <div id="staff-timetable-export" className="timetable-grid">
+                    <div className="timetable-header">Day/Period</div>
+                    {[...Array(periods)].map((_, i) => (
+                        <div key={i} className="timetable-header">P{i + 1}</div>
+                    ))}
+
+                    {DAYS.map((day, dayIndex) => (
+                        <React.Fragment key={day}>
+                            <div className="timetable-day">{day}</div>
+                            {grid[dayIndex].map((slot, periodIndex) => (
+                                <div 
+                                    key={periodIndex} 
+                                    className={`timetable-cell subject-${slot.type.toLowerCase()}`}
+                                >
+                                    {slot.subject !== 'FREE' ? (
+                                        <>
+                                            <div className="subject-name">{slot.subject}</div>
+                                            <div className="teacher-name">{slot.class}</div>
+                                        </>
+                                    ) : (
+                                        <div style={{ color: '#999' }}>FREE</div>
+                                    )}
+                                </div>
+                            ))}
+                        </React.Fragment>
+                    ))}
+                </div>
+            );
+        };
+
+        // Admin Dashboard
+        const AdminDashboard = ({ user, onLogout }) => {
+            const [activeTab, setActiveTab] = useState('classes');
+            const [classes, setClasses] = useState(Storage.get('classes') || []);
+            const [staff, setStaff] = useState(Storage.get('staff') || []);
+            const [subjects, setSubjects] = useState(Storage.get('subjects') || []);
+            const [timetable, setTimetable] = useState(Storage.get('timetable'));
+            const [message, setMessage] = useState(null);
+
+            const teachers = staff.filter(s => s.role === 'staff');
+
+            // Class Management
+            const [newClass, setNewClass] = useState({ name: '', section: 'A' });
+
+            const addClass = () => {
+                if (!newClass.name) {
+                    showMessage('Please enter class name', 'error');
+                    return;
+                }
+                const fullName = newClass.name + newClass.section;
+                if (classes.find(c => c.name === fullName)) {
+                    showMessage('Class already exists', 'error');
+                    return;
+                }
+                const updated = [...classes, { id: Date.now(), name: fullName }];
+                setClasses(updated);
+                Storage.set('classes', updated);
+                setNewClass({ name: '', section: 'A' });
+                showMessage('Class added successfully', 'success');
+            };
+
+            const deleteClass = (id) => {
+                if (!confirm('Delete this class?')) return;
+                const updated = classes.filter(c => c.id !== id);
+                setClasses(updated);
+                Storage.set('classes', updated);
+                // Also delete related subjects
+                const updatedSubjects = subjects.filter(s => {
+                    const cls = classes.find(c => c.id === id);
+                    return s.className !== cls?.name;
+                });
+                setSubjects(updatedSubjects);
+                Storage.set('subjects', updatedSubjects);
+                showMessage('Class deleted', 'success');
+            };
+
+            // Staff Management
+            const [newStaff, setNewStaff] = useState({
+                name: '',
+                username: '',
+                password: '',
+                freePeriodMode: 'auto',
+                manualFreePeriods: 0
+            });
+
+            const addStaff = () => {
+                if (!newStaff.name || !newStaff.username || !newStaff.password) {
+                    showMessage('Please fill all fields', 'error');
+                    return;
+                }
+                const updated = [...staff, { 
+                    id: Date.now(), 
+                    ...newStaff, 
+                    role: 'staff' 
+                }];
+                setStaff(updated);
+                Storage.set('staff', updated);
+                setNewStaff({
+                    name: '',
+                    username: '',
+                    password: '',
+                    freePeriodMode: 'auto',
+                    manualFreePeriods: 0
+                });
+                showMessage('Staff added successfully', 'success');
+            };
+
+            const deleteStaff = (id) => {
+                if (!confirm('Delete this staff member?')) return;
+                const updated = staff.filter(s => s.id !== id);
+                setStaff(updated);
+                Storage.set('staff', updated);
+                showMessage('Staff deleted', 'success');
+            };
+
+            // Subject Management
+            const [newSubject, setNewSubject] = useState({
+                className: '',
+                name: '',
+                subjectType: 'Core',
+                hoursPerWeek: 3,
+                isContinuous: false,
+                blockSize: 2,
+                teacher: ''
+            });
+
+            const addSubject = () => {
+                if (!newSubject.className || !newSubject.name || !newSubject.teacher) {
+                    showMessage('Please fill all required fields', 'error');
+                    return;
+                }
+                const updated = [...subjects, { id: Date.now(), ...newSubject }];
+                setSubjects(updated);
+                Storage.set('subjects', updated);
+                setNewSubject({
+                    className: '',
+                    name: '',
+                    subjectType: 'Core',
+                    hoursPerWeek: 3,
+                    isContinuous: false,
+                    blockSize: 2,
+                    teacher: ''
+                });
+                showMessage('Subject added successfully', 'success');
+            };
+
+            const deleteSubject = (id) => {
+                if (!confirm('Delete this subject?')) return;
+                const updated = subjects.filter(s => s.id !== id);
+                setSubjects(updated);
+                Storage.set('subjects', updated);
+                showMessage('Subject deleted', 'success');
+            };
+
+            // Generate Timetable
+            const generateTimetable = () => {
+                const generator = new TimetableGenerator(classes, teachers, subjects);
+                const validation = generator.validate();
+
+                if (!validation.valid) {
+                    showMessage(validation.errors.join(', '), 'error');
+                    return;
+                }
+
+                const result = generator.generate();
+
+                if (result.success) {
+                    const timetableData = {
+                        classTimetables: result.classTimetables,
+                        staffTimetables: result.staffTimetables
+                    };
+                    setTimetable(timetableData);
+                    Storage.set('timetable', timetableData);
+                    showMessage('Timetable generated successfully!', 'success');
+                    setActiveTab('view');
+                } else {
+                    showMessage(result.error, 'error');
+                }
+            };
+
+            const showMessage = (text, type) => {
+                setMessage({ text, type });
+                setTimeout(() => setMessage(null), 5000);
+            };
+
+            return (
+                <div className="dashboard-container">
+                    <div className="header">
+                        <div>
+                            <h1>🏫 Admin Dashboard</h1>
+                            <p style={{ opacity: 0.9, marginTop: '5px' }}>Welcome, {user.name}</p>
+                        </div>
+                        <div className="header-actions">
+                            <ThemeToggle />
+                            <button className="btn btn-danger" onClick={onLogout}>
+                                Logout
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="tabs">
+                        <button 
+                            className={`tab ${activeTab === 'classes' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('classes')}
+                        >
+                            Classes
+                        </button>
+                        <button 
+                            className={`tab ${activeTab === 'staff' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('staff')}
+                        >
+                            Staff
+                        </button>
+                        <button 
+                            className={`tab ${activeTab === 'subjects' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('subjects')}
+                        >
+                            Subjects
+                        </button>
+                        <button 
+                            className={`tab ${activeTab === 'generate' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('generate')}
+                        >
+                            Generate
+                        </button>
+                        <button 
+                            className={`tab ${activeTab === 'view' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('view')}
+                        >
+                            View Timetable
+                        </button>
+                    </div>
+
+                    <div className="tab-content">
+                        {message && (
+                            <div className={`alert alert-${message.type}`}>
+                                {message.text}
+                            </div>
+                        )}
+
+                        {activeTab === 'classes' && (
+                            <div>
+                                <div className="card">
+                                    <h3>Add New Class</h3>
+                                    <div className="grid-2">
+                                        <div className="form-group">
+                                            <label>Class Name (e.g., CS3, EE2)</label>
+                                            <input
+                                                type="text"
+                                                value={newClass.name}
+                                                onChange={(e) => setNewClass({ ...newClass, name: e.target.value.toUpperCase() })}
+                                                placeholder="CS3"
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Section</label>
+                                            <select
+                                                value={newClass.section}
+                                                onChange={(e) => setNewClass({ ...newClass, section: e.target.value })}
+                                            >
+                                                <option value="A">A</option>
+                                                <option value="B">B</option>
+                                                <option value="C">C</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <button className="btn btn-primary" onClick={addClass}>
+                                        Add Class
+                                    </button>
+                                </div>
+
+                                <div className="card">
+                                    <h3>Existing Classes</h3>
+                                    {classes.length === 0 ? (
+                                        <p>No classes added yet</p>
+                                    ) : (
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th>Class Name</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {classes.map(cls => (
+                                                    <tr key={cls.id}>
+                                                        <td>{cls.name}</td>
+                                                        <td>
+                                                            <button 
+                                                                className="btn btn-danger btn-sm"
+                                                                onClick={() => deleteClass(cls.id)}
+                                                            >
+                                                                Delete
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'staff' && (
+                            <div>
+                                <div className="card">
+                                    <h3>Add New Staff</h3>
+                                    <div className="grid-2">
+                                        <div className="form-group">
+                                            <label>Name</label>
+                                            <input
+                                                type="text"
+                                                value={newStaff.name}
+                                                onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })}
+                                                placeholder="Dr. John Doe"
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Username</label>
+                                            <input
+                                                type="text"
+                                                value={newStaff.username}
+                                                onChange={(e) => setNewStaff({ ...newStaff, username: e.target.value })}
+                                                placeholder="john"
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Password</label>
+                                            <input
+                                                type="password"
+                                                value={newStaff.password}
+                                                onChange={(e) => setNewStaff({ ...newStaff, password: e.target.value })}
+                                                placeholder="Password"
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Free Period Mode</label>
+                                            <select
+                                                value={newStaff.freePeriodMode}
+                                                onChange={(e) => setNewStaff({ ...newStaff, freePeriodMode: e.target.value })}
+                                            >
+                                                <option value="auto">Auto</option>
+                                                <option value="manual">Manual</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    {newStaff.freePeriodMode === 'manual' && (
+                                        <div className="form-group">
+                                            <label>Free Periods per Week</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max="30"
+                                                value={newStaff.manualFreePeriods}
+                                                onChange={(e) => setNewStaff({ ...newStaff, manualFreePeriods: parseInt(e.target.value) })}
+                                            />
+                                        </div>
+                                    )}
+                                    <button className="btn btn-primary" onClick={addStaff}>
+                                        Add Staff
+                                    </button>
+                                </div>
+
+                                <div className="card">
+                                    <h3>Existing Staff</h3>
+                                    {teachers.length === 0 ? (
+                                        <p>No staff added yet</p>
+                                    ) : (
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th>Name</th>
+                                                    <th>Username</th>
+                                                    <th>Free Period Mode</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {teachers.map(s => (
+                                                    <tr key={s.id}>
+                                                        <td>{s.name}</td>
+                                                        <td>{s.username}</td>
+                                                        <td>
+                                                            {s.freePeriodMode === 'manual' 
+                                                                ? `Manual (${s.manualFreePeriods} free)` 
+                                                                : 'Auto'}
+                                                        </td>
+                                                        <td>
+                                                            <button 
+                                                                className="btn btn-danger btn-sm"
+                                                                onClick={() => deleteStaff(s.id)}
+                                                            >
+                                                                Delete
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'subjects' && (
+                            <div>
+                                <div className="card">
+                                    <h3>Add New Subject</h3>
+                                    <div className="grid-2">
+                                        <div className="form-group">
+                                            <label>Class</label>
+                                            <select
+                                                value={newSubject.className}
+                                                onChange={(e) => setNewSubject({ ...newSubject, className: e.target.value })}
+                                            >
+                                                <option value="">Select Class</option>
+                                                {classes.map(cls => (
+                                                    <option key={cls.id} value={cls.name}>{cls.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Subject Name</label>
+                                            <input
+                                                type="text"
+                                                value={newSubject.name}
+                                                onChange={(e) => setNewSubject({ ...newSubject, name: e.target.value })}
+                                                placeholder="DBMS, NLP, etc."
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Subject Type</label>
+                                            <select
+                                                value={newSubject.subjectType}
+                                                onChange={(e) => setNewSubject({ ...newSubject, subjectType: e.target.value })}
+                                            >
+                                                <option value="Core">Core</option>
+                                                <option value="Elective">Elective</option>
+                                                <option value="Lab">Lab</option>
+                                                <option value="Other">Other</option>
+                                            </select>
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Hours per Week</label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="30"
+                                                value={newSubject.hoursPerWeek}
+                                                onChange={(e) => setNewSubject({ ...newSubject, hoursPerWeek: parseInt(e.target.value) })}
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Teacher</label>
+                                            <select
+                                                value={newSubject.teacher}
+                                                onChange={(e) => setNewSubject({ ...newSubject, teacher: e.target.value })}
+                                            >
+                                                <option value="">Select Teacher</option>
+                                                {teachers.map(t => (
+                                                    <option key={t.id} value={t.name}>{t.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="checkbox-group">
+                                        <input
+                                            type="checkbox"
+                                            id="continuous"
+                                            checked={newSubject.isContinuous}
+                                            onChange={(e) => setNewSubject({ ...newSubject, isContinuous: e.target.checked })}
+                                        />
+                                        <label htmlFor="continuous">Continuous (Lab Block)</label>
+                                    </div>
+                                    {newSubject.isContinuous && (
+                                        <div className="form-group">
+                                            <label>Block Size</label>
+                                            <select
+                                                value={newSubject.blockSize}
+                                                onChange={(e) => setNewSubject({ ...newSubject, blockSize: parseInt(e.target.value) })}
+                                            >
+                                                <option value={2}>2 Periods</option>
+                                                <option value={3}>3 Periods</option>
+                                            </select>
+                                        </div>
+                                    )}
+                                    <button className="btn btn-primary" onClick={addSubject}>
+                                        Add Subject
+                                    </button>
+                                </div>
+
+                                <div className="card">
+                                    <h3>Existing Subjects</h3>
+                                    {subjects.length === 0 ? (
+                                        <p>No subjects added yet</p>
+                                    ) : (
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th>Class</th>
+                                                    <th>Subject</th>
+                                                    <th>Type</th>
+                                                    <th>Hours</th>
+                                                    <th>Teacher</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {subjects.map(sub => (
+                                                    <tr key={sub.id}>
+                                                        <td>{sub.className}</td>
+                                                        <td>{sub.name}</td>
+                                                        <td>{sub.subjectType}</td>
+                                                        <td>{sub.hoursPerWeek}h</td>
+                                                        <td>{sub.teacher}</td>
+                                                        <td>
+                                                            <button 
+                                                                className="btn btn-danger btn-sm"
+                                                                onClick={() => deleteSubject(sub.id)}
+                                                            >
+                                                                Delete
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'generate' && (
+                            <div>
+                                <div className="card">
+                                    <h3>Generate Timetable</h3>
+                                    <p style={{ marginBottom: '20px', color: 'var(--text-secondary)' }}>
+                                        Click the button below to generate a new timetable based on your configured classes, staff, and subjects.
+                                    </p>
+
+                                    <div style={{ marginBottom: '20px' }}>
+                                        <strong>Summary:</strong>
+                                        <ul style={{ marginTop: '10px', marginLeft: '20px' }}>
+                                            <li>Classes: {classes.length}</li>
+                                            <li>Staff: {teachers.length}</li>
+                                            <li>Subjects: {subjects.length}</li>
+                                        </ul>
+                                    </div>
+
+                                    <button 
+                                        className="btn btn-success"
+                                        onClick={generateTimetable}
+                                        style={{ fontSize: '18px', padding: '15px 30px' }}
+                                    >
+                                        ✨ Generate Timetable
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'view' && (
+                            <div>
+                                {!timetable ? (
+                                    <div className="card">
+                                        <p>No timetable generated yet. Go to the Generate tab to create one.</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="card">
+                                            <h3>Class-wise Timetables</h3>
+                                            {classes.map(cls => (
+                                                <div key={cls.id} style={{ marginBottom: '40px' }}>
+                                                    <h4 style={{ marginBottom: '15px' }}>Class: {cls.name}</h4>
+                                                    <TimetableGrid 
+                                                        timetable={timetable.classTimetables} 
+                                                        className={cls.name} 
+                                                    />
+                                                    <button 
+                                                        className="btn btn-primary btn-sm no-print"
+                                                        style={{ marginTop: '10px' }}
+                                                        onClick={() => exportToPDF('timetable-export', `${cls.name}_Timetable.pdf`)}
+                                                    >
+                                                        📄 Download PDF
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div className="card">
+                                            <h3>Staff-wise Timetables</h3>
+                                            {teachers.map(teacher => (
+                                                <div key={teacher.id} style={{ marginBottom: '40px' }}>
+                                                    <h4 style={{ marginBottom: '15px' }}>Teacher: {teacher.name}</h4>
+                                                    <StaffTimetableGrid 
+                                                        timetable={timetable.staffTimetables} 
+                                                        staffName={teacher.name} 
+                                                    />
+                                                    <button 
+                                                        className="btn btn-primary btn-sm no-print"
+                                                        style={{ marginTop: '10px' }}
+                                                        onClick={() => exportToPDF('staff-timetable-export', `${teacher.name}_Timetable.pdf`)}
+                                                    >
+                                                        📄 Download PDF
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+
+        // Staff Dashboard
+        const StaffDashboard = ({ user, onLogout }) => {
+            const [timetable, setTimetable] = useState(Storage.get('timetable'));
+
+            return (
+                <div className="dashboard-container">
+                    <div className="header">
+                        <div>
+                            <h1>👨‍🏫 Staff Dashboard</h1>
+                            <p style={{ opacity: 0.9, marginTop: '5px' }}>Welcome, {user.name}</p>
+                        </div>
+                        <div className="header-actions">
+                            <ThemeToggle />
+                            <button className="btn btn-danger" onClick={onLogout}>
+                                Logout
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="tab-content">
+                        <div className="card">
+                            <h3>My Timetable</h3>
+                            {!timetable ? (
+                                <p>No timetable generated yet. Please contact the administrator.</p>
+                            ) : (
+                                <>
+                                    <StaffTimetableGrid 
+                                        timetable={timetable.staffTimetables} 
+                                        staffName={user.name} 
+                                    />
+                                    <div className="action-buttons no-print">
+                                        <button 
+                                            className="btn btn-primary"
+                                            onClick={() => exportToPDF('staff-timetable-export', `${user.name}_Timetable.pdf`)}
+                                        >
+                                            📄 Download as PDF
+                                        </button>
+                                        <button 
+                                            className="btn btn-primary"
+                                            onClick={() => window.print()}
+                                        >
+                                            🖨️ Print
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        <div className="card">
+                            <h3>Free Period Summary</h3>
+                            {!timetable ? (
+                                <p>No data available</p>
+                            ) : (
+                                <div>
+                                    {(() => {
+                                        const grid = timetable.staffTimetables[user.name];
+                                        if (!grid) return <p>No timetable data</p>;
+
+                                        const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+                                        let freePeriods = 0;
+                                        let teachingPeriods = 0;
+
+                                        grid.forEach(day => {
+                                            day.forEach(slot => {
+                                                if (slot.subject === 'FREE') {
+                                                    freePeriods++;
+                                                } else {
+                                                    teachingPeriods++;
+                                                }
+                                            });
+                                        });
+
+                                        return (
+                                            <div style={{ fontSize: '16px' }}>
+                                                <p><strong>Teaching Periods:</strong> {teachingPeriods}/30</p>
+                                                <p><strong>Free Periods:</strong> {freePeriods}/30</p>
+                                                <p><strong>Workload:</strong> {((teachingPeriods / 30) * 100).toFixed(1)}%</p>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Student Dashboard
+        const StudentDashboard = ({ user, onLogout }) => {
+            const [timetable, setTimetable] = useState(Storage.get('timetable'));
+            const [classes] = useState(Storage.get('classes') || []);
+            const [selectedClass, setSelectedClass] = useState(user.className || '');
+
+            useEffect(() => {
+                if (!selectedClass && classes.length > 0) {
+                    setSelectedClass(classes[0].name);
+                }
+            }, [classes]);
+
+            return (
+                <div className="dashboard-container">
+                    <div className="header">
+                        <div>
+                            <h1>🎓 Student Dashboard</h1>
+                            <p style={{ opacity: 0.9, marginTop: '5px' }}>Welcome, {user.name}</p>
+                        </div>
+                        <div className="header-actions">
+                            <ThemeToggle />
+                            <button className="btn btn-danger" onClick={onLogout}>
+                                Logout
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="tab-content">
+                        <div className="card">
+                            <h3>Class Timetable</h3>
+
+                            {classes.length > 0 && (
+                                <div className="form-group" style={{ maxWidth: '300px' }}>
+                                    <label>Select Class</label>
+                                    <select
+                                        value={selectedClass}
+                                        onChange={(e) => setSelectedClass(e.target.value)}
+                                    >
+                                        {classes.map(cls => (
+                                            <option key={cls.id} value={cls.name}>{cls.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {!timetable ? (
+                                <p>No timetable generated yet. Please contact the administrator.</p>
+                            ) : (
+                                <>
+                                    <TimetableGrid 
+                                        timetable={timetable.classTimetables} 
+                                        className={selectedClass} 
+                                    />
+                                    <div className="action-buttons no-print">
+                                        <button 
+                                            className="btn btn-primary"
+                                            onClick={() => exportToPDF('timetable-export', `${selectedClass}_Timetable.pdf`)}
+                                        >
+                                            📄 Download as PDF
+                                        </button>
+                                        <button 
+                                            className="btn btn-primary"
+                                            onClick={() => window.print()}
+                                        >
+                                            🖨️ Print
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        <div className="card">
+                            <h3>Subject Summary</h3>
+                            {!timetable || !selectedClass ? (
+                                <p>No data available</p>
+                            ) : (
+                                <div>
+                                    {(() => {
+                                        const grid = timetable.classTimetables[selectedClass];
+                                        if (!grid) return <p>No timetable data</p>;
+
+                                        const subjectCount = {};
+                                        const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+                                        grid.forEach(day => {
+                                            day.forEach(slot => {
+                                                if (slot) {
+                                                    subjectCount[slot.subject] = (subjectCount[slot.subject] || 0) + 1;
+                                                }
+                                            });
+                                        });
+
+                                        return (
+                                            <table>
+                                                <thead>
+                                                    <tr>
+                                                        <th>Subject</th>
+                                                        <th>Periods per Week</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {Object.entries(subjectCount).map(([subject, count]) => (
+                                                        <tr key={subject}>
+                                                            <td>{subject}</td>
+                                                            <td>{count}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        );
+                                    })()}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Main App Component
+        const App = () => {
+            const [user, setUser] = useState(null);
+
+            useEffect(() => {
+                initializeData();
+            }, []);
+
+            const handleLogin = (userData) => {
+                setUser(userData);
+            };
+
+            const handleLogout = () => {
+                setUser(null);
+            };
+
+            if (!user) {
+                return <Login onLogin={handleLogin} />;
+            }
+
+            return (
+                <div className="app-container">
+                    {user.role === 'admin' && (
+                        <AdminDashboard user={user} onLogout={handleLogout} />
+                    )}
+                    {user.role === 'staff' && (
+                        <StaffDashboard user={user} onLogout={handleLogout} />
+                    )}
+                    {user.role === 'student' && (
+                        <StudentDashboard user={user} onLogout={handleLogout} />
+                    )}
+                </div>
+            );
+        };
+
+        // Render the app
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
