@@ -1,7 +1,6 @@
 {
   "name": "smart-timetable-generator",
   "version": "2.0.0",
-  "homepage": "https://vishnubalakumar0.github.io/time-table",
   "description": "AI-Powered Smart Timetable Generator with Enhanced Algorithm",
   "private": true,
   "dependencies": {
@@ -20,7 +19,7 @@
   },
   "scripts": {
     "start": "parcel public/index.html",
-    "build": "parcel build public/index.html --dist-dir dist --public-url /time-table",
-    "deploy": "gh-pages -d dist"
+    "build": "parcel build public/index.html --dist-dir dist --public-url ./",
+    "deploy": "npm run build && gh-pages -d dist"
   }
 }
