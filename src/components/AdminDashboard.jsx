@@ -7,6 +7,9 @@ import StaffTimetableGrid from './StaffTimetableGrid';
 import { Storage } from '../utils/storage';
 import { TimetableGenerator } from '../utils/timetableGenerator';
 import { exportToPDF } from '../utils/pdfUtils';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { setDoc, doc } from 'firebase/firestore';
+import { auth, db } from '../utils/firebase';
 
 export default function AdminDashboard({ user, onLogout }) {
     const [classes, setClasses] = useState(Storage.get('classes') || []);
@@ -67,7 +70,30 @@ export default function AdminDashboard({ user, onLogout }) {
         Storage.set('classes', updated);
         showToast('Class deleted', 'success');
     };
+    // ⬇️⬇️ PASTE THIS NEW FUNCTION HERE
+    const createStaffInFirebase = async (staffData) => {
+        const { name, username, password } = staffData;
+        const email = `${username}@timetable.com`;
 
+        try {
+             // 1️⃣ Create login account in Firebase Auth
+             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+             const uid = userCredential.user.uid;
+
+              // 2️⃣ Save profile + role in Firestore
+              await setDoc(doc(db, 'users', uid), {
+            fullName: name,
+            username,
+            role: 'staff',
+            createdAt: new Date()
+        });
+
+        showToast('Staff account created in Firebase ✅', 'success');
+    } catch (error) {
+        console.error('Firebase staff creation error:', error);
+        showToast('Firebase error: ' + (error.message || 'Could not create staff'), 'error');
+    } };
+    
     // Staff Management
     const addStaff = () => {
         if (!newStaff.name || !newStaff.username || !newStaff.password) {

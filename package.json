@@ -5,6 +5,7 @@
   "description": "AI-Powered Smart Timetable Generator with Enhanced Algorithm",
   "private": true,
   "dependencies": {
+    "firebase": "^12.6.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.1",
     "react": "^18.2.0",
