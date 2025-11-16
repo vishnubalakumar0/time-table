@@ -1,20 +1,47 @@
 import React, { useState } from 'react';
 import AnimatedBackground from './AnimatedBackground';
-import { Storage } from '../utils/storage';
+
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../utils/firebase';
 
 export default function Login({ onLogin }) {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
-        const staff = Storage.get('staff') || [];
-        const user = staff.find(s => s.username === username && s.password === password);
+        setError('');
 
-        if (user) {
-            onLogin(user);
-        } else {
+        if (!username || !password) {
+            setError('Please enter username and password');
+            setTimeout(() => setError(''), 3000);
+            return;
+        }
+
+        try {
+            const email = `${username}@timetable.com`;
+
+            // 1️⃣ Sign in with Firebase Auth
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const uid = userCredential.user.uid;
+
+            // 2️⃣ Fetch user profile from Firestore
+            const snap = await getDoc(doc(db, 'users', uid));
+
+            if (!snap.exists()) {
+                setError('User profile not found. Contact admin.');
+                setTimeout(() => setError(''), 3000);
+                return;
+            }
+
+            const userData = { id: uid, ...snap.data() };
+
+            // 3️⃣ Pass data up to App (role-based dashboard)
+            onLogin(userData);
+        } catch (err) {
+            console.error('Login error:', err);
             setError('Invalid credentials!');
             setTimeout(() => setError(''), 3000);
         }
