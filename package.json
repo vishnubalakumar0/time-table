@@ -18,8 +18,7 @@
   },
   "scripts": {
     "start": "parcel public/index.html",
-    "build": "parcel build public/index.html --dist-dir dist",
-    "predeploy": "npm run build",
+    "build": "parcel build public/index.html --dist-dir dist --public-url /time-table",
     "deploy": "gh-pages -d dist"
   }
 }
