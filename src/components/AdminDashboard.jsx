@@ -7,6 +7,8 @@ import StaffTimetableGrid from './StaffTimetableGrid';
 import { Storage } from '../utils/storage';
 import { TimetableGenerator } from '../utils/timetableGenerator';
 import { exportToPDF } from '../utils/pdfUtils';
+
+// 🔥 Firebase imports
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { setDoc, doc } from 'firebase/firestore';
 import { auth, db } from '../utils/firebase';
@@ -70,32 +72,34 @@ export default function AdminDashboard({ user, onLogout }) {
         Storage.set('classes', updated);
         showToast('Class deleted', 'success');
     };
-    // ⬇️⬇️ PASTE THIS NEW FUNCTION HERE
+
+    // 🔥 Create staff in Firebase (Auth + Firestore)
     const createStaffInFirebase = async (staffData) => {
         const { name, username, password } = staffData;
         const email = `${username}@timetable.com`;
 
         try {
-             // 1️⃣ Create login account in Firebase Auth
-             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-             const uid = userCredential.user.uid;
+            // 1️⃣ Create login account in Firebase Auth
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const uid = userCredential.user.uid;
 
-              // 2️⃣ Save profile + role in Firestore
-              await setDoc(doc(db, 'users', uid), {
-            fullName: name,
-            username,
-            role: 'staff',
-            createdAt: new Date()
-        });
+            // 2️⃣ Save profile + role in Firestore
+            await setDoc(doc(db, 'users', uid), {
+                fullName: name,
+                username,
+                role: 'staff',
+                createdAt: new Date()
+            });
 
-        showToast('Staff account created in Firebase ✅', 'success');
-    } catch (error) {
-        console.error('Firebase staff creation error:', error);
-        showToast('Firebase error: ' + (error.message || 'Could not create staff'), 'error');
-    } };
-    
+            showToast('Staff account created in Firebase ✅', 'success');
+        } catch (error) {
+            console.error('Firebase staff creation error:', error);
+            showToast('Firebase error: ' + (error.message || 'Could not create staff'), 'error');
+        }
+    };
+
     // Staff Management
-    const addStaff = () => {
+    const addStaff = async () => {
         if (!newStaff.name || !newStaff.username || !newStaff.password) {
             showToast('Please fill all fields', 'error');
             return;
@@ -104,9 +108,23 @@ export default function AdminDashboard({ user, onLogout }) {
             showToast('Username already exists', 'error');
             return;
         }
-        const updated = [...staff, { id: Date.now(), ...newStaff, role: 'staff' }];
+
+        // Object used for local timetable logic
+        const staffToSave = {
+            id: Date.now(),
+            ...newStaff,
+            role: 'staff'
+        };
+
+        // 1️⃣ Save to local state + Storage (for timetable generator)
+        const updated = [...staff, staffToSave];
         setStaff(updated);
         Storage.set('staff', updated);
+
+        // 2️⃣ Create Firebase Auth user + Firestore doc
+        await createStaffInFirebase(newStaff);
+
+        // 3️⃣ Reset form
         setNewStaff({
             name: '',
             username: '',
@@ -114,6 +132,7 @@ export default function AdminDashboard({ user, onLogout }) {
             freePeriodMode: 'auto',
             manualFreePeriods: 0
         });
+
         showToast('Staff added successfully!', 'success');
     };
 
@@ -148,7 +167,7 @@ export default function AdminDashboard({ user, onLogout }) {
 
     const deleteSubject = (id) => {
         if (!window.confirm('Delete this subject?')) return;
-        const updated = subjects.filter(s => s.id !== id);
+            const updated = subjects.filter(s => s.id !== id);
         setSubjects(updated);
         Storage.set('subjects', updated);
         showToast('Subject deleted', 'success');

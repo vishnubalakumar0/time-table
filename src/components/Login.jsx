@@ -15,36 +15,37 @@ export default function Login({ onLogin }) {
         setError('');
 
         if (!username || !password) {
-            setError('Please enter username and password');
-            setTimeout(() => setError(''), 3000);
+            showError("Please enter username and password");
             return;
         }
 
         try {
+            // Convert username → email for Firebase login
             const email = `${username}@timetable.com`;
 
-            // 1️⃣ Sign in with Firebase Auth
+            // 1️⃣ Firebase Authentication
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const uid = userCredential.user.uid;
 
-            // 2️⃣ Fetch user profile from Firestore
+            // 2️⃣ Firestore user profile
             const snap = await getDoc(doc(db, 'users', uid));
-
             if (!snap.exists()) {
-                setError('User profile not found. Contact admin.');
-                setTimeout(() => setError(''), 3000);
+                showError("User profile not found. Contact admin.");
                 return;
             }
 
-            const userData = { id: uid, ...snap.data() };
+            // 3️⃣ Send user profile to App.jsx (role decides dashboard)
+            onLogin({ id: uid, ...snap.data() });
 
-            // 3️⃣ Pass data up to App (role-based dashboard)
-            onLogin(userData);
         } catch (err) {
-            console.error('Login error:', err);
-            setError('Invalid credentials!');
-            setTimeout(() => setError(''), 3000);
+            console.error("Login Error:", err);
+            showError("Invalid username or password");
         }
+    };
+
+    const showError = (msg) => {
+        setError(msg);
+        setTimeout(() => setError(""), 3000);
     };
 
     return (
@@ -57,7 +58,7 @@ export default function Login({ onLogin }) {
                     <p className="login-subtitle">Premium Edition</p>
 
                     {error && (
-                        <div className="toast toast-error" style={{marginBottom: '20px'}}>
+                        <div className="toast toast-error" style={{ marginBottom: '20px' }}>
                             <span className="toast-icon">❌</span>
                             <span className="toast-text">{error}</span>
                         </div>
@@ -91,21 +92,6 @@ export default function Login({ onLogin }) {
                         </button>
                     </form>
 
-                    <div style={{
-                        marginTop: '25px',
-                        padding: '16px',
-                        background: '#f8fafc',
-                        borderRadius: '12px',
-                        fontSize: '13px',
-                        color: '#64748b'
-                    }}>
-                        <strong style={{color: '#1e293b'}}>Demo Credentials:</strong><br/>
-                        <div style={{marginTop: '8px', lineHeight: '1.6'}}>
-                            Admin: admin / admin123<br/>
-                            Staff: alice / staff123<br/>
-                            Student: student / student123
-                        </div>
-                    </div>
                 </div>
             </div>
         </>
