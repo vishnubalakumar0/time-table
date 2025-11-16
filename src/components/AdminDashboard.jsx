@@ -74,41 +74,41 @@ export default function AdminDashboard({ user, onLogout }) {
     };
 
     // 🔥 Create staff in Firebase (Auth + Firestore)
-    const createStaffInFirebase = async (staff) => {
-    try {
-        // 1️⃣ Build email & password for the staff account
-        //    Example: username "ram" → "ram@timetable.com"
-        const email = `${staff.username}@timetable.com`;
+    const createStaffInFirebase = async (staffObj) => {
+        try {
+            // Email = username@timetable.com
+            const email = `${staffObj.username}@timetable.com`;
+            const password = staffObj.password || 'Staff@123';
 
-        // Use staff.password if you store it, otherwise some default temp password
-        const password = staff.password || "Staff@123";
+            console.log('Creating Firebase user:', email);
 
-        console.log("Creating Firebase user:", email);
+            // 1️⃣ Create Auth user
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const uid = userCredential.user.uid;
 
-        // 2️⃣ Create account in Firebase Authentication
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const uid = userCredential.user.uid;
+            console.log('Staff Firebase UID:', uid);
 
-        console.log("Staff Firebase UID:", uid);
+            // 2️⃣ Create Firestore user document
+            await setDoc(doc(db, 'users', uid), {
+                fullName: staffObj.name || staffObj.fullName || '',
+                username: staffObj.username,
+                role: 'staff',
+                department: staffObj.department || staffObj.dept || '',
+                createdAt: new Date(),
+            });
 
-        // 3️⃣ Create Firestore user document
-        await setDoc(doc(db, "users", uid), {
-            fullName: staff.name || staff.fullName || "",
-            username: staff.username,
-            role: "staff",
-            department: staff.department || staff.dept || "",
-            createdAt: new Date(),
-        });
+            return uid;
+        } catch (error) {
+            const code = error.code || 'no-code';
+            const msg = error.message || 'no-message';
 
-        return uid;
-    } catch (error) {
-        console.error("🔥 REAL FIREBASE ERROR CODE:", error.code);
-        console.error("🔥 REAL FIREBASE ERROR MSG:", error.message);
-        // Pass error back so addStaff can show toast
-        throw error;
-    }
-};
+            // Show real Firebase error in simple popup (no React red overlay)
+            alert(`Firebase staff creation error:\n${code}\n${msg}`);
 
+            // Return null to indicate failure
+            return null;
+        }
+    };
 
     // Staff Management
     const addStaff = async () => {
@@ -121,20 +121,26 @@ export default function AdminDashboard({ user, onLogout }) {
             return;
         }
 
-        // Object used for local timetable logic
+        // 1️⃣ First try to create in Firebase (Auth + Firestore)
+        const uid = await createStaffInFirebase(newStaff);
+
+        if (!uid) {
+            // Firebase failed → don't save locally
+            showToast('Firebase error: could not create staff account', 'error');
+            return;
+        }
+
+        // 2️⃣ If Firebase success → save to local state + storage
         const staffToSave = {
             id: Date.now(),
             ...newStaff,
-            role: 'staff'
+            role: 'staff',
+            firebaseUid: uid,
         };
 
-        // 1️⃣ Save to local state + Storage (for timetable generator)
         const updated = [...staff, staffToSave];
         setStaff(updated);
         Storage.set('staff', updated);
-
-        // 2️⃣ Create Firebase Auth user + Firestore doc
-        await createStaffInFirebase(newStaff);
 
         // 3️⃣ Reset form
         setNewStaff({
@@ -179,7 +185,7 @@ export default function AdminDashboard({ user, onLogout }) {
 
     const deleteSubject = (id) => {
         if (!window.confirm('Delete this subject?')) return;
-            const updated = subjects.filter(s => s.id !== id);
+        const updated = subjects.filter(s => s.id !== id);
         setSubjects(updated);
         Storage.set('subjects', updated);
         showToast('Subject deleted', 'success');
@@ -207,8 +213,8 @@ export default function AdminDashboard({ user, onLogout }) {
             showToast('Timetable generated successfully!', 'success');
 
             setTimeout(() => {
-                document.getElementById('view-timetables')?.scrollIntoView({ 
-                    behavior: 'smooth' 
+                document.getElementById('view-timetables')?.scrollIntoView({
+                    behavior: 'smooth'
                 });
             }, 1000);
         } else {
@@ -259,7 +265,7 @@ export default function AdminDashboard({ user, onLogout }) {
                     <div className="card">
                         <h3>Existing Classes ({classes.length})</h3>
                         {classes.length === 0 ? (
-                            <p style={{color: '#64748b'}}>No classes added yet</p>
+                            <p style={{ color: '#64748b' }}>No classes added yet</p>
                         ) : (
                             <>
                                 <div className="desktop-table">
@@ -279,7 +285,7 @@ export default function AdminDashboard({ user, onLogout }) {
                                                     <td><strong>{cls.name}</strong></td>
                                                     <td>{subjects.filter(s => s.className === cls.name).length}</td>
                                                     <td>
-                                                        <button 
+                                                        <button
                                                             className="btn btn-danger btn-sm"
                                                             onClick={() => deleteClass(cls.id)}
                                                         >
@@ -308,7 +314,7 @@ export default function AdminDashboard({ user, onLogout }) {
                                                 </div>
                                             </div>
                                             <div className="mobile-card-actions">
-                                                <button 
+                                                <button
                                                     className="btn btn-danger btn-sm"
                                                     onClick={() => deleteClass(cls.id)}
                                                 >
@@ -379,9 +385,9 @@ export default function AdminDashboard({ user, onLogout }) {
                                     min="0"
                                     max="30"
                                     value={newStaff.manualFreePeriods}
-                                    onChange={(e) => setNewStaff({ 
-                                        ...newStaff, 
-                                        manualFreePeriods: parseInt(e.target.value) || 0 
+                                    onChange={(e) => setNewStaff({
+                                        ...newStaff,
+                                        manualFreePeriods: parseInt(e.target.value) || 0
                                     })}
                                 />
                             </div>
@@ -394,7 +400,7 @@ export default function AdminDashboard({ user, onLogout }) {
                     <div className="card">
                         <h3>Existing Staff ({teachers.length})</h3>
                         {teachers.length === 0 ? (
-                            <p style={{color: '#64748b'}}>No staff added yet</p>
+                            <p style={{ color: '#64748b' }}>No staff added yet</p>
                         ) : (
                             <>
                                 <div className="desktop-table">
@@ -415,12 +421,12 @@ export default function AdminDashboard({ user, onLogout }) {
                                                     <td><strong>{s.name}</strong></td>
                                                     <td>{s.username}</td>
                                                     <td>
-                                                        {s.freePeriodMode === 'manual' 
-                                                            ? `Manual (${s.manualFreePeriods} free)` 
+                                                        {s.freePeriodMode === 'manual'
+                                                            ? `Manual (${s.manualFreePeriods} free)`
                                                             : 'Auto'}
                                                     </td>
                                                     <td>
-                                                        <button 
+                                                        <button
                                                             className="btn btn-danger btn-sm"
                                                             onClick={() => deleteStaff(s.id)}
                                                         >
@@ -448,14 +454,14 @@ export default function AdminDashboard({ user, onLogout }) {
                                                 <div className="mobile-card-row">
                                                     <span className="mobile-card-label">Mode:</span>
                                                     <span className="mobile-card-value">
-                                                        {s.freePeriodMode === 'manual' 
-                                                            ? `Manual (${s.manualFreePeriods} free)` 
+                                                        {s.freePeriodMode === 'manual'
+                                                            ? `Manual (${s.manualFreePeriods} free)`
                                                             : 'Auto'}
                                                     </span>
                                                 </div>
                                             </div>
                                             <div className="mobile-card-actions">
-                                                <button 
+                                                <button
                                                     className="btn btn-danger btn-sm"
                                                     onClick={() => deleteStaff(s.id)}
                                                 >
@@ -525,9 +531,9 @@ export default function AdminDashboard({ user, onLogout }) {
                                     min="1"
                                     max="30"
                                     value={newSubject.hoursPerWeek}
-                                    onChange={(e) => setNewSubject({ 
-                                        ...newSubject, 
-                                        hoursPerWeek: parseInt(e.target.value) || 6 
+                                    onChange={(e) => setNewSubject({
+                                        ...newSubject,
+                                        hoursPerWeek: parseInt(e.target.value) || 6
                                     })}
                                 />
                             </div>
@@ -552,7 +558,7 @@ export default function AdminDashboard({ user, onLogout }) {
                                 checked={newSubject.isContinuous}
                                 onChange={(e) => setNewSubject({ ...newSubject, isContinuous: e.target.checked })}
                             />
-                            <label htmlFor="continuous" style={{marginBottom: 0}}>
+                            <label htmlFor="continuous" style={{ marginBottom: 0 }}>
                                 Continuous Lab Block
                             </label>
                         </div>
@@ -562,9 +568,9 @@ export default function AdminDashboard({ user, onLogout }) {
                                 <label>Block Size</label>
                                 <select
                                     value={newSubject.blockSize}
-                                    onChange={(e) => setNewSubject({ 
-                                        ...newSubject, 
-                                        blockSize: parseInt(e.target.value) 
+                                    onChange={(e) => setNewSubject({
+                                        ...newSubject,
+                                        blockSize: parseInt(e.target.value)
                                     })}
                                 >
                                     <option value={2}>2 Periods</option>
@@ -581,7 +587,7 @@ export default function AdminDashboard({ user, onLogout }) {
                     <div className="card">
                         <h3>Existing Subjects ({subjects.length})</h3>
                         {subjects.length === 0 ? (
-                            <p style={{color: '#64748b'}}>No subjects added yet</p>
+                            <p style={{ color: '#64748b' }}>No subjects added yet</p>
                         ) : (
                             <>
                                 {classes.map(cls => {
@@ -591,12 +597,12 @@ export default function AdminDashboard({ user, onLogout }) {
                                     const totalHours = classSubjects.reduce((sum, s) => sum + s.hoursPerWeek, 0);
 
                                     return (
-                                        <div key={cls.id} style={{marginBottom: '30px'}}>
+                                        <div key={cls.id} style={{ marginBottom: '30px' }}>
                                             <h4 style={{
-                                                marginBottom: '15px', 
-                                                display: 'flex', 
-                                                alignItems: 'center', 
-                                                gap: '10px', 
+                                                marginBottom: '15px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '10px',
                                                 color: '#1e293b'
                                             }}>
                                                 Class: {cls.name}
@@ -631,7 +637,7 @@ export default function AdminDashboard({ user, onLogout }) {
                                                                 <td>{sub.hoursPerWeek}h</td>
                                                                 <td>{sub.teacher}</td>
                                                                 <td>
-                                                                    <button 
+                                                                    <button
                                                                         className="btn btn-danger btn-sm"
                                                                         onClick={() => deleteSubject(sub.id)}
                                                                     >
@@ -662,7 +668,7 @@ export default function AdminDashboard({ user, onLogout }) {
                                                             </div>
                                                         </div>
                                                         <div className="mobile-card-actions">
-                                                            <button 
+                                                            <button
                                                                 className="btn btn-danger btn-sm"
                                                                 onClick={() => deleteSubject(sub.id)}
                                                             >
@@ -690,16 +696,16 @@ export default function AdminDashboard({ user, onLogout }) {
                     <div className="card">
                         <h3>Ready to Generate</h3>
                         <div style={{
-                            marginBottom: '25px', 
-                            padding: '20px', 
-                            background: '#f8fafc', 
-                            borderRadius: '12px', 
+                            marginBottom: '25px',
+                            padding: '20px',
+                            background: '#f8fafc',
+                            borderRadius: '12px',
                             color: '#475569'
                         }}>
-                            <p style={{marginBottom: '15px', fontSize: '15px', lineHeight: '1.6'}}>
+                            <p style={{ marginBottom: '15px', fontSize: '15px', lineHeight: '1.6' }}>
                                 The smart algorithm will create an optimized timetable ensuring:
                             </p>
-                            <ul style={{marginLeft: '25px', lineHeight: '1.8'}}>
+                            <ul style={{ marginLeft: '25px', lineHeight: '1.8' }}>
                                 <li>✅ No free periods (all 30 filled)</li>
                                 <li>✅ Each subject appears at least once per day 🔥 NEW!</li>
                                 <li>✅ Labs in continuous blocks</li>
@@ -710,47 +716,47 @@ export default function AdminDashboard({ user, onLogout }) {
                         </div>
 
                         <div style={{
-                            display: 'grid', 
-                            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
-                            gap: '15px', 
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                            gap: '15px',
                             marginBottom: '25px'
                         }}>
                             <div style={{
-                                padding: '15px', 
-                                background: 'linear-gradient(135deg, #667eea, #764ba2)', 
-                                borderRadius: '12px', 
-                                color: 'white', 
+                                padding: '15px',
+                                background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                                borderRadius: '12px',
+                                color: 'white',
                                 textAlign: 'center'
                             }}>
-                                <div style={{fontSize: '13px', opacity: 0.9}}>Classes</div>
-                                <div style={{fontSize: '2em', fontWeight: 'bold'}}>{classes.length}</div>
+                                <div style={{ fontSize: '13px', opacity: 0.9 }}>Classes</div>
+                                <div style={{ fontSize: '2em', fontWeight: 'bold' }}>{classes.length}</div>
                             </div>
                             <div style={{
-                                padding: '15px', 
-                                background: 'linear-gradient(135deg, #10b981, #059669)', 
-                                borderRadius: '12px', 
-                                color: 'white', 
+                                padding: '15px',
+                                background: 'linear-gradient(135deg, #10b981, #059669)',
+                                borderRadius: '12px',
+                                color: 'white',
                                 textAlign: 'center'
                             }}>
-                                <div style={{fontSize: '13px', opacity: 0.9}}>Teachers</div>
-                                <div style={{fontSize: '2em', fontWeight: 'bold'}}>{teachers.length}</div>
+                                <div style={{ fontSize: '13px', opacity: 0.9 }}>Teachers</div>
+                                <div style={{ fontSize: '2em', fontWeight: 'bold' }}>{teachers.length}</div>
                             </div>
                             <div style={{
-                                padding: '15px', 
-                                background: 'linear-gradient(135deg, #f59e0b, #d97706)', 
-                                borderRadius: '12px', 
-                                color: 'white', 
+                                padding: '15px',
+                                background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                                borderRadius: '12px',
+                                color: 'white',
                                 textAlign: 'center'
                             }}>
-                                <div style={{fontSize: '13px', opacity: 0.9}}>Subjects</div>
-                                <div style={{fontSize: '2em', fontWeight: 'bold'}}>{subjects.length}</div>
+                                <div style={{ fontSize: '13px', opacity: 0.9 }}>Subjects</div>
+                                <div style={{ fontSize: '2em', fontWeight: 'bold' }}>{subjects.length}</div>
                             </div>
                         </div>
 
-                        <button 
+                        <button
                             className="btn btn-success"
                             onClick={generateTimetable}
-                            style={{width: '100%', fontSize: '18px', padding: '18px 40px'}}
+                            style={{ width: '100%', fontSize: '18px', padding: '18px 40px' }}
                         >
                             Generate Timetable
                         </button>
@@ -768,26 +774,26 @@ export default function AdminDashboard({ user, onLogout }) {
                         <div className="card">
                             <h3>Class-wise Timetables</h3>
                             {classes.map(cls => (
-                                <div key={cls.id} style={{marginBottom: '40px'}}>
+                                <div key={cls.id} style={{ marginBottom: '40px' }}>
                                     <h4 style={{
-                                        marginBottom: '15px', 
-                                        fontSize: '1.2em', 
+                                        marginBottom: '15px',
+                                        fontSize: '1.2em',
                                         color: '#1e293b'
                                     }}>
                                         Class: {cls.name}
                                     </h4>
-                                    <TimetableGrid 
-                                        timetable={timetable.classTimetables} 
-                                        className={cls.name} 
+                                    <TimetableGrid
+                                        timetable={timetable.classTimetables}
+                                        className={cls.name}
                                     />
-                                    <div 
-                                        style={{marginTop: '15px', display: 'flex', gap: '10px'}} 
+                                    <div
+                                        style={{ marginTop: '15px', display: 'flex', gap: '10px' }}
                                         className="no-print"
                                     >
-                                        <button 
+                                        <button
                                             className="btn btn-primary btn-sm"
                                             onClick={() => exportToPDF(
-                                                'timetable-export', 
+                                                'timetable-export',
                                                 `${cls.name}_Timetable.pdf`
                                             )}
                                         >
@@ -801,26 +807,26 @@ export default function AdminDashboard({ user, onLogout }) {
                         <div className="card">
                             <h3>Staff-wise Timetables</h3>
                             {teachers.map(teacher => (
-                                <div key={teacher.id} style={{marginBottom: '40px'}}>
+                                <div key={teacher.id} style={{ marginBottom: '40px' }}>
                                     <h4 style={{
-                                        marginBottom: '15px', 
-                                        fontSize: '1.2em', 
+                                        marginBottom: '15px',
+                                        fontSize: '1.2em',
                                         color: '#1e293b'
                                     }}>
                                         Teacher: {teacher.name}
                                     </h4>
-                                    <StaffTimetableGrid 
-                                        timetable={timetable.staffTimetables} 
-                                        staffName={teacher.name} 
+                                    <StaffTimetableGrid
+                                        timetable={timetable.staffTimetables}
+                                        staffName={teacher.name}
                                     />
-                                    <div 
-                                        style={{marginTop: '15px', display: 'flex', gap: '10px'}} 
+                                    <div
+                                        style={{ marginTop: '15px', display: 'flex', gap: '10px' }}
                                         className="no-print"
                                     >
-                                        <button 
+                                        <button
                                             className="btn btn-primary btn-sm"
                                             onClick={() => exportToPDF(
-                                                'staff-timetable-export', 
+                                                'staff-timetable-export',
                                                 `${teacher.name}_Timetable.pdf`
                                             )}
                                         >
