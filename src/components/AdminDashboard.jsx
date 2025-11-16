@@ -1,5 +1,4 @@
-/* === AdminDashboard.jsx — PART 1/3 START === */
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import AnimatedBackground from './AnimatedBackground';
 import { ToastContainer } from './Toast';
 import HoursTracker from './HoursTracker';
@@ -9,15 +8,16 @@ import { Storage } from '../utils/storage';
 import { TimetableGenerator } from '../utils/timetableGenerator';
 import { exportToPDF } from '../utils/pdfUtils';
 
-// Firebase imports
+// 🔥 Firebase imports
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { setDoc, doc, collection, addDoc, getDocs, deleteDoc, onSnapshot } from "firebase/firestore";
+import { setDoc, doc } from 'firebase/firestore';
 import { auth, db } from '../utils/firebase';
+import { collection, addDoc, getDocs, deleteDoc, doc } from "firebase/firestore";
+import { useEffect } from "react";
+
 
 export default function AdminDashboard({ user, onLogout }) {
-
-    // HYBRID MODE — CLOUD + LOCAL BACKUP
-    const [classes, setClasses] = useState(Storage.get("classes") || []);
+    const [classes, setClasses] = useState(Storage.get('classes') || []);
     const [staff, setStaff] = useState(Storage.get('staff') || []);
     const [subjects, setSubjects] = useState(Storage.get('subjects') || []);
     const [timetable, setTimetable] = useState(Storage.get('timetable'));
@@ -43,53 +43,188 @@ export default function AdminDashboard({ user, onLogout }) {
         teacher: ''
     });
 
-    const showToast = (message, type) => setToasts(prev => [...prev, { message, type }]);
-    const removeToast = index => setToasts(prev => prev.filter((_, i) => i !== index));
-
-    /* =================================================
-       FIRESTORE + LOCAL HYBRID SYNC FOR CLASSES
-    ==================================================== */
-
-    // Realtime Firestore listener
-    useEffect(() => {
-        const unsub = onSnapshot(collection(db, "classes"), (snapshot) => {
-            const cloudClasses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            if (cloudClasses.length > 0) {
-                setClasses(cloudClasses);
-                Storage.set("classes", cloudClasses); // backup
-            }
-        });
-        return unsub;
-    }, []);
-
-    // Add class → cloud + backup
-    const addClass = async () => {
-        if (!newClass.name) return showToast("Enter class name", "error");
-        if (classes.find(c => c.name === newClass.name)) return showToast("Class already exists", "error");
-
-        const docRef = await addDoc(collection(db, "classes"), { name: newClass.name });
-        const updated = [...classes, { id: docRef.id, name: newClass.name }];
-
-        setClasses(updated);
-        Storage.set("classes", updated);
-
-        setNewClass({ name: "" });
-        showToast("Class added successfully!", "success");
+    const showToast = (message, type) => {
+        setToasts(prev => [...prev, { message, type }]);
     };
 
-    // Delete class → cloud + backup
-    const deleteClass = async (id) => {
-        if (!window.confirm("Delete this class?")) return;
+    const removeToast = (index) => {
+        setToasts(prev => prev.filter((_, i) => i !== index));
+    };
 
-        await deleteDoc(doc(db, "classes", id));
+    // Class Management
+    const addClass = () => {
+        if (!newClass.name) {
+            showToast('Please enter class name', 'error');
+            return;
+        }
+        if (classes.find(c => c.name === newClass.name)) {
+            showToast('Class already exists', 'error');
+            return;
+        }
+        const updated = [...classes, { id: Date.now(), name: newClass.name }];
+        setClasses(updated);
+        Storage.set('classes', updated);
+        setNewClass({ name: '' });
+        showToast('Class added successfully!', 'success');
+    };
+
+    const deleteClass = (id) => {
+        if (!window.confirm('Delete this class?')) return;
         const updated = classes.filter(c => c.id !== id);
-
         setClasses(updated);
-        Storage.set("classes", updated);
-        showToast("Class deleted", "success");
+        Storage.set('classes', updated);
+        showToast('Class deleted', 'success');
     };
 
-    /* === UI START ================================================= */
+    // 🔥 Create staff in Firebase (Auth + Firestore)
+    const createStaffInFirebase = async (staffObj) => {
+        try {
+            // Email = username@timetable.com
+            const email = `${staffObj.username}@timetable.com`;
+            const password = staffObj.password || 'Staff@123';
+
+            console.log('Creating Firebase user:', email);
+
+            // 1️⃣ Create Auth user
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const uid = userCredential.user.uid;
+
+            console.log('Staff Firebase UID:', uid);
+
+            // 2️⃣ Create Firestore user document
+            await setDoc(doc(db, 'users', uid), {
+                fullName: staffObj.name || staffObj.fullName || '',
+                username: staffObj.username,
+                role: 'staff',
+                department: staffObj.department || staffObj.dept || '',
+                createdAt: new Date(),
+            });
+
+            return uid;
+        } catch (error) {
+            const code = error.code || 'no-code';
+            const msg = error.message || 'no-message';
+
+            // Show real Firebase error in simple popup (no React red overlay)
+            alert(`Firebase staff creation error:\n${code}\n${msg}`);
+
+            // Return null to indicate failure
+            return null;
+        }
+    };
+
+    // Staff Management
+    const addStaff = async () => {
+        if (!newStaff.name || !newStaff.username || !newStaff.password) {
+            showToast('Please fill all fields', 'error');
+            return;
+        }
+        if (staff.find(s => s.username === newStaff.username)) {
+            showToast('Username already exists', 'error');
+            return;
+        }
+
+        // 1️⃣ First try to create in Firebase (Auth + Firestore)
+        const uid = await createStaffInFirebase(newStaff);
+
+        if (!uid) {
+            // Firebase failed → don't save locally
+            showToast('Firebase error: could not create staff account', 'error');
+            return;
+        }
+
+        // 2️⃣ If Firebase success → save to local state + storage
+        const staffToSave = {
+            id: Date.now(),
+            ...newStaff,
+            role: 'staff',
+            firebaseUid: uid,
+        };
+
+        const updated = [...staff, staffToSave];
+        setStaff(updated);
+        Storage.set('staff', updated);
+
+        // 3️⃣ Reset form
+        setNewStaff({
+            name: '',
+            username: '',
+            password: '',
+            freePeriodMode: 'auto',
+            manualFreePeriods: 0
+        });
+
+        showToast('Staff added successfully!', 'success');
+    };
+
+    const deleteStaff = (id) => {
+        if (!window.confirm('Delete this staff member?')) return;
+        const updated = staff.filter(s => s.id !== id);
+        setStaff(updated);
+        Storage.set('staff', updated);
+        showToast('Staff deleted', 'success');
+    };
+
+    // Subject Management
+    const addSubject = () => {
+        if (!newSubject.className || !newSubject.name || !newSubject.subjectType || !newSubject.teacher) {
+            showToast('Please fill all required fields', 'error');
+            return;
+        }
+        const updated = [...subjects, { id: Date.now(), ...newSubject }];
+        setSubjects(updated);
+        Storage.set('subjects', updated);
+        setNewSubject({
+            className: '',
+            name: '',
+            subjectType: '',
+            hoursPerWeek: 6,
+            isContinuous: false,
+            blockSize: 2,
+            teacher: ''
+        });
+        showToast('Subject added successfully!', 'success');
+    };
+
+    const deleteSubject = (id) => {
+        if (!window.confirm('Delete this subject?')) return;
+        const updated = subjects.filter(s => s.id !== id);
+        setSubjects(updated);
+        Storage.set('subjects', updated);
+        showToast('Subject deleted', 'success');
+    };
+
+    // Timetable Generation
+    const generateTimetable = () => {
+        const generator = new TimetableGenerator(classes, teachers, subjects);
+        const validation = generator.validate();
+
+        if (!validation.valid) {
+            showToast('Validation errors: ' + validation.errors.join('; '), 'error');
+            return;
+        }
+
+        const result = generator.generate();
+
+        if (result.success) {
+            const timetableData = {
+                classTimetables: result.classTimetables,
+                staffTimetables: result.staffTimetables
+            };
+            setTimetable(timetableData);
+            Storage.set('timetable', timetableData);
+            showToast('Timetable generated successfully!', 'success');
+
+            setTimeout(() => {
+                document.getElementById('view-timetables')?.scrollIntoView({
+                    behavior: 'smooth'
+                });
+            }, 1000);
+        } else {
+            showToast('Generation failed: ' + result.error, 'error');
+        }
+    };
+
     return (
         <>
             <AnimatedBackground />
@@ -97,6 +232,7 @@ export default function AdminDashboard({ user, onLogout }) {
                 <div className="header-content">
                     <h1>🏫 Admin Dashboard</h1>
                     <div className="header-actions">
+                        <button className="theme-toggle">🌙</button>
                         <button className="btn btn-danger btn-sm" onClick={onLogout}>
                             Logout
                         </button>
@@ -195,6 +331,7 @@ export default function AdminDashboard({ user, onLogout }) {
                         )}
                     </div>
                 </div>
+
                 {/* STAFF SECTION */}
                 <div className="section">
                     <div className="section-header">
@@ -243,7 +380,6 @@ export default function AdminDashboard({ user, onLogout }) {
                                 </select>
                             </div>
                         </div>
-
                         {newStaff.freePeriodMode === 'manual' && (
                             <div className="form-group">
                                 <label>Free Periods per Week</label>
@@ -259,7 +395,6 @@ export default function AdminDashboard({ user, onLogout }) {
                                 />
                             </div>
                         )}
-
                         <button className="btn btn-primary" onClick={addStaff}>
                             Add Staff
                         </button>
@@ -517,6 +652,7 @@ export default function AdminDashboard({ user, onLogout }) {
                                                     </tbody>
                                                 </table>
                                             </div>
+
                                             <div className="mobile-cards">
                                                 {classSubjects.map(sub => (
                                                     <div key={sub.id} className="mobile-card">
@@ -552,6 +688,7 @@ export default function AdminDashboard({ user, onLogout }) {
                         )}
                     </div>
                 </div>
+
                 {/* GENERATION SECTION */}
                 <div className="section">
                     <div className="section-header">
@@ -573,7 +710,7 @@ export default function AdminDashboard({ user, onLogout }) {
                             </p>
                             <ul style={{ marginLeft: '25px', lineHeight: '1.8' }}>
                                 <li>✅ No free periods (all 30 filled)</li>
-                                <li>✅ Each subject appears at least once per day</li>
+                                <li>✅ Each subject appears at least once per day 🔥 NEW!</li>
                                 <li>✅ Labs in continuous blocks</li>
                                 <li>✅ Core subjects distributed evenly</li>
                                 <li>✅ No teacher conflicts</li>
@@ -637,7 +774,6 @@ export default function AdminDashboard({ user, onLogout }) {
                             <h2 className="section-title">Generated Timetables</h2>
                         </div>
 
-                        {/* CLASS TIMETABLES */}
                         <div className="card">
                             <h3>Class-wise Timetables</h3>
                             {classes.map(cls => (
@@ -659,9 +795,10 @@ export default function AdminDashboard({ user, onLogout }) {
                                     >
                                         <button
                                             className="btn btn-primary btn-sm"
-                                            onClick={() =>
-                                                exportToPDF('timetable-export', `${cls.name}_Timetable.pdf`)
-                                            }
+                                            onClick={() => exportToPDF(
+                                                'timetable-export',
+                                                `${cls.name}_Timetable.pdf`
+                                            )}
                                         >
                                             Download PDF
                                         </button>
@@ -670,7 +807,6 @@ export default function AdminDashboard({ user, onLogout }) {
                             ))}
                         </div>
 
-                        {/* STAFF TIMETABLES */}
                         <div className="card">
                             <h3>Staff-wise Timetables</h3>
                             {teachers.map(teacher => (
@@ -692,9 +828,10 @@ export default function AdminDashboard({ user, onLogout }) {
                                     >
                                         <button
                                             className="btn btn-primary btn-sm"
-                                            onClick={() =>
-                                                exportToPDF('staff-timetable-export', `${teacher.name}_Timetable.pdf`)
-                                            }
+                                            onClick={() => exportToPDF(
+                                                'staff-timetable-export',
+                                                `${teacher.name}_Timetable.pdf`
+                                            )}
                                         >
                                             Download PDF
                                         </button>
