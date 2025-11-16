@@ -74,29 +74,41 @@ export default function AdminDashboard({ user, onLogout }) {
     };
 
     // 🔥 Create staff in Firebase (Auth + Firestore)
-    const createStaffInFirebase = async (staffData) => {
-        const { name, username, password } = staffData;
-        const email = `${username}@timetable.com`;
+    const createStaffInFirebase = async (staff) => {
+    try {
+        // 1️⃣ Build email & password for the staff account
+        //    Example: username "ram" → "ram@timetable.com"
+        const email = `${staff.username}@timetable.com`;
 
-        try {
-            // 1️⃣ Create login account in Firebase Auth
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            const uid = userCredential.user.uid;
+        // Use staff.password if you store it, otherwise some default temp password
+        const password = staff.password || "Staff@123";
 
-            // 2️⃣ Save profile + role in Firestore
-            await setDoc(doc(db, 'users', uid), {
-                fullName: name,
-                username,
-                role: 'staff',
-                createdAt: new Date()
-            });
+        console.log("Creating Firebase user:", email);
 
-            showToast('Staff account created in Firebase ✅', 'success');
-        } catch (error) {
-            console.error('Firebase staff creation error:', error);
-            showToast('Firebase error: ' + (error.message || 'Could not create staff'), 'error');
-        }
-    };
+        // 2️⃣ Create account in Firebase Authentication
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const uid = userCredential.user.uid;
+
+        console.log("Staff Firebase UID:", uid);
+
+        // 3️⃣ Create Firestore user document
+        await setDoc(doc(db, "users", uid), {
+            fullName: staff.name || staff.fullName || "",
+            username: staff.username,
+            role: "staff",
+            department: staff.department || staff.dept || "",
+            createdAt: new Date(),
+        });
+
+        return uid;
+    } catch (error) {
+        console.error("🔥 REAL FIREBASE ERROR CODE:", error.code);
+        console.error("🔥 REAL FIREBASE ERROR MSG:", error.message);
+        // Pass error back so addStaff can show toast
+        throw error;
+    }
+};
+
 
     // Staff Management
     const addStaff = async () => {
