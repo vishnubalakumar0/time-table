@@ -1,21 +1,25 @@
 {
   "name": "smart-timetable-generator",
   "version": "2.0.0",
+  "homepage": "https://vishnubalakumar0.github.io/time-table",
   "description": "AI-Powered Smart Timetable Generator with Enhanced Algorithm",
   "private": true,
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "html2canvas": "^1.4.1",
     "jspdf": "^2.5.1",
-    "html2canvas": "^1.4.1"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.23.0",
     "@babel/preset-react": "^7.23.0",
+    "gh-pages": "^6.3.0",
     "parcel": "^2.10.0"
   },
   "scripts": {
     "start": "parcel public/index.html",
-    "build": "parcel build public/index.html"
+    "build": "parcel build public/index.html --dist-dir dist",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
   }
 }
