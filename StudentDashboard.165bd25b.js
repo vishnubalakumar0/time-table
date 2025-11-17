@@ -999,7 +999,7 @@ $parcel$ReactRefreshHelpers$583d.prelude(module);
 try {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>StaffTimetableGrid);
+parcelHelpers.export(exports, "default", ()=>TimetableGrid);
 var _jsxDevRuntime = require("react/jsx-dev-runtime");
 var _react = require("react");
 var _reactDefault = parcelHelpers.interopDefault(_react);
@@ -1010,8 +1010,8 @@ const DAYS = [
     'Thursday',
     'Friday'
 ];
-function StaffTimetableGrid({ timetable, staffName }) {
-    if (!timetable || !timetable[staffName]) return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+function TimetableGrid({ timetable, className }) {
+    if (!timetable || !timetable[className]) return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
         style: {
             padding: '40px',
             textAlign: 'center',
@@ -1023,7 +1023,11 @@ function StaffTimetableGrid({ timetable, staffName }) {
         lineNumber: 8,
         columnNumber: 13
     }, this);
-    const grid = timetable[staffName];
+    const grid = timetable[className];
+    // Debug code
+    console.log('TimetableGrid - className:', className);
+    console.log('TimetableGrid - grid:', grid);
+    console.log('TimetableGrid - grid is array?', Array.isArray(grid));
     // Safety check: if grid is not an array or not nested properly
     if (!Array.isArray(grid) || grid.length === 0) return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
         style: {
@@ -1034,10 +1038,11 @@ function StaffTimetableGrid({ timetable, staffName }) {
         children: "Invalid timetable format"
     }, void 0, false, {
         fileName: "src/components/TimetableGrid.jsx",
-        lineNumber: 19,
+        lineNumber: 24,
         columnNumber: 13
     }, this);
     return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+        id: "class-timetable-export",
         className: "timetable-grid",
         children: [
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -1045,7 +1050,7 @@ function StaffTimetableGrid({ timetable, staffName }) {
                 children: "Day/Period"
             }, void 0, false, {
                 fileName: "src/components/TimetableGrid.jsx",
-                lineNumber: 27,
+                lineNumber: 32,
                 columnNumber: 13
             }, this),
             [
@@ -1058,7 +1063,7 @@ function StaffTimetableGrid({ timetable, staffName }) {
                     ]
                 }, i, true, {
                     fileName: "src/components/TimetableGrid.jsx",
-                    lineNumber: 29,
+                    lineNumber: 34,
                     columnNumber: 17
                 }, this)),
             DAYS.map((day, dayIndex)=>{
@@ -1071,7 +1076,7 @@ function StaffTimetableGrid({ timetable, staffName }) {
                             children: day
                         }, void 0, false, {
                             fileName: "src/components/TimetableGrid.jsx",
-                            lineNumber: 40,
+                            lineNumber: 45,
                             columnNumber: 25
                         }, this),
                         grid[dayIndex].map((slot, periodIndex)=>/*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -1083,48 +1088,50 @@ function StaffTimetableGrid({ timetable, staffName }) {
                                             children: slot.subject
                                         }, void 0, false, {
                                             fileName: "src/components/TimetableGrid.jsx",
-                                            lineNumber: 48,
+                                            lineNumber: 53,
                                             columnNumber: 41
                                         }, this),
                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                            className: "class-name",
-                                            children: slot.class
+                                            className: "teacher-name",
+                                            children: slot.teacher
                                         }, void 0, false, {
                                             fileName: "src/components/TimetableGrid.jsx",
-                                            lineNumber: 49,
+                                            lineNumber: 54,
                                             columnNumber: 41
                                         }, this)
                                     ]
                                 }, void 0, true) : /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                    className: "free-period",
+                                    style: {
+                                        color: '#94a3b8'
+                                    },
                                     children: "FREE"
                                 }, void 0, false, {
                                     fileName: "src/components/TimetableGrid.jsx",
-                                    lineNumber: 52,
+                                    lineNumber: 57,
                                     columnNumber: 37
                                 }, this)
                             }, periodIndex, false, {
                                 fileName: "src/components/TimetableGrid.jsx",
-                                lineNumber: 42,
+                                lineNumber: 47,
                                 columnNumber: 29
                             }, this))
                     ]
                 }, day, true, {
                     fileName: "src/components/TimetableGrid.jsx",
-                    lineNumber: 39,
+                    lineNumber: 44,
                     columnNumber: 21
                 }, this);
             })
         ]
     }, void 0, true, {
         fileName: "src/components/TimetableGrid.jsx",
-        lineNumber: 26,
+        lineNumber: 31,
         columnNumber: 9
     }, this);
 }
-_c = StaffTimetableGrid;
+_c = TimetableGrid;
 var _c;
-$RefreshReg$(_c, "StaffTimetableGrid");
+$RefreshReg$(_c, "TimetableGrid");
 
   $parcel$ReactRefreshHelpers$583d.postlude(module);
 } finally {

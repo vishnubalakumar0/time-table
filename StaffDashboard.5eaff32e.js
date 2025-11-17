@@ -736,12 +736,15 @@ var _pdfUtils = require("../utils/pdfUtils");
 var _s = $RefreshSig$();
 function StaffDashboard({ user, onLogout }) {
     _s();
-    const [timetable] = (0, _react.useState)((0, _storage.Storage).get('timetable'));
+    // FIX 1: Get the complete timetable object
+    const [timetableData] = (0, _react.useState)((0, _storage.Storage).get('timetable'));
+    // FIX 2: Extract staffTimetables from the timetable object
+    const staffTimetables = timetableData?.staffTimetables || null;
     return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _jsxDevRuntime.Fragment), {
         children: [
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _animatedBackgroundDefault.default), {}, void 0, false, {
                 fileName: "src/components/StaffDashboard.jsx",
-                lineNumber: 12,
+                lineNumber: 16,
                 columnNumber: 13
             }, this),
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -753,7 +756,7 @@ function StaffDashboard({ user, onLogout }) {
                             children: "\uD83D\uDC68\u200D\uD83C\uDFEB Staff Dashboard"
                         }, void 0, false, {
                             fileName: "src/components/StaffDashboard.jsx",
-                            lineNumber: 15,
+                            lineNumber: 19,
                             columnNumber: 21
                         }, this),
                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -764,7 +767,7 @@ function StaffDashboard({ user, onLogout }) {
                                     children: "\uD83C\uDF19"
                                 }, void 0, false, {
                                     fileName: "src/components/StaffDashboard.jsx",
-                                    lineNumber: 17,
+                                    lineNumber: 21,
                                     columnNumber: 25
                                 }, this),
                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
@@ -773,24 +776,24 @@ function StaffDashboard({ user, onLogout }) {
                                     children: "Logout"
                                 }, void 0, false, {
                                     fileName: "src/components/StaffDashboard.jsx",
-                                    lineNumber: 18,
+                                    lineNumber: 22,
                                     columnNumber: 25
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "src/components/StaffDashboard.jsx",
-                            lineNumber: 16,
+                            lineNumber: 20,
                             columnNumber: 21
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "src/components/StaffDashboard.jsx",
-                    lineNumber: 14,
+                    lineNumber: 18,
                     columnNumber: 17
                 }, this)
             }, void 0, false, {
                 fileName: "src/components/StaffDashboard.jsx",
-                lineNumber: 13,
+                lineNumber: 17,
                 columnNumber: 13
             }, this),
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -806,7 +809,7 @@ function StaffDashboard({ user, onLogout }) {
                                     children: "\uD83D\uDCC5"
                                 }, void 0, false, {
                                     fileName: "src/components/StaffDashboard.jsx",
-                                    lineNumber: 28,
+                                    lineNumber: 32,
                                     columnNumber: 25
                                 }, this),
                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h2", {
@@ -814,18 +817,18 @@ function StaffDashboard({ user, onLogout }) {
                                     children: "My Timetable"
                                 }, void 0, false, {
                                     fileName: "src/components/StaffDashboard.jsx",
-                                    lineNumber: 29,
+                                    lineNumber: 33,
                                     columnNumber: 25
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "src/components/StaffDashboard.jsx",
-                            lineNumber: 27,
+                            lineNumber: 31,
                             columnNumber: 21
                         }, this),
                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                             className: "card",
-                            children: !timetable ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                            children: !staffTimetables ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                 style: {
                                     padding: '60px 20px',
                                     textAlign: 'center'
@@ -839,7 +842,7 @@ function StaffDashboard({ user, onLogout }) {
                                         children: "\uD83D\uDCCB"
                                     }, void 0, false, {
                                         fileName: "src/components/StaffDashboard.jsx",
-                                        lineNumber: 35,
+                                        lineNumber: 39,
                                         columnNumber: 33
                                     }, this),
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h3", {
@@ -850,32 +853,32 @@ function StaffDashboard({ user, onLogout }) {
                                         children: "No Timetable Generated"
                                     }, void 0, false, {
                                         fileName: "src/components/StaffDashboard.jsx",
-                                        lineNumber: 36,
+                                        lineNumber: 40,
                                         columnNumber: 33
                                     }, this),
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
                                         style: {
                                             color: '#64748b'
                                         },
-                                        children: "Please contact the administrator."
+                                        children: "Please contact the administrator to generate a timetable."
                                     }, void 0, false, {
                                         fileName: "src/components/StaffDashboard.jsx",
-                                        lineNumber: 39,
+                                        lineNumber: 43,
                                         columnNumber: 33
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "src/components/StaffDashboard.jsx",
-                                lineNumber: 34,
+                                lineNumber: 38,
                                 columnNumber: 29
                             }, this) : /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _jsxDevRuntime.Fragment), {
                                 children: [
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _staffTimetableGridDefault.default), {
-                                        timetable: timetable.staffTimetables,
+                                        timetable: staffTimetables,
                                         staffName: user.name
                                     }, void 0, false, {
                                         fileName: "src/components/StaffDashboard.jsx",
-                                        lineNumber: 45,
+                                        lineNumber: 50,
                                         columnNumber: 33
                                     }, this),
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -892,7 +895,7 @@ function StaffDashboard({ user, onLogout }) {
                                                 children: "\uD83D\uDCC4 Download PDF"
                                             }, void 0, false, {
                                                 fileName: "src/components/StaffDashboard.jsx",
-                                                lineNumber: 53,
+                                                lineNumber: 58,
                                                 columnNumber: 37
                                             }, this),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
@@ -901,37 +904,37 @@ function StaffDashboard({ user, onLogout }) {
                                                 children: "\uD83D\uDDA8\uFE0F Print"
                                             }, void 0, false, {
                                                 fileName: "src/components/StaffDashboard.jsx",
-                                                lineNumber: 62,
+                                                lineNumber: 67,
                                                 columnNumber: 37
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/components/StaffDashboard.jsx",
-                                        lineNumber: 49,
+                                        lineNumber: 54,
                                         columnNumber: 33
                                     }, this)
                                 ]
                             }, void 0, true)
                         }, void 0, false, {
                             fileName: "src/components/StaffDashboard.jsx",
-                            lineNumber: 32,
+                            lineNumber: 36,
                             columnNumber: 21
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "src/components/StaffDashboard.jsx",
-                    lineNumber: 26,
+                    lineNumber: 30,
                     columnNumber: 17
                 }, this)
             }, void 0, false, {
                 fileName: "src/components/StaffDashboard.jsx",
-                lineNumber: 25,
+                lineNumber: 29,
                 columnNumber: 13
             }, this)
         ]
     }, void 0, true);
 }
-_s(StaffDashboard, "uLj+YGa3AhRuflxUpyig6bvR8to=");
+_s(StaffDashboard, "y1TAunA0ESrI+UHXzcMNiyjTD/Q=");
 _c = StaffDashboard;
 var _c;
 $RefreshReg$(_c, "StaffDashboard");
@@ -963,27 +966,125 @@ const DAYS = [
     'Friday'
 ];
 function StaffTimetableGrid({ timetable, staffName }) {
-    if (!timetable || !timetable[staffName]) return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-        style: {
-            padding: '40px',
-            textAlign: 'center',
-            color: '#64748b'
-        },
-        children: "No timetable generated yet"
-    }, void 0, false, {
-        fileName: "src/components/StaffTimetableGrid.jsx",
-        lineNumber: 8,
-        columnNumber: 13
-    }, this);
-    const grid = timetable[staffName];
-    // Debug code - placed BEFORE return statement
-    console.log('StaffTimetableGrid - staffName:', staffName);
-    console.log('StaffTimetableGrid - grid:', grid);
-    console.log('StaffTimetableGrid - grid is array?', Array.isArray(grid));
-    if (Array.isArray(grid)) {
-        console.log('Grid length:', grid.length);
-        console.log('First element:', grid[0]);
+    // Debug logging
+    console.log('=== StaffTimetableGrid Debug ===');
+    console.log('Received timetable:', timetable);
+    console.log('Received staffName:', staffName);
+    console.log('timetable keys:', timetable ? Object.keys(timetable) : 'timetable is null');
+    // Check if timetable exists
+    if (!timetable) {
+        console.warn('No timetable data received');
+        return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+            style: {
+                padding: '40px',
+                textAlign: 'center',
+                color: '#64748b'
+            },
+            children: [
+                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
+                    children: "No timetable data available"
+                }, void 0, false, {
+                    fileName: "src/components/StaffTimetableGrid.jsx",
+                    lineNumber: 17,
+                    columnNumber: 17
+                }, this),
+                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
+                    style: {
+                        fontSize: '14px',
+                        marginTop: '10px'
+                    },
+                    children: "Please generate a timetable first from the Admin Dashboard"
+                }, void 0, false, {
+                    fileName: "src/components/StaffTimetableGrid.jsx",
+                    lineNumber: 18,
+                    columnNumber: 17
+                }, this)
+            ]
+        }, void 0, true, {
+            fileName: "src/components/StaffTimetableGrid.jsx",
+            lineNumber: 16,
+            columnNumber: 13
+        }, this);
     }
+    // Check if staff timetable exists
+    if (!timetable[staffName]) {
+        console.warn(`No timetable found for staff: ${staffName}`);
+        console.log('Available staff timetables:', Object.keys(timetable));
+        return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+            style: {
+                padding: '40px',
+                textAlign: 'center',
+                color: '#64748b'
+            },
+            children: [
+                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
+                    children: [
+                        "No timetable available for ",
+                        staffName
+                    ]
+                }, void 0, true, {
+                    fileName: "src/components/StaffTimetableGrid.jsx",
+                    lineNumber: 31,
+                    columnNumber: 17
+                }, this),
+                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
+                    style: {
+                        fontSize: '14px',
+                        marginTop: '10px'
+                    },
+                    children: "Timetable may not have been generated yet or you are not assigned any classes."
+                }, void 0, false, {
+                    fileName: "src/components/StaffTimetableGrid.jsx",
+                    lineNumber: 32,
+                    columnNumber: 17
+                }, this)
+            ]
+        }, void 0, true, {
+            fileName: "src/components/StaffTimetableGrid.jsx",
+            lineNumber: 30,
+            columnNumber: 13
+        }, this);
+    }
+    const grid = timetable[staffName];
+    // Validate grid structure
+    console.log('Grid data:', grid);
+    console.log('Grid is array?', Array.isArray(grid));
+    console.log('Grid length:', grid ? grid.length : 0);
+    if (!Array.isArray(grid) || grid.length === 0) {
+        console.error('Invalid grid structure');
+        return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+            style: {
+                padding: '40px',
+                textAlign: 'center',
+                color: '#64748b'
+            },
+            children: [
+                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
+                    children: "Invalid timetable format"
+                }, void 0, false, {
+                    fileName: "src/components/StaffTimetableGrid.jsx",
+                    lineNumber: 50,
+                    columnNumber: 17
+                }, this),
+                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
+                    style: {
+                        fontSize: '14px',
+                        marginTop: '10px'
+                    },
+                    children: "Please regenerate the timetable from Admin Dashboard"
+                }, void 0, false, {
+                    fileName: "src/components/StaffTimetableGrid.jsx",
+                    lineNumber: 51,
+                    columnNumber: 17
+                }, this)
+            ]
+        }, void 0, true, {
+            fileName: "src/components/StaffTimetableGrid.jsx",
+            lineNumber: 49,
+            columnNumber: 13
+        }, this);
+    }
+    console.log('Rendering timetable grid...');
     return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
         id: "staff-timetable-export",
         className: "timetable-grid",
@@ -993,7 +1094,7 @@ function StaffTimetableGrid({ timetable, staffName }) {
                 children: "Day/Period"
             }, void 0, false, {
                 fileName: "src/components/StaffTimetableGrid.jsx",
-                lineNumber: 27,
+                lineNumber: 63,
                 columnNumber: 13
             }, this),
             [
@@ -1006,65 +1107,95 @@ function StaffTimetableGrid({ timetable, staffName }) {
                     ]
                 }, i, true, {
                     fileName: "src/components/StaffTimetableGrid.jsx",
-                    lineNumber: 29,
+                    lineNumber: 65,
                     columnNumber: 17
                 }, this)),
-            DAYS.map((day, dayIndex)=>/*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _reactDefault.default).Fragment, {
+            DAYS.map((day, dayIndex)=>{
+                // Safety check for each day
+                if (!grid[dayIndex] || !Array.isArray(grid[dayIndex])) {
+                    console.warn(`Invalid data for day ${day} (index ${dayIndex})`);
+                    return null;
+                }
+                return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _reactDefault.default).Fragment, {
                     children: [
                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                             className: "timetable-day",
                             children: day
                         }, void 0, false, {
                             fileName: "src/components/StaffTimetableGrid.jsx",
-                            lineNumber: 34,
-                            columnNumber: 21
+                            lineNumber: 78,
+                            columnNumber: 25
                         }, this),
-                        grid[dayIndex].map((slot, periodIndex)=>/*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                className: `timetable-cell subject-${slot.type.toLowerCase()}`,
-                                children: slot.subject !== 'FREE' ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _jsxDevRuntime.Fragment), {
-                                    children: [
-                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                            className: "subject-name",
-                                            children: slot.subject
-                                        }, void 0, false, {
-                                            fileName: "src/components/StaffTimetableGrid.jsx",
-                                            lineNumber: 42,
-                                            columnNumber: 37
-                                        }, this),
-                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                            className: "teacher-name",
-                                            children: slot.class
-                                        }, void 0, false, {
-                                            fileName: "src/components/StaffTimetableGrid.jsx",
-                                            lineNumber: 43,
-                                            columnNumber: 37
-                                        }, this)
-                                    ]
-                                }, void 0, true) : /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                        grid[dayIndex].map((slot, periodIndex)=>{
+                            // Safety check for slot
+                            if (!slot) return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                className: "timetable-cell subject-free",
+                                children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                     style: {
                                         color: '#94a3b8'
                                     },
                                     children: "FREE"
                                 }, void 0, false, {
                                     fileName: "src/components/StaffTimetableGrid.jsx",
-                                    lineNumber: 46,
-                                    columnNumber: 33
+                                    lineNumber: 84,
+                                    columnNumber: 41
                                 }, this)
                             }, periodIndex, false, {
                                 fileName: "src/components/StaffTimetableGrid.jsx",
-                                lineNumber: 36,
-                                columnNumber: 25
-                            }, this))
+                                lineNumber: 83,
+                                columnNumber: 37
+                            }, this);
+                            const subjectType = slot.type ? slot.type.toLowerCase() : 'free';
+                            const isFree = slot.subject === 'FREE' || !slot.subject;
+                            return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                className: `timetable-cell subject-${subjectType}`,
+                                children: !isFree ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _jsxDevRuntime.Fragment), {
+                                    children: [
+                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                            className: "subject-name",
+                                            children: slot.subject
+                                        }, void 0, false, {
+                                            fileName: "src/components/StaffTimetableGrid.jsx",
+                                            lineNumber: 99,
+                                            columnNumber: 45
+                                        }, this),
+                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                            className: "teacher-name",
+                                            children: slot.class || '-'
+                                        }, void 0, false, {
+                                            fileName: "src/components/StaffTimetableGrid.jsx",
+                                            lineNumber: 102,
+                                            columnNumber: 45
+                                        }, this)
+                                    ]
+                                }, void 0, true) : /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                    style: {
+                                        color: '#94a3b8',
+                                        fontWeight: '500'
+                                    },
+                                    children: "FREE"
+                                }, void 0, false, {
+                                    fileName: "src/components/StaffTimetableGrid.jsx",
+                                    lineNumber: 107,
+                                    columnNumber: 41
+                                }, this)
+                            }, periodIndex, false, {
+                                fileName: "src/components/StaffTimetableGrid.jsx",
+                                lineNumber: 93,
+                                columnNumber: 33
+                            }, this);
+                        })
                     ]
                 }, day, true, {
                     fileName: "src/components/StaffTimetableGrid.jsx",
-                    lineNumber: 33,
-                    columnNumber: 17
-                }, this))
+                    lineNumber: 77,
+                    columnNumber: 21
+                }, this);
+            })
         ]
     }, void 0, true, {
         fileName: "src/components/StaffTimetableGrid.jsx",
-        lineNumber: 26,
+        lineNumber: 61,
         columnNumber: 9
     }, this);
 }
