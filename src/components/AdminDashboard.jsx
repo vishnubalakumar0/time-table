@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AnimatedBackground from './AnimatedBackground';
 import { ToastContainer } from './Toast';
 import HoursTracker from './HoursTracker';
@@ -10,17 +10,14 @@ import { exportToPDF } from '../utils/pdfUtils';
 
 // 🔥 Firebase imports
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { setDoc, doc } from 'firebase/firestore';
+import { setDoc, doc, collection, addDoc, getDocs, deleteDoc } from 'firebase/firestore';
 import { auth, db } from '../utils/firebase';
-import { collection, addDoc, getDocs, deleteDoc, doc } from "firebase/firestore";
-import { useEffect } from "react";
-
 
 export default function AdminDashboard({ user, onLogout }) {
     const [classes, setClasses] = useState(Storage.get('classes') || []);
     const [staff, setStaff] = useState(Storage.get('staff') || []);
     const [subjects, setSubjects] = useState(Storage.get('subjects') || []);
-    const [timetable, setTimetable] = useState(Storage.get('timetable'));
+    const [timetable, setTimetable] = useState(Storage.get('timetable') || null);
     const [toasts, setToasts] = useState([]);
 
     const teachers = staff.filter(s => s.role === 'staff');
@@ -43,6 +40,7 @@ export default function AdminDashboard({ user, onLogout }) {
         teacher: ''
     });
 
+    // 🔔 Toast helpers
     const showToast = (message, type) => {
         setToasts(prev => [...prev, { message, type }]);
     };
@@ -51,8 +49,54 @@ export default function AdminDashboard({ user, onLogout }) {
         setToasts(prev => prev.filter((_, i) => i !== index));
     };
 
-    // Class Management
-    const addClass = () => {
+    // 🔥 Load data from Firestore on mount (classes + staff + subjects)
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                // CLASSES
+                const classSnap = await getDocs(collection(db, 'classes'));
+                const cloudClasses = classSnap.docs.map(d => ({
+                    id: d.id,
+                    ...d.data(),
+                }));
+
+                // STAFF
+                const staffSnap = await getDocs(collection(db, 'staff'));
+                const cloudStaff = staffSnap.docs.map(d => ({
+                    id: d.id,
+                    ...d.data(),
+                }));
+
+                // SUBJECTS
+                const subjectSnap = await getDocs(collection(db, 'subjects'));
+                const cloudSubjects = subjectSnap.docs.map(d => ({
+                    id: d.id,
+                    ...d.data(),
+                }));
+
+                if (cloudClasses.length) {
+                    setClasses(cloudClasses);
+                    Storage.set('classes', cloudClasses);
+                }
+                if (cloudStaff.length) {
+                    setStaff(cloudStaff);
+                    Storage.set('staff', cloudStaff);
+                }
+                if (cloudSubjects.length) {
+                    setSubjects(cloudSubjects);
+                    Storage.set('subjects', cloudSubjects);
+                }
+            } catch (err) {
+                console.error('Error loading data from Firestore:', err);
+                showToast('Could not load data from server', 'error');
+            }
+        };
+
+        loadData();
+    }, []);
+
+    // ================== CLASS MANAGEMENT (Firestore + Local) ==================
+    const addClass = async () => {
         if (!newClass.name) {
             showToast('Please enter class name', 'error');
             return;
@@ -61,22 +105,47 @@ export default function AdminDashboard({ user, onLogout }) {
             showToast('Class already exists', 'error');
             return;
         }
-        const updated = [...classes, { id: Date.now(), name: newClass.name }];
-        setClasses(updated);
-        Storage.set('classes', updated);
-        setNewClass({ name: '' });
-        showToast('Class added successfully!', 'success');
+
+        try {
+            // Save in Firestore
+            const docRef = await addDoc(collection(db, 'classes'), {
+                name: newClass.name,
+                createdAt: new Date(),
+            });
+
+            const newCls = { id: docRef.id, name: newClass.name };
+
+            // Update UI + LocalStorage
+            const updated = [...classes, newCls];
+            setClasses(updated);
+            Storage.set('classes', updated);
+
+            setNewClass({ name: '' });
+            showToast('Class added successfully!', 'success');
+        } catch (err) {
+            console.error('Error adding class to Firestore:', err);
+            showToast('Could not save class online', 'error');
+        }
     };
 
-    const deleteClass = (id) => {
+    const deleteClass = async (id) => {
         if (!window.confirm('Delete this class?')) return;
+
+        try {
+            await deleteDoc(doc(db, 'classes', id));
+        } catch (err) {
+            console.error('Error deleting class from Firestore:', err);
+            showToast('Could not delete class online', 'error');
+        }
+
         const updated = classes.filter(c => c.id !== id);
         setClasses(updated);
         Storage.set('classes', updated);
         showToast('Class deleted', 'success');
     };
 
-    // 🔥 Create staff in Firebase (Auth + Firestore)
+    // ================== STAFF (Auth + Firestore + Local) ==================
+    // Create staff in Firebase (Auth + Firestore `users` collection)
     const createStaffInFirebase = async (staffObj) => {
         try {
             // Email = username@timetable.com
@@ -91,7 +160,7 @@ export default function AdminDashboard({ user, onLogout }) {
 
             console.log('Staff Firebase UID:', uid);
 
-            // 2️⃣ Create Firestore user document
+            // 2️⃣ Create Firestore user document (users collection)
             await setDoc(doc(db, 'users', uid), {
                 fullName: staffObj.name || staffObj.fullName || '',
                 username: staffObj.username,
@@ -105,15 +174,11 @@ export default function AdminDashboard({ user, onLogout }) {
             const code = error.code || 'no-code';
             const msg = error.message || 'no-message';
 
-            // Show real Firebase error in simple popup (no React red overlay)
             alert(`Firebase staff creation error:\n${code}\n${msg}`);
-
-            // Return null to indicate failure
             return null;
         }
     };
 
-    // Staff Management
     const addStaff = async () => {
         if (!newStaff.name || !newStaff.username || !newStaff.password) {
             showToast('Please fill all fields', 'error');
@@ -124,77 +189,127 @@ export default function AdminDashboard({ user, onLogout }) {
             return;
         }
 
-        // 1️⃣ First try to create in Firebase (Auth + Firestore)
+        // 1️⃣ Create in Firebase Auth + users collection
         const uid = await createStaffInFirebase(newStaff);
-
         if (!uid) {
-            // Firebase failed → don't save locally
             showToast('Firebase error: could not create staff account', 'error');
             return;
         }
 
-        // 2️⃣ If Firebase success → save to local state + storage
-        const staffToSave = {
-            id: Date.now(),
-            ...newStaff,
-            role: 'staff',
-            firebaseUid: uid,
-        };
+        // 2️⃣ Save to staff collection
+        try {
+            const staffDoc = {
+                name: newStaff.name,
+                username: newStaff.username,
+                password: newStaff.password, // ⚠️ for production, don't store plain passwords
+                freePeriodMode: newStaff.freePeriodMode,
+                manualFreePeriods: newStaff.manualFreePeriods,
+                role: 'staff',
+                firebaseUid: uid,
+                createdAt: new Date(),
+            };
 
-        const updated = [...staff, staffToSave];
-        setStaff(updated);
-        Storage.set('staff', updated);
+            const docRef = await addDoc(collection(db, 'staff'), staffDoc);
+            const staffWithId = { id: docRef.id, ...staffDoc };
 
-        // 3️⃣ Reset form
-        setNewStaff({
-            name: '',
-            username: '',
-            password: '',
-            freePeriodMode: 'auto',
-            manualFreePeriods: 0
-        });
+            const updated = [...staff, staffWithId];
+            setStaff(updated);
+            Storage.set('staff', updated);
 
-        showToast('Staff added successfully!', 'success');
+            // Reset form
+            setNewStaff({
+                name: '',
+                username: '',
+                password: '',
+                freePeriodMode: 'auto',
+                manualFreePeriods: 0
+            });
+
+            showToast('Staff added successfully!', 'success');
+        } catch (err) {
+            console.error('Error saving staff to Firestore:', err);
+            showToast('Could not save staff online', 'error');
+        }
     };
 
-    const deleteStaff = (id) => {
+    const deleteStaff = async (id) => {
         if (!window.confirm('Delete this staff member?')) return;
+
+        try {
+            await deleteDoc(doc(db, 'staff', id));
+        } catch (err) {
+            console.error('Error deleting staff from Firestore:', err);
+            showToast('Could not delete staff online', 'error');
+        }
+
         const updated = staff.filter(s => s.id !== id);
         setStaff(updated);
         Storage.set('staff', updated);
         showToast('Staff deleted', 'success');
     };
 
-    // Subject Management
-    const addSubject = () => {
+    // ================== SUBJECT MANAGEMENT (Firestore + Local) ==================
+    const addSubject = async () => {
         if (!newSubject.className || !newSubject.name || !newSubject.subjectType || !newSubject.teacher) {
             showToast('Please fill all required fields', 'error');
             return;
         }
-        const updated = [...subjects, { id: Date.now(), ...newSubject }];
-        setSubjects(updated);
-        Storage.set('subjects', updated);
-        setNewSubject({
-            className: '',
-            name: '',
-            subjectType: '',
-            hoursPerWeek: 6,
-            isContinuous: false,
-            blockSize: 2,
-            teacher: ''
-        });
-        showToast('Subject added successfully!', 'success');
+
+        const subjectToSave = {
+            className: newSubject.className,
+            name: newSubject.name,
+            subjectType: newSubject.subjectType,
+            hoursPerWeek: Number(newSubject.hoursPerWeek) || 6,
+            isContinuous: !!newSubject.isContinuous,
+            blockSize: newSubject.isContinuous
+                ? Number(newSubject.blockSize) || 2
+                : 1,
+            teacher: newSubject.teacher,
+            createdAt: new Date(),
+        };
+
+        try {
+            const docRef = await addDoc(collection(db, 'subjects'), subjectToSave);
+            const subWithId = { id: docRef.id, ...subjectToSave };
+
+            const updated = [...subjects, subWithId];
+            setSubjects(updated);
+            Storage.set('subjects', updated);
+
+            setNewSubject({
+                className: '',
+                name: '',
+                subjectType: '',
+                hoursPerWeek: 6,
+                isContinuous: false,
+                blockSize: 2,
+                teacher: ''
+            });
+
+            showToast('Subject added successfully!', 'success');
+        } catch (err) {
+            console.error('Error adding subject to Firestore:', err);
+            showToast('Could not save subject online', 'error');
+        }
     };
 
-    const deleteSubject = (id) => {
+    const deleteSubject = async (id) => {
         if (!window.confirm('Delete this subject?')) return;
+
+        try {
+            await deleteDoc(doc(db, 'subjects', id));
+        } catch (err) {
+            console.error('Error deleting subject from Firestore:', err);
+            showToast('Could not delete subject online', 'error');
+        }
+
         const updated = subjects.filter(s => s.id !== id);
         setSubjects(updated);
         Storage.set('subjects', updated);
         showToast('Subject deleted', 'success');
     };
 
-    // Timetable Generation
+    // ================== TIMETABLE GENERATION ==================
     const generateTimetable = () => {
         const generator = new TimetableGenerator(classes, teachers, subjects);
         const validation = generator.validate();
@@ -225,6 +340,7 @@ export default function AdminDashboard({ user, onLogout }) {
         }
     };
 
+    // ================== RENDER ==================
     return (
         <>
             <AnimatedBackground />
@@ -390,7 +506,7 @@ export default function AdminDashboard({ user, onLogout }) {
                                     value={newStaff.manualFreePeriods}
                                     onChange={(e) => setNewStaff({
                                         ...newStaff,
-                                        manualFreePeriods: parseInt(e.target.value) || 0
+                                        manualFreePeriods: parseInt(e.target.value, 10) || 0
                                     })}
                                 />
                             </div>
@@ -536,7 +652,7 @@ export default function AdminDashboard({ user, onLogout }) {
                                     value={newSubject.hoursPerWeek}
                                     onChange={(e) => setNewSubject({
                                         ...newSubject,
-                                        hoursPerWeek: parseInt(e.target.value) || 6
+                                        hoursPerWeek: parseInt(e.target.value, 10) || 6
                                     })}
                                 />
                             </div>
@@ -573,7 +689,7 @@ export default function AdminDashboard({ user, onLogout }) {
                                     value={newSubject.blockSize}
                                     onChange={(e) => setNewSubject({
                                         ...newSubject,
-                                        blockSize: parseInt(e.target.value)
+                                        blockSize: parseInt(e.target.value, 10)
                                     })}
                                 >
                                     <option value={2}>2 Periods</option>
@@ -710,7 +826,7 @@ export default function AdminDashboard({ user, onLogout }) {
                             </p>
                             <ul style={{ marginLeft: '25px', lineHeight: '1.8' }}>
                                 <li>✅ No free periods (all 30 filled)</li>
-                                <li>✅ Each subject appears at least once per day 🔥 NEW!</li>
+                                <li>✅ Each subject appears at least once per day</li>
                                 <li>✅ Labs in continuous blocks</li>
                                 <li>✅ Core subjects distributed evenly</li>
                                 <li>✅ No teacher conflicts</li>
