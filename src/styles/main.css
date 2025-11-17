@@ -778,6 +778,123 @@ td {
     flex-wrap: wrap;
 }
 
+/* ========== TIMETABLE GRID ========== */
+.timetable-grid {
+    display: grid;
+    grid-template-columns: 120px repeat(6, 1fr);
+    gap: 0;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    min-width: 800px;
+}
+
+.timetable-header {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 14px;
+    font-weight: 700;
+    text-align: center;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.timetable-day {
+    background: #f8fafc;
+    color: #1e293b;
+    padding: 14px;
+    font-weight: 700;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.timetable-cell {
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    min-height: 70px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background: white;
+    transition: all 0.2s ease;
+}
+
+.timetable-cell:hover {
+    background: #f8fafc;
+    transform: scale(1.02);
+    z-index: 10;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.subject-name {
+    font-weight: 700;
+    color: #1e293b;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.teacher-name {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 600;
+}
+
+/* Subject color coding */
+.subject-core {
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+    border-left: 4px solid #3b82f6;
+}
+
+.subject-elective {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    border-left: 4px solid #f59e0b;
+}
+
+.subject-lab {
+    background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+    border-left: 4px solid #10b981;
+}
+
+.subject-free {
+    background: #f8fafc;
+    color: #94a3b8;
+}
+
+/* Mobile responsiveness for timetable grid */
+@media (max-width: 768px) {
+    .timetable-grid {
+        grid-template-columns: 80px repeat(6, minmax(100px, 1fr));
+        font-size: 12px;
+    }
+    
+    .timetable-header,
+    .timetable-day {
+        padding: 10px;
+        font-size: 11px;
+    }
+    
+    .timetable-cell {
+        padding: 8px;
+        min-height: 60px;
+    }
+    
+    .subject-name {
+        font-size: 12px;
+    }
+    
+    .teacher-name {
+        font-size: 10px;
+    }
+}
+
 /* ========== TOAST NOTIFICATIONS ========== */
 .toast-container {
     position: fixed;

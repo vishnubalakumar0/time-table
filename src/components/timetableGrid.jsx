@@ -2,8 +2,8 @@ import React from 'react';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-export default function StaffTimetableGrid({ timetable, staffName }) {
-    if (!timetable || !timetable[staffName]) {
+export default function TimetableGrid({ timetable, className }) {
+    if (!timetable || !timetable[className]) {
         return (
             <div style={{padding: '40px', textAlign: 'center', color: '#64748b'}}>
                 No timetable available
@@ -11,7 +11,12 @@ export default function StaffTimetableGrid({ timetable, staffName }) {
         );
     }
 
-    const grid = timetable[staffName];
+    const grid = timetable[className];
+
+    // Debug code
+    console.log('TimetableGrid - className:', className);
+    console.log('TimetableGrid - grid:', grid);
+    console.log('TimetableGrid - grid is array?', Array.isArray(grid));
 
     // Safety check: if grid is not an array or not nested properly
     if (!Array.isArray(grid) || grid.length === 0) {
@@ -23,7 +28,7 @@ export default function StaffTimetableGrid({ timetable, staffName }) {
     }
 
     return (
-        <div className="timetable-grid">
+        <div id="class-timetable-export" className="timetable-grid">
             <div className="timetable-header">Day/Period</div>
             {[...Array(6)].map((_, i) => (
                 <div key={i} className="timetable-header">P{i + 1}</div>
@@ -46,10 +51,10 @@ export default function StaffTimetableGrid({ timetable, staffName }) {
                                 {slot && slot.subject !== 'FREE' ? (
                                     <>
                                         <div className="subject-name">{slot.subject}</div>
-                                        <div className="class-name">{slot.class}</div>
+                                        <div className="teacher-name">{slot.teacher}</div>
                                     </>
                                 ) : (
-                                    <div className="free-period">FREE</div>
+                                    <div style={{ color: '#94a3b8' }}>FREE</div>
                                 )}
                             </div>
                         ))}
