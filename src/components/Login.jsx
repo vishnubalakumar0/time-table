@@ -1,76 +1,97 @@
-import React, { useState } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth, db } from "../utils/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import React, { useState } from 'react';
+import AnimatedBackground from './AnimatedBackground';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../utils/firebase';
 
 export default function Login({ onLogin }) {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
 
-  const handleLogin = async () => {
-    if (!username || !password) {
-      setError("Enter username & password");
-      return;
-    }
+    const handleLogin = async (e) => {
+        e.preventDefault();
+        setError("");
 
-    // Convert username → email for Firebase Auth
-    const email = `${username}@timetable.com`;
+        if (!username || !password) {
+            return showError("Enter username & password");
+        }
 
-    try {
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
+        try {
+            // Convert Username → Email format for Firebase
+            const email = `${username}@timetable.com`;
 
-      const uid = userCredential.user.uid;
+            // 1️⃣ Firebase Authentication
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const uid = userCredential.user.uid;
 
-      // Fetch role from Firestore
-      const snap = await getDoc(doc(db, "users", uid));
+            // 2️⃣ Get Role from Firestore
+            const snap = await getDoc(doc(db, "users", uid));
+            if (!snap.exists()) {
+                return showError("User profile missing. Contact admin.");
+            }
 
-      let role = "staff"; // default
-      if (snap.exists() && snap.data().role) {
-        role = snap.data().role;
-      }
+            const profile = snap.data();
 
-      onLogin({ uid, role, username });
+            // 3️⃣ Send role to App.jsx
+            onLogin({ id: uid, ...profile });
 
-    } catch (err) {
-      console.error(err);
-      setError("Invalid username or password!");
-    }
-  };
+        } catch (err) {
+            console.error("Login error:", err);
+            showError("Invalid username or password");
+        }
+    };
 
-  return (
-    <div className="login-container">
-      <h2>Login</h2>
+    const showError = (msg) => {
+        setError(msg);
+        setTimeout(() => setError(""), 2500);
+    };
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
+    return (
+        <>
+            <AnimatedBackground />
+            <div className="login-container">
+                <div className="login-box glass">
 
-      <div className="form-group">
-        <label>Username</label>
-        <input
-          type="text"
-          placeholder="admin / john..."
-          value={username}
-          onChange={(e) => setUsername(e.target.value.toLowerCase())}
-        />
-      </div>
+                    <h1 className="login-title">Smart Timetable</h1>
+                    <p className="login-subtitle">Premium Edition 🔥</p>
 
-      <div className="form-group">
-        <label>Password</label>
-        <input
-          type="password"
-          placeholder="********"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-      </div>
+                    {error && (
+                        <div className="toast toast-error" style={{ marginBottom: 20 }}>
+                            ❌ {error}
+                        </div>
+                    )}
 
-      <button className="btn btn-primary" onClick={handleLogin}>
-        Login
-      </button>
-    </div>
-  );
+                    <form onSubmit={handleLogin}>
+                        <div className="input-wrapper">
+                            <span className="input-icon">👤</span>
+                            <input
+                                type="text"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                placeholder="Username"
+                                required
+                            />
+                        </div>
+
+                        <div className="input-wrapper">
+                            <span className="input-icon">🔒</span>
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="Password"
+                                required
+                            />
+                        </div>
+
+                        <button type="submit" className="btn btn-primary" style={{ width: "100%" }}>
+                            Login
+                        </button>
+                    </form>
+
+                </div>
+            </div>
+        </>
+    );
 }
