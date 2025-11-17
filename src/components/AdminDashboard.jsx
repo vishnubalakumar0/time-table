@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import AnimatedBackground from './AnimatedBackground';
 import { ToastContainer } from './Toast';
 import HoursTracker from './HoursTracker';
-import TimetableGrid from './TimetableGrid';
+import TimetableGrid from './timetableGrid';
 import StaffTimetableGrid from './StaffTimetableGrid';
 import { exportToPDF } from '../utils/pdfUtils';
 import { TimetableGenerator } from '../utils/timetableGenerator';
@@ -65,9 +65,96 @@ export default function AdminDashboard({ user, onLogout }) {
     const removeToast = (id) => {
         setToasts(prev => prev.filter(t => t.id !== id));
     };
+// Helper function to convert Firebase flat format to nested arrays
+const convertFlatToNested = (flatTimetable) => {
+    if (!flatTimetable) return null;
 
+    const nested = {};
+
+    Object.keys(flatTimetable).forEach(key => {
+        const slots = flatTimetable[key];
+
+        // Check if already nested (array of arrays)
+        if (Array.isArray(slots) && slots.length > 0 && Array.isArray(slots[0])) {
+            // Already nested format
+            nested[key] = slots;
+        } else if (Array.isArray(slots)) {
+            // Flat format - convert to nested
+            const days = [[], [], [], [], []]; // 5 days
+
+            slots.forEach(slot => {
+                if (slot && typeof slot.day === 'number' && typeof slot.period === 'number') {
+                    if (!days[slot.day]) days[slot.day] = [];
+                    days[slot.day][slot.period] = {
+                        subject: slot.subject,
+                        teacher: slot.teacher,
+                        class: slot.class,
+                        type: slot.type
+                    };
+                }
+            });
+
+            // Fill empty periods
+            days.forEach((day, idx) => {
+                if (!days[idx]) days[idx] = [];
+                for (let p = 0; p < 6; p++) {
+                    if (!days[idx][p]) {
+                        // For class timetables, use null
+                        // For staff timetables, use FREE
+                        days[idx][p] = slots[0]?.class !== undefined 
+                            ? { subject: 'FREE', class: '-', type: 'free' }
+                            : null;
+                    }
+                }
+            });
+
+            nested[key] = days;
+        }
+    });
+
+    return nested;
+};
+
+
+// Now UPDATE your fetchData function to use this helper
+// Find the section where you set timetable data and modify it:
+
+const fetchData = async () => {
+    setLoading(true);
+
+    try {
+        const [cls, st, sb, tt] = await Promise.all([
+            getDocs(collection(db, 'classes')),
+            getDocs(collection(db, 'staff')),
+            getDocs(collection(db, 'subjects')),
+            getDocs(collection(db, 'timetable'))
+        ]);
+
+        setClasses(cls.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        setStaff(st.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        setSubjects(sb.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+
+        // FIX: Convert flat format from Firebase to nested arrays
+        if (!tt.empty) {
+            const ttData = tt.docs[0].data();
+
+            // Convert both class and staff timetables
+            const convertedData = {
+                classTimetables: convertFlatToNested(ttData.classTimetables),
+                staffTimetables: convertFlatToNested(ttData.staffTimetables)
+            };
+
+            setTimetable(convertedData);
+        }
+    } catch (error) {
+        showToast('❌ Error loading data: ' + error.message, 'error');
+        console.error(error);
+    }
+
+    setLoading(false);
+};
     // FIX 1: Faster loading - optimized data fetching
-    useEffect(() => {
+      useEffect(() => {
         const fetchAll = async () => {
             try {
                 const [cls, st, sb, tt] = await Promise.all([
@@ -77,20 +164,30 @@ export default function AdminDashboard({ user, onLogout }) {
                     getDocs(collection(db, 'timetable'))
                 ]);
 
-                setClasses(cls.docs.map(d => ({ id: d.id, ...d.data() })));
-                setStaff(st.docs.map(d => ({ id: d.id, ...d.data() })));
-                setSubjects(sb.docs.map(d => ({ id: d.id, ...d.data() })));
-                if (!tt.empty) setTimetable(tt.docs[0].data());
+                setClasses(cls.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+                setStaff(st.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+                setSubjects(sb.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+
+                // ✅ REPLACE WITH THIS - IT'S CORRECT:
+                if (!tt.empty) {
+                    const ttData = tt.docs[0].data();
+                    const convertedData = {
+                        classTimetables: convertFlatToNested(ttData.classTimetables),
+                        staffTimetables: convertFlatToNested(ttData.staffTimetables)
+                    };
+                    setTimetable(convertedData);
+                }
 
             } catch (error) {
-                showToast("⚠ Could not load data", "error");
-                console.error(error);
+                showToast('❌ Error: ' + error.message, 'error');
             } finally {
                 setLoading(false);
             }
         };
+
         fetchAll();
     }, []);
+
 
     // ------------------- CLASS CRUD - FIX 3: Added hallNumber & edit -------------------
     const addClass = async () => {

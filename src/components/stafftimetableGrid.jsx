@@ -13,6 +13,15 @@ export default function StaffTimetableGrid({ timetable, staffName }) {
 
     const grid = timetable[staffName];
 
+    // Debug code - placed BEFORE return statement
+    console.log('StaffTimetableGrid - staffName:', staffName);
+    console.log('StaffTimetableGrid - grid:', grid);
+    console.log('StaffTimetableGrid - grid is array?', Array.isArray(grid));
+    if (Array.isArray(grid)) {
+        console.log('Grid length:', grid.length);
+        console.log('First element:', grid[0]);
+    }
+
     return (
         <div id="staff-timetable-export" className="timetable-grid">
             <div className="timetable-header">Day/Period</div>
