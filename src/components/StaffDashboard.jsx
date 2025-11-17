@@ -5,7 +5,11 @@ import { Storage } from '../utils/storage';
 import { exportToPDF } from '../utils/pdfUtils';
 
 export default function StaffDashboard({ user, onLogout }) {
-    const [timetable] = useState(Storage.get('timetable'));
+    // FIX 1: Get the complete timetable object
+    const [timetableData] = useState(Storage.get('timetable'));
+
+    // FIX 2: Extract staffTimetables from the timetable object
+    const staffTimetables = timetableData?.staffTimetables || null;
 
     return (
         <>
@@ -30,20 +34,21 @@ export default function StaffDashboard({ user, onLogout }) {
                     </div>
 
                     <div className="card">
-                        {!timetable ? (
+                        {!staffTimetables ? (
                             <div style={{padding: '60px 20px', textAlign: 'center'}}>
                                 <div style={{fontSize: '60px', marginBottom: '20px'}}>📋</div>
                                 <h3 style={{marginBottom: '10px', color: '#1e293b'}}>
                                     No Timetable Generated
                                 </h3>
                                 <p style={{color: '#64748b'}}>
-                                    Please contact the administrator.
+                                    Please contact the administrator to generate a timetable.
                                 </p>
                             </div>
                         ) : (
                             <>
+                                {/* FIX 3: Pass staffTimetables correctly */}
                                 <StaffTimetableGrid 
-                                    timetable={timetable.staffTimetables} 
+                                    timetable={staffTimetables} 
                                     staffName={user.name} 
                                 />
                                 <div 

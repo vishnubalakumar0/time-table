@@ -1,95 +1,146 @@
 import React, { useState } from 'react';
 import AnimatedBackground from './AnimatedBackground';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../utils/firebase';
+import { Storage } from '../utils/storage';
 
 export default function Login({ onLogin }) {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [role, setRole] = useState('admin');
     const [error, setError] = useState('');
 
-    const handleLogin = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
-        setError("");
+        setError('');
 
-        if (!username || !password) {
-            return showError("Enter username & password");
-        }
-
-        try {
-            // Convert Username → Email format for Firebase
-            const email = `${username}@timetable.com`;
-
-            // 1️⃣ Firebase Authentication
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            const uid = userCredential.user.uid;
-
-            // 2️⃣ Get Role from Firestore
-            const snap = await getDoc(doc(db, "users", uid));
-            if (!snap.exists()) {
-                return showError("User profile missing. Contact admin.");
+        if (role === 'admin') {
+            // Admin login
+            if (username === 'admin' && password === 'admin123') {
+                onLogin({ 
+                    name: 'Admin', 
+                    role: 'admin' 
+                });
+            } else {
+                setError('Invalid admin credentials');
             }
+        } else if (role === 'staff') {
+            // Staff login - FIX APPLIED HERE!
+            const staff = Storage.get('staff') || [];
 
-            const profile = snap.data();
+            // Find staff member by username
+            const staffMember = staff.find(
+                s => s && s.name && s.name.toLowerCase() === username.toLowerCase()
+            );
 
-            // 3️⃣ Send role to App.jsx
-            onLogin({ id: uid, ...profile });
+            if (staffMember && password === 'staff123') {
+                // FIX: Set user.name to the EXACT staff name from database
+                onLogin({ 
+                    name: staffMember.name,  // ← THIS IS THE FIX!
+                    role: 'staff' 
+                });
+            } else if (!staffMember) {
+                setError(`Staff member "${username}" not found. Check spelling.`);
+            } else {
+                setError('Invalid staff credentials');
+            }
+        } else if (role === 'student') {
+            // Student login
+            if (password === 'student123') {
+                const classes = Storage.get('classes') || [];
+                const studentClass = classes.find(c => 
+                    c && c.name && c.name.toLowerCase() === username.toLowerCase()
+                );
 
-        } catch (err) {
-            console.error("Login error:", err);
-            showError("Invalid username or password");
+                if (studentClass) {
+                    onLogin({ 
+                        name: username, 
+                        role: 'student', 
+                        className: studentClass.name 
+                    });
+                } else {
+                    setError('Class not found');
+                }
+            } else {
+                setError('Invalid student credentials');
+            }
         }
-    };
-
-    const showError = (msg) => {
-        setError(msg);
-        setTimeout(() => setError(""), 2500);
     };
 
     return (
         <>
             <AnimatedBackground />
             <div className="login-container">
-                <div className="login-box glass">
+                <div className="login-card">
+                    <div className="login-header">
+                        <h1>📚 Timetable Manager</h1>
+                        <p>Intelligent Scheduling System</p>
+                    </div>
 
-                    <h1 className="login-title">Smart Timetable</h1>
-                    <p className="login-subtitle">Premium Edition 🔥</p>
-
-                    {error && (
-                        <div className="toast toast-error" style={{ marginBottom: 20 }}>
-                            ❌ {error}
+                    <form onSubmit={handleSubmit} className="login-form">
+                        <div className="form-group">
+                            <label>Role</label>
+                            <select 
+                                value={role} 
+                                onChange={(e) => {
+                                    setRole(e.target.value);
+                                    setError('');
+                                }}
+                                className="input"
+                            >
+                                <option value="admin">Admin</option>
+                                <option value="staff">Staff</option>
+                                <option value="student">Student</option>
+                            </select>
                         </div>
-                    )}
 
-                    <form onSubmit={handleLogin}>
-                        <div className="input-wrapper">
-                            <span className="input-icon">👤</span>
+                        <div className="form-group">
+                            <label>
+                                {role === 'admin' ? 'Username' : 
+                                 role === 'staff' ? 'Staff Name' : 
+                                 'Class Name'}
+                            </label>
                             <input
                                 type="text"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
-                                placeholder="Username"
+                                placeholder={
+                                    role === 'admin' ? 'Enter username' :
+                                    role === 'staff' ? 'e.g., Dr. Kavitha' :
+                                    'e.g., I MSCC (a1)'
+                                }
+                                className="input"
                                 required
                             />
                         </div>
 
-                        <div className="input-wrapper">
-                            <span className="input-icon">🔒</span>
+                        <div className="form-group">
+                            <label>Password</label>
                             <input
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                placeholder="Password"
+                                placeholder="Enter password"
+                                className="input"
                                 required
                             />
                         </div>
 
-                        <button type="submit" className="btn btn-primary" style={{ width: "100%" }}>
+                        {error && (
+                            <div className="error-message">
+                                {error}
+                            </div>
+                        )}
+
+                        <button type="submit" className="btn btn-primary">
                             Login
                         </button>
-                    </form>
 
+                        <div className="login-info">
+                            <h4>Demo Credentials:</h4>
+                            <p><strong>Admin:</strong> admin / admin123</p>
+                            <p><strong>Staff:</strong> [Staff Name] / staff123</p>
+                            <p><strong>Student:</strong> [Class Name] / student123</p>
+                        </div>
+                    </form>
                 </div>
             </div>
         </>
