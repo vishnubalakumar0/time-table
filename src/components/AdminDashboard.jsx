@@ -7,6 +7,7 @@ import StaffTimetableGrid from './StaffTimetableGrid';
 import { exportToPDF } from '../utils/pdfUtils';
 import { TimetableGenerator } from '../utils/timetableGenerator';
 
+
 import { auth, db } from '../utils/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import {
@@ -286,63 +287,146 @@ export default function AdminDashboard({ user, onLogout }) {
     };
 
     // ------------------- TIMETABLE GENERATION - FIX 6: Save to staff -------------------
-    const generateTimetable = async () => {
-        setLoading(true);
+  const generateTimetable = async () => {
+    setLoading(true);
 
-        try {
-            const generator = new TimetableGenerator(classes, teachers, subjects);
-            const validation = generator.validate();
+    try {
+        const generator = new TimetableGenerator(classes, staff.filter(s => s.role === 'staff'), subjects);
+        const validation = generator.validate();
 
-            if (!validation.valid) {
-                showToast('❌ Validation: ' + validation.errors[0], 'error');
-                setLoading(false);
-                return;
-            }
-
-            const result = generator.generate();
-
-            if (result.success) {
-                const timetableData = {
-                    classTimetables: result.classTimetables,
-                    staffTimetables: result.staffTimetables
-                };
-
-                // Save main timetable
-                const ttRef = collection(db, 'timetable');
-                const existing = await getDocs(ttRef);
-
-                if (!existing.empty) {
-                    await updateDoc(doc(db, 'timetable', existing.docs[0].id), timetableData);
-                } else {
-                    await addDoc(ttRef, timetableData);
-                }
-
-                // Save individual staff timetables
-                for (const teacher of teachers) {
-                    const staffTT = result.staffTimetables[teacher.name];
-                    if (staffTT) {
-                        await setDoc(doc(db, 'staffTimetables', teacher.id), {
-                            staffName: teacher.name,
-                            timetable: staffTT
-                        });
-                    }
-                }
-
-                setTimetable(timetableData);
-                showToast('✅ Timetable generated & saved!', 'success');
-
-                setTimeout(() => {
-                    document.getElementById('view-timetables')?.scrollIntoView({ behavior: 'smooth' });
-                }, 1000);
-            } else {
-                showToast('❌ Failed: ' + result.error, 'error');
-            }
-        } catch (error) {
-            showToast('❌ Error: ' + error.message, 'error');
+        if (!validation.valid) {
+            showToast('❌ Validation: ' + validation.errors[0], 'error');
+            setLoading(false);
+            return;
         }
 
-        setLoading(false);
-    };
+        const result = generator.generate();
+
+        if (result.success) {
+            // Convert nested arrays to Firebase-friendly format
+            const serializableClassTimetables = {};
+            const serializableStaffTimetables = {};
+
+            // Flatten class timetables
+            Object.keys(result.classTimetables).forEach(className => {
+                serializableClassTimetables[className] = result.classTimetables[className].map((day, dayIndex) => {
+                    return day.map((period, periodIndex) => ({
+                        day: dayIndex,
+                        period: periodIndex,
+                        subject: period?.subject || null,
+                        teacher: period?.teacher || null,
+                        type: period?.type || null
+                    }));
+                }).flat();
+            });
+
+            // Flatten staff timetables
+            Object.keys(result.staffTimetables).forEach(staffName => {
+                serializableStaffTimetables[staffName] = result.staffTimetables[staffName].map((day, dayIndex) => {
+                    return day.map((period, periodIndex) => ({
+                        day: dayIndex,
+                        period: periodIndex,
+                        subject: period?.subject || null,
+                        class: period?.class || null,
+                        type: period?.type || null
+                    }));
+                }).flat();
+            });
+
+            const timetableData = {
+                classTimetables: serializableClassTimetables,
+                staffTimetables: serializableStaffTimetables,
+                generatedAt: new Date().toISOString()
+            };
+
+            // Save to Firebase
+            const ttRef = collection(db, 'timetable');
+            const existing = await getDocs(ttRef);
+
+            if (!existing.empty) {
+                await updateDoc(doc(db, 'timetable', existing.docs[0].id), timetableData);
+            } else {
+                await addDoc(ttRef, timetableData);
+            }
+
+            // Save individual staff timetables
+            const teachers = staff.filter(s => s.role === 'staff');
+            for (const teacher of teachers) {
+                const staffTT = serializableStaffTimetables[teacher.name];
+                if (staffTT) {
+                    await setDoc(doc(db, 'staffTimetables', teacher.id), {
+                        staffName: teacher.name,
+                        timetable: staffTT,
+                        generatedAt: new Date().toISOString()
+                    });
+                }
+            }
+
+            // Convert back to nested arrays for display
+            const displayClassTimetables = {};
+            Object.keys(serializableClassTimetables).forEach(className => {
+                const days = [[], [], [], [], []];
+                serializableClassTimetables[className].forEach(slot => {
+                    if (!days[slot.day]) days[slot.day] = [];
+                    days[slot.day][slot.period] = {
+                        subject: slot.subject,
+                        teacher: slot.teacher,
+                        type: slot.type
+                    };
+                });
+                // Fill empty periods with null
+                days.forEach((day, idx) => {
+                    if (!days[idx]) days[idx] = [];
+                    for (let p = 0; p < 6; p++) {
+                        if (!days[idx][p]) days[idx][p] = null;
+                    }
+                });
+                displayClassTimetables[className] = days;
+            });
+
+            const displayStaffTimetables = {};
+            Object.keys(serializableStaffTimetables).forEach(staffName => {
+                const days = [[], [], [], [], []];
+                serializableStaffTimetables[staffName].forEach(slot => {
+                    if (!days[slot.day]) days[slot.day] = [];
+                    days[slot.day][slot.period] = {
+                        subject: slot.subject,
+                        class: slot.class,
+                        type: slot.type
+                    };
+                });
+                // Fill empty periods with FREE
+                days.forEach((day, idx) => {
+                    if (!days[idx]) days[idx] = [];
+                    for (let p = 0; p < 6; p++) {
+                        if (!days[idx][p]) {
+                            days[idx][p] = { subject: 'FREE', class: '-', type: 'free' };
+                        }
+                    }
+                });
+                displayStaffTimetables[staffName] = days;
+            });
+
+            setTimetable({
+                classTimetables: displayClassTimetables,
+                staffTimetables: displayStaffTimetables
+            });
+
+            showToast('✅ Timetable generated & saved!', 'success');
+
+            setTimeout(() => {
+                document.getElementById('view-timetables')?.scrollIntoView({ behavior: 'smooth' });
+            }, 1000);
+        } else {
+            showToast('❌ Failed: ' + result.error, 'error');
+        }
+    } catch (error) {
+        showToast('❌ Error: ' + error.message, 'error');
+        console.error(error);
+    }
+
+    setLoading(false);
+};;
 
     if (loading) {
         return (
