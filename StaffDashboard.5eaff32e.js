@@ -976,6 +976,14 @@ function StaffTimetableGrid({ timetable, staffName }) {
         columnNumber: 13
     }, this);
     const grid = timetable[staffName];
+    // Debug code - placed BEFORE return statement
+    console.log('StaffTimetableGrid - staffName:', staffName);
+    console.log('StaffTimetableGrid - grid:', grid);
+    console.log('StaffTimetableGrid - grid is array?', Array.isArray(grid));
+    if (Array.isArray(grid)) {
+        console.log('Grid length:', grid.length);
+        console.log('First element:', grid[0]);
+    }
     return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
         id: "staff-timetable-export",
         className: "timetable-grid",
@@ -985,7 +993,7 @@ function StaffTimetableGrid({ timetable, staffName }) {
                 children: "Day/Period"
             }, void 0, false, {
                 fileName: "src/components/StaffTimetableGrid.jsx",
-                lineNumber: 18,
+                lineNumber: 27,
                 columnNumber: 13
             }, this),
             [
@@ -998,7 +1006,7 @@ function StaffTimetableGrid({ timetable, staffName }) {
                     ]
                 }, i, true, {
                     fileName: "src/components/StaffTimetableGrid.jsx",
-                    lineNumber: 20,
+                    lineNumber: 29,
                     columnNumber: 17
                 }, this)),
             DAYS.map((day, dayIndex)=>/*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _reactDefault.default).Fragment, {
@@ -1008,7 +1016,7 @@ function StaffTimetableGrid({ timetable, staffName }) {
                             children: day
                         }, void 0, false, {
                             fileName: "src/components/StaffTimetableGrid.jsx",
-                            lineNumber: 25,
+                            lineNumber: 34,
                             columnNumber: 21
                         }, this),
                         grid[dayIndex].map((slot, periodIndex)=>/*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -1020,7 +1028,7 @@ function StaffTimetableGrid({ timetable, staffName }) {
                                             children: slot.subject
                                         }, void 0, false, {
                                             fileName: "src/components/StaffTimetableGrid.jsx",
-                                            lineNumber: 33,
+                                            lineNumber: 42,
                                             columnNumber: 37
                                         }, this),
                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -1028,7 +1036,7 @@ function StaffTimetableGrid({ timetable, staffName }) {
                                             children: slot.class
                                         }, void 0, false, {
                                             fileName: "src/components/StaffTimetableGrid.jsx",
-                                            lineNumber: 34,
+                                            lineNumber: 43,
                                             columnNumber: 37
                                         }, this)
                                     ]
@@ -1039,24 +1047,24 @@ function StaffTimetableGrid({ timetable, staffName }) {
                                     children: "FREE"
                                 }, void 0, false, {
                                     fileName: "src/components/StaffTimetableGrid.jsx",
-                                    lineNumber: 37,
+                                    lineNumber: 46,
                                     columnNumber: 33
                                 }, this)
                             }, periodIndex, false, {
                                 fileName: "src/components/StaffTimetableGrid.jsx",
-                                lineNumber: 27,
+                                lineNumber: 36,
                                 columnNumber: 25
                             }, this))
                     ]
                 }, day, true, {
                     fileName: "src/components/StaffTimetableGrid.jsx",
-                    lineNumber: 24,
+                    lineNumber: 33,
                     columnNumber: 17
                 }, this))
         ]
     }, void 0, true, {
         fileName: "src/components/StaffTimetableGrid.jsx",
-        lineNumber: 17,
+        lineNumber: 26,
         columnNumber: 9
     }, this);
 }

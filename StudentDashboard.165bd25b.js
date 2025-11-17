@@ -999,7 +999,7 @@ $parcel$ReactRefreshHelpers$583d.prelude(module);
 try {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>TimetableGrid);
+parcelHelpers.export(exports, "default", ()=>StaffTimetableGrid);
 var _jsxDevRuntime = require("react/jsx-dev-runtime");
 var _react = require("react");
 var _reactDefault = parcelHelpers.interopDefault(_react);
@@ -1010,22 +1010,34 @@ const DAYS = [
     'Thursday',
     'Friday'
 ];
-function TimetableGrid({ timetable, className }) {
-    if (!timetable || !timetable[className]) return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+function StaffTimetableGrid({ timetable, staffName }) {
+    if (!timetable || !timetable[staffName]) return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
         style: {
             padding: '40px',
             textAlign: 'center',
             color: '#64748b'
         },
-        children: "No timetable generated yet"
+        children: "No timetable available"
     }, void 0, false, {
         fileName: "src/components/TimetableGrid.jsx",
         lineNumber: 8,
         columnNumber: 13
     }, this);
-    const grid = timetable[className];
+    const grid = timetable[staffName];
+    // Safety check: if grid is not an array or not nested properly
+    if (!Array.isArray(grid) || grid.length === 0) return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+        style: {
+            padding: '40px',
+            textAlign: 'center',
+            color: '#64748b'
+        },
+        children: "Invalid timetable format"
+    }, void 0, false, {
+        fileName: "src/components/TimetableGrid.jsx",
+        lineNumber: 19,
+        columnNumber: 13
+    }, this);
     return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-        id: "timetable-export",
         className: "timetable-grid",
         children: [
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -1033,7 +1045,7 @@ function TimetableGrid({ timetable, className }) {
                 children: "Day/Period"
             }, void 0, false, {
                 fileName: "src/components/TimetableGrid.jsx",
-                lineNumber: 18,
+                lineNumber: 27,
                 columnNumber: 13
             }, this),
             [
@@ -1046,68 +1058,73 @@ function TimetableGrid({ timetable, className }) {
                     ]
                 }, i, true, {
                     fileName: "src/components/TimetableGrid.jsx",
-                    lineNumber: 20,
+                    lineNumber: 29,
                     columnNumber: 17
                 }, this)),
-            DAYS.map((day, dayIndex)=>/*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _reactDefault.default).Fragment, {
+            DAYS.map((day, dayIndex)=>{
+                // Safety check for each day
+                if (!grid[dayIndex] || !Array.isArray(grid[dayIndex])) return null;
+                return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _reactDefault.default).Fragment, {
                     children: [
                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                             className: "timetable-day",
                             children: day
                         }, void 0, false, {
                             fileName: "src/components/TimetableGrid.jsx",
-                            lineNumber: 25,
-                            columnNumber: 21
+                            lineNumber: 40,
+                            columnNumber: 25
                         }, this),
                         grid[dayIndex].map((slot, periodIndex)=>/*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                className: `timetable-cell subject-${slot ? slot.type.toLowerCase() : 'other'}`,
-                                children: slot ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _jsxDevRuntime.Fragment), {
+                                className: `timetable-cell subject-${slot && slot.type ? slot.type.toLowerCase() : 'free'}`,
+                                children: slot && slot.subject !== 'FREE' ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _jsxDevRuntime.Fragment), {
                                     children: [
                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                             className: "subject-name",
                                             children: slot.subject
                                         }, void 0, false, {
                                             fileName: "src/components/TimetableGrid.jsx",
-                                            lineNumber: 33,
-                                            columnNumber: 37
+                                            lineNumber: 48,
+                                            columnNumber: 41
                                         }, this),
                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                            className: "teacher-name",
-                                            children: slot.teacher
+                                            className: "class-name",
+                                            children: slot.class
                                         }, void 0, false, {
                                             fileName: "src/components/TimetableGrid.jsx",
-                                            lineNumber: 34,
-                                            columnNumber: 37
+                                            lineNumber: 49,
+                                            columnNumber: 41
                                         }, this)
                                     ]
                                 }, void 0, true) : /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                    children: "-"
+                                    className: "free-period",
+                                    children: "FREE"
                                 }, void 0, false, {
                                     fileName: "src/components/TimetableGrid.jsx",
-                                    lineNumber: 37,
-                                    columnNumber: 33
+                                    lineNumber: 52,
+                                    columnNumber: 37
                                 }, this)
                             }, periodIndex, false, {
                                 fileName: "src/components/TimetableGrid.jsx",
-                                lineNumber: 27,
-                                columnNumber: 25
+                                lineNumber: 42,
+                                columnNumber: 29
                             }, this))
                     ]
                 }, day, true, {
                     fileName: "src/components/TimetableGrid.jsx",
-                    lineNumber: 24,
-                    columnNumber: 17
-                }, this))
+                    lineNumber: 39,
+                    columnNumber: 21
+                }, this);
+            })
         ]
     }, void 0, true, {
         fileName: "src/components/TimetableGrid.jsx",
-        lineNumber: 17,
+        lineNumber: 26,
         columnNumber: 9
     }, this);
 }
-_c = TimetableGrid;
+_c = StaffTimetableGrid;
 var _c;
-$RefreshReg$(_c, "TimetableGrid");
+$RefreshReg$(_c, "StaffTimetableGrid");
 
   $parcel$ReactRefreshHelpers$583d.postlude(module);
 } finally {
