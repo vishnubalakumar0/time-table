@@ -1,145 +1,165 @@
 import React, { useState } from 'react';
 import AnimatedBackground from './AnimatedBackground';
-import { Storage } from '../utils/storage';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../utils/firebase';
 
 export default function Login({ onLogin }) {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [role, setRole] = useState('admin');
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
-    const handleSubmit = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
+        setLoading(true);
 
-        if (role === 'admin') {
-            // Admin login
-            if (username === 'admin' && password === 'admin123') {
+        if (!username || !password) {
+            setLoading(false);
+            return showError('Please enter username and password');
+        }
+
+        try {
+            // Convert Username → Email format for Firebase
+            const email = `${username}@timetable.com`;
+
+            // Firebase Authentication
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const uid = userCredential.user.uid;
+
+            // Get User Profile from Firestore
+            const snap = await getDoc(doc(db, 'users', uid));
+
+            if (!snap.exists()) {
+                setLoading(false);
+                return showError('User profile not found. Contact administrator.');
+            }
+
+            const profile = snap.data();
+
+            // Handle different user roles
+            if (profile.role === 'admin') {
                 onLogin({ 
-                    name: 'Admin', 
+                    id: uid, 
+                    name: profile.name || 'Admin',
                     role: 'admin' 
                 });
-            } else {
-                setError('Invalid admin credentials');
-            }
-        } else if (role === 'staff') {
-            // Staff login - FIX APPLIED HERE!
-            const staff = Storage.get('staff') || [];
-
-            // Find staff member by username
-            const staffMember = staff.find(
-                s => s && s.name && s.name.toLowerCase() === username.toLowerCase()
-            );
-
-            if (staffMember && password === 'staff123') {
-                // FIX: Set user.name to the EXACT staff name from database
+            } 
+            else if (profile.role === 'staff') {
                 onLogin({ 
-                    name: staffMember.name,  // ← THIS IS THE FIX!
+                    id: uid, 
+                    name: profile.name,
+                    username: profile.username || username,
                     role: 'staff' 
                 });
-            } else if (!staffMember) {
-                setError(`Staff member "${username}" not found. Check spelling.`);
-            } else {
-                setError('Invalid staff credentials');
+            } 
+            else if (profile.role === 'student') {
+                onLogin({ 
+                    id: uid, 
+                    name: profile.name || username,
+                    className: profile.className,
+                    role: 'student' 
+                });
+            } 
+            else {
+                setLoading(false);
+                return showError('Invalid user role.');
             }
-        } else if (role === 'student') {
-            // Student login
-            if (password === 'student123') {
-                const classes = Storage.get('classes') || [];
-                const studentClass = classes.find(c => 
-                    c && c.name && c.name.toLowerCase() === username.toLowerCase()
-                );
 
-                if (studentClass) {
-                    onLogin({ 
-                        name: username, 
-                        role: 'student', 
-                        className: studentClass.name 
-                    });
-                } else {
-                    setError('Class not found');
-                }
+        } catch (err) {
+            setLoading(false);
+            console.error('Login error:', err);
+
+            if (err.code === 'auth/user-not-found') {
+                showError('User not found. Check your username.');
+            } else if (err.code === 'auth/wrong-password') {
+                showError('Incorrect password. Please try again.');
+            } else if (err.code === 'auth/invalid-email') {
+                showError('Invalid username format.');
+            } else if (err.code === 'auth/network-request-failed') {
+                showError('Network error. Check your connection.');
             } else {
-                setError('Invalid student credentials');
+                showError('Login failed. Please check your credentials.');
             }
         }
+    };
+
+    const showError = (msg) => {
+        setError(msg);
+        setTimeout(() => setError(''), 4000);
     };
 
     return (
         <>
             <AnimatedBackground />
             <div className="login-container">
-                <div className="login-card">
-                    <div className="login-header">
-                        <h1>📚 Timetable Manager</h1>
-                        <p>Intelligent Scheduling System</p>
+                <div className="login-card modern">
+                    <div className="login-logo">
+                        <div className="logo-icon">📚</div>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="login-form">
-                        <div className="form-group">
-                            <label>Role</label>
-                            <select 
-                                value={role} 
-                                onChange={(e) => {
-                                    setRole(e.target.value);
-                                    setError('');
-                                }}
-                                className="input"
-                            >
-                                <option value="admin">Admin</option>
-                                <option value="staff">Staff</option>
-                                <option value="student">Student</option>
-                            </select>
-                        </div>
+                    <div className="login-header">
+                        <h1>Welcome Back</h1>
+                        <p>Sign in to continue to Timetable Manager</p>
+                    </div>
 
+                    <form onSubmit={handleLogin} className="login-form">
                         <div className="form-group">
-                            <label>
-                                {role === 'admin' ? 'Username' : 
-                                 role === 'staff' ? 'Staff Name' : 
-                                 'Class Name'}
+                            <label htmlFor="username">
+                                <span className="label-icon">👤</span>
+                                Username
                             </label>
                             <input
+                                id="username"
                                 type="text"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
-                                placeholder={
-                                    role === 'admin' ? 'Enter username' :
-                                    role === 'staff' ? 'e.g., Dr. Kavitha' :
-                                    'e.g., I MSCC (a1)'
-                                }
-                                className="input"
+                                placeholder="Enter your username"
+                                className="input modern"
+                                autoComplete="username"
                                 required
                             />
                         </div>
 
                         <div className="form-group">
-                            <label>Password</label>
+                            <label htmlFor="password">
+                                <span className="label-icon">🔒</span>
+                                Password
+                            </label>
                             <input
+                                id="password"
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                placeholder="Enter password"
-                                className="input"
+                                placeholder="Enter your password"
+                                className="input modern"
+                                autoComplete="current-password"
                                 required
                             />
                         </div>
 
                         {error && (
-                            <div className="error-message">
+                            <div className="error-message modern">
+                                <span className="error-icon">⚠️</span>
                                 {error}
                             </div>
                         )}
 
-                        <button type="submit" className="btn btn-primary">
-                            Login
+                        <button 
+                            type="submit" 
+                            className="btn btn-primary modern"
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <>
+                                    <span className="spinner"></span>
+                                    Signing in...
+                                </>
+                            ) : (
+                                'Sign In'
+                            )}
                         </button>
-
-                        <div className="login-info">
-                            <h4>Demo Credentials:</h4>
-                            <p><strong>Admin:</strong> admin / admin123</p>
-                            <p><strong>Staff:</strong> [Staff Name] / staff123</p>
-                            <p><strong>Student:</strong> [Class Name] / student123</p>
-                        </div>
                     </form>
                 </div>
             </div>

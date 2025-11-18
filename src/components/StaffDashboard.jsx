@@ -1,22 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AnimatedBackground from './AnimatedBackground';
 import StaffTimetableGrid from './StaffTimetableGrid';
 import { Storage } from '../utils/storage';
 import { exportToPDF } from '../utils/pdfUtils';
 
 export default function StaffDashboard({ user, onLogout }) {
-    // FIX 1: Get the complete timetable object
+    // Get the complete timetable object
     const [timetableData] = useState(Storage.get('timetable'));
 
-    // FIX 2: Extract staffTimetables from the timetable object
+    // Extract staffTimetables from the timetable object
     const staffTimetables = timetableData?.staffTimetables || null;
+
+    // Debug logs
+    useEffect(() => {
+        console.log('=== StaffDashboard Debug ===');
+        console.log('User object:', user);
+        console.log('User name:', user?.name);
+        console.log('Timetable data:', timetableData);
+        console.log('Staff timetables:', staffTimetables);
+        if (staffTimetables) {
+            console.log('Available staff:', Object.keys(staffTimetables));
+        }
+    }, [user, timetableData, staffTimetables]);
 
     return (
         <>
             <AnimatedBackground />
             <div className="header">
                 <div className="header-content">
-                    <h1>👨‍🏫 Staff Dashboard</h1>
+                    <div className="header-left">
+                        <h1>👨‍🏫 Staff Dashboard</h1>
+                    </div>
+                    <div className="header-center">
+                        {user && user.name && (
+                            <div className="welcome-message">
+                                <span className="welcome-text">Welcome,</span>
+                                <span className="staff-name">{user.name}</span>
+                            </div>
+                        )}
+                    </div>
                     <div className="header-actions">
                         <button className="theme-toggle">🌙</button>
                         <button className="btn btn-danger btn-sm" onClick={onLogout}>
@@ -34,7 +56,17 @@ export default function StaffDashboard({ user, onLogout }) {
                     </div>
 
                     <div className="card">
-                        {!staffTimetables ? (
+                        {!user || !user.name ? (
+                            <div style={{padding: '60px 20px', textAlign: 'center'}}>
+                                <div style={{fontSize: '60px', marginBottom: '20px'}}>⚠️</div>
+                                <h3 style={{marginBottom: '10px', color: '#1e293b'}}>
+                                    User Information Missing
+                                </h3>
+                                <p style={{color: '#64748b'}}>
+                                    Please logout and login again.
+                                </p>
+                            </div>
+                        ) : !staffTimetables ? (
                             <div style={{padding: '60px 20px', textAlign: 'center'}}>
                                 <div style={{fontSize: '60px', marginBottom: '20px'}}>📋</div>
                                 <h3 style={{marginBottom: '10px', color: '#1e293b'}}>
@@ -46,13 +78,23 @@ export default function StaffDashboard({ user, onLogout }) {
                             </div>
                         ) : (
                             <>
-                                {/* FIX 3: Pass staffTimetables correctly */}
+                                <div className="timetable-header-info">
+                                    <h3>📊 Your Schedule</h3>
+                                    <p>Below is your weekly teaching schedule</p>
+                                </div>
+
                                 <StaffTimetableGrid 
                                     timetable={staffTimetables} 
                                     staffName={user.name} 
                                 />
+
                                 <div 
-                                    style={{marginTop: '20px', display: 'flex', gap: '10px'}} 
+                                    style={{
+                                        marginTop: '20px', 
+                                        display: 'flex', 
+                                        gap: '10px',
+                                        justifyContent: 'center'
+                                    }} 
                                     className="no-print"
                                 >
                                     <button 
