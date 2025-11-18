@@ -66491,12 +66491,13 @@ var version = "12.6.0";
  */ (0, _app.registerVersion)(name, version, 'app');
 
 },{"@firebase/app":"clWgn","@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT"}],"2BjnI":[function(require,module,exports,__globalThis) {
-/**
- * LocalStorage utility functions
- */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "Storage", ()=>Storage);
 parcelHelpers.export(exports, "initializeData", ()=>initializeData);
+parcelHelpers.export(exports, "getUserByUsername", ()=>getUserByUsername);
+parcelHelpers.export(exports, "saveTimetable", ()=>saveTimetable);
+parcelHelpers.export(exports, "getTimetable", ()=>getTimetable);
 const Storage = {
     get: (key)=>{
         try {
@@ -66520,38 +66521,38 @@ const Storage = {
         } catch (error) {
             console.error('Storage remove error:', error);
         }
+    },
+    clear: ()=>{
+        try {
+            localStorage.clear();
+        } catch (error) {
+            console.error('Storage clear error:', error);
+        }
     }
 };
 const initializeData = ()=>{
+    // Initialize timetable if not present
+    if (!Storage.get('timetable')) Storage.set('timetable', {
+        classTimetables: {},
+        staffTimetables: {}
+    });
+    // Initialize classes if not present
     if (!Storage.get('classes')) Storage.set('classes', []);
-    if (!Storage.get('staff')) Storage.set('staff', [
-        {
-            id: 1,
-            name: 'Admin',
-            username: 'admin',
-            password: 'admin123',
-            role: 'admin'
-        },
-        {
-            id: 2,
-            name: 'Dr. Alice Smith',
-            username: 'alice',
-            password: 'staff123',
-            role: 'staff',
-            freePeriodMode: 'manual',
-            manualFreePeriods: 5
-        },
-        {
-            id: 3,
-            name: 'Student User',
-            username: 'student',
-            password: 'student123',
-            role: 'student',
-            className: ''
-        }
-    ]);
+    // Initialize staff if not present
+    if (!Storage.get('staff')) Storage.set('staff', []);
+    // Initialize subjects if not present
     if (!Storage.get('subjects')) Storage.set('subjects', []);
-    if (!Storage.get('timetable')) Storage.set('timetable', null);
+    console.log('Storage initialized');
+};
+const getUserByUsername = (username)=>{
+    const staff = Storage.get('staff') || [];
+    return staff.find((s)=>s.username === username);
+};
+const saveTimetable = (timetableData)=>{
+    Storage.set('timetable', timetableData);
+};
+const getTimetable = ()=>{
+    return Storage.get('timetable');
 };
 
 },{"@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT"}],"hZ41r":[function(require,module,exports,__globalThis) {

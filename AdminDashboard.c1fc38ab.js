@@ -999,7 +999,7 @@ function AdminDashboard({ user, onLogout }) {
             };
             const docRef = await (0, _firestore.addDoc)((0, _firestore.collection)((0, _firebase.db), 'staff'), staffData);
             await (0, _firestore.setDoc)((0, _firestore.doc)((0, _firebase.db), 'users', uid), {
-                fullName: newStaff.name,
+                name: newStaff.name,
                 username: newStaff.username,
                 role: 'staff'
             });
@@ -3738,148 +3738,177 @@ parcelHelpers.export(exports, "default", ()=>HoursTracker);
 var _jsxDevRuntime = require("react/jsx-dev-runtime");
 var _react = require("react");
 var _reactDefault = parcelHelpers.interopDefault(_react);
-function HoursTracker({ className, subjects }) {
-    const allocated = subjects.filter((s)=>s.className === className).reduce((sum, s)=>sum + s.hoursPerWeek, 0);
-    const remaining = 30 - allocated;
-    const percentage = allocated / 30 * 100;
+function HoursTracker({ timetable, staff }) {
+    if (!timetable || !timetable.staffTimetables) return null;
+    const teachers = staff.filter((s)=>s.role === 'staff');
     return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-        className: "hours-tracker",
+        style: {
+            marginBottom: '30px'
+        },
         children: [
-            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                className: "hours-grid",
+            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h3", {
+                style: {
+                    marginBottom: '15px'
+                },
+                children: "\uD83D\uDCCA Staff Hours Summary"
+            }, void 0, false, {
+                fileName: "src/components/HoursTracker.jsx",
+                lineNumber: 12,
+                columnNumber: 7
+            }, this),
+            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("table", {
+                className: "data-table",
                 children: [
-                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                        className: "hours-item",
-                        children: [
-                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                className: "hours-label",
-                                children: "Allocated"
-                            }, void 0, false, {
-                                fileName: "src/components/HoursTracker.jsx",
-                                lineNumber: 15,
-                                columnNumber: 21
-                            }, this),
-                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                className: "hours-value",
-                                children: allocated
-                            }, void 0, false, {
-                                fileName: "src/components/HoursTracker.jsx",
-                                lineNumber: 16,
-                                columnNumber: 21
-                            }, this)
-                        ]
-                    }, void 0, true, {
+                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("thead", {
+                        children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("tr", {
+                            children: [
+                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("th", {
+                                    children: "Staff Name"
+                                }, void 0, false, {
+                                    fileName: "src/components/HoursTracker.jsx",
+                                    lineNumber: 16,
+                                    columnNumber: 13
+                                }, this),
+                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("th", {
+                                    children: "Teaching Hours"
+                                }, void 0, false, {
+                                    fileName: "src/components/HoursTracker.jsx",
+                                    lineNumber: 17,
+                                    columnNumber: 13
+                                }, this),
+                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("th", {
+                                    children: "Free Periods"
+                                }, void 0, false, {
+                                    fileName: "src/components/HoursTracker.jsx",
+                                    lineNumber: 18,
+                                    columnNumber: 13
+                                }, this),
+                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("th", {
+                                    children: "Status"
+                                }, void 0, false, {
+                                    fileName: "src/components/HoursTracker.jsx",
+                                    lineNumber: 19,
+                                    columnNumber: 13
+                                }, this)
+                            ]
+                        }, void 0, true, {
+                            fileName: "src/components/HoursTracker.jsx",
+                            lineNumber: 15,
+                            columnNumber: 11
+                        }, this)
+                    }, void 0, false, {
                         fileName: "src/components/HoursTracker.jsx",
                         lineNumber: 14,
-                        columnNumber: 17
+                        columnNumber: 9
                     }, this),
-                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                        className: "hours-item",
-                        children: [
-                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                className: "hours-label",
-                                children: "Remaining"
-                            }, void 0, false, {
+                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("tbody", {
+                        children: teachers.map((teacher)=>{
+                            const staffTT = timetable.staffTimetables[teacher.name];
+                            if (!staffTT) return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("tr", {
+                                children: [
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
+                                        children: teacher.name
+                                    }, void 0, false, {
+                                        fileName: "src/components/HoursTracker.jsx",
+                                        lineNumber: 28,
+                                        columnNumber: 19
+                                    }, this),
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
+                                        children: "0"
+                                    }, void 0, false, {
+                                        fileName: "src/components/HoursTracker.jsx",
+                                        lineNumber: 29,
+                                        columnNumber: 19
+                                    }, this),
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
+                                        children: "30"
+                                    }, void 0, false, {
+                                        fileName: "src/components/HoursTracker.jsx",
+                                        lineNumber: 30,
+                                        columnNumber: 19
+                                    }, this),
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
+                                        children: "\u26A0\uFE0F Not Assigned"
+                                    }, void 0, false, {
+                                        fileName: "src/components/HoursTracker.jsx",
+                                        lineNumber: 31,
+                                        columnNumber: 19
+                                    }, this)
+                                ]
+                            }, teacher.id, true, {
                                 fileName: "src/components/HoursTracker.jsx",
-                                lineNumber: 19,
-                                columnNumber: 21
-                            }, this),
-                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                className: "hours-value",
-                                children: remaining
-                            }, void 0, false, {
+                                lineNumber: 27,
+                                columnNumber: 17
+                            }, this);
+                            // Count teaching hours
+                            let teachingHours = 0;
+                            let freePeriods = 0;
+                            staffTT.forEach((day)=>{
+                                day.forEach((period)=>{
+                                    if (period && period.type !== 'free') teachingHours++;
+                                    else freePeriods++;
+                                });
+                            });
+                            const status = teachingHours >= 24 ? "\u2705 Full Load" : teachingHours >= 18 ? "\u26A1 Good" : teachingHours > 0 ? "\u26A0\uFE0F Low Load" : "\u274C No Classes";
+                            return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("tr", {
+                                children: [
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
+                                        children: teacher.name
+                                    }, void 0, false, {
+                                        fileName: "src/components/HoursTracker.jsx",
+                                        lineNumber: 57,
+                                        columnNumber: 17
+                                    }, this),
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
+                                        children: [
+                                            teachingHours,
+                                            "/30"
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "src/components/HoursTracker.jsx",
+                                        lineNumber: 58,
+                                        columnNumber: 17
+                                    }, this),
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
+                                        children: [
+                                            freePeriods,
+                                            "/30"
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "src/components/HoursTracker.jsx",
+                                        lineNumber: 59,
+                                        columnNumber: 17
+                                    }, this),
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
+                                        children: status
+                                    }, void 0, false, {
+                                        fileName: "src/components/HoursTracker.jsx",
+                                        lineNumber: 60,
+                                        columnNumber: 17
+                                    }, this)
+                                ]
+                            }, teacher.id, true, {
                                 fileName: "src/components/HoursTracker.jsx",
-                                lineNumber: 20,
-                                columnNumber: 21
-                            }, this)
-                        ]
-                    }, void 0, true, {
-                        fileName: "src/components/HoursTracker.jsx",
-                        lineNumber: 18,
-                        columnNumber: 17
-                    }, this),
-                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                        className: "hours-item",
-                        children: [
-                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                className: "hours-label",
-                                children: "Total"
-                            }, void 0, false, {
-                                fileName: "src/components/HoursTracker.jsx",
-                                lineNumber: 23,
-                                columnNumber: 21
-                            }, this),
-                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                className: "hours-value",
-                                children: "30"
-                            }, void 0, false, {
-                                fileName: "src/components/HoursTracker.jsx",
-                                lineNumber: 24,
-                                columnNumber: 21
-                            }, this)
-                        ]
-                    }, void 0, true, {
+                                lineNumber: 56,
+                                columnNumber: 15
+                            }, this);
+                        })
+                    }, void 0, false, {
                         fileName: "src/components/HoursTracker.jsx",
                         lineNumber: 22,
-                        columnNumber: 17
+                        columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "src/components/HoursTracker.jsx",
                 lineNumber: 13,
-                columnNumber: 13
-            }, this),
-            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                className: "progress-bar",
-                children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                    className: "progress-fill",
-                    style: {
-                        width: `${Math.min(percentage, 100)}%`
-                    }
-                }, void 0, false, {
-                    fileName: "src/components/HoursTracker.jsx",
-                    lineNumber: 28,
-                    columnNumber: 17
-                }, this)
-            }, void 0, false, {
-                fileName: "src/components/HoursTracker.jsx",
-                lineNumber: 27,
-                columnNumber: 13
-            }, this),
-            remaining === 0 && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                style: {
-                    marginTop: '12px',
-                    textAlign: 'center',
-                    fontWeight: 'bold'
-                },
-                children: "\u2713 Perfect! No free periods."
-            }, void 0, false, {
-                fileName: "src/components/HoursTracker.jsx",
-                lineNumber: 34,
-                columnNumber: 17
-            }, this),
-            remaining < 0 && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                style: {
-                    marginTop: '12px',
-                    textAlign: 'center',
-                    fontWeight: 'bold',
-                    color: '#ef4444'
-                },
-                children: [
-                    "\u26A0 Over by ",
-                    Math.abs(remaining),
-                    " hours!"
-                ]
-            }, void 0, true, {
-                fileName: "src/components/HoursTracker.jsx",
-                lineNumber: 39,
-                columnNumber: 17
+                columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "src/components/HoursTracker.jsx",
-        lineNumber: 12,
-        columnNumber: 9
+        lineNumber: 11,
+        columnNumber: 5
     }, this);
 }
 _c = HoursTracker;
