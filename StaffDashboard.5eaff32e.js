@@ -736,15 +736,28 @@ var _pdfUtils = require("../utils/pdfUtils");
 var _s = $RefreshSig$();
 function StaffDashboard({ user, onLogout }) {
     _s();
-    // FIX 1: Get the complete timetable object
+    // Get the complete timetable object
     const [timetableData] = (0, _react.useState)((0, _storage.Storage).get('timetable'));
-    // FIX 2: Extract staffTimetables from the timetable object
+    // Extract staffTimetables from the timetable object
     const staffTimetables = timetableData?.staffTimetables || null;
+    // Debug logs
+    (0, _react.useEffect)(()=>{
+        console.log('=== StaffDashboard Debug ===');
+        console.log('User object:', user);
+        console.log('User name:', user?.name);
+        console.log('Timetable data:', timetableData);
+        console.log('Staff timetables:', staffTimetables);
+        if (staffTimetables) console.log('Available staff:', Object.keys(staffTimetables));
+    }, [
+        user,
+        timetableData,
+        staffTimetables
+    ]);
     return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _jsxDevRuntime.Fragment), {
         children: [
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _animatedBackgroundDefault.default), {}, void 0, false, {
                 fileName: "src/components/StaffDashboard.jsx",
-                lineNumber: 16,
+                lineNumber: 28,
                 columnNumber: 13
             }, this),
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -752,11 +765,50 @@ function StaffDashboard({ user, onLogout }) {
                 children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                     className: "header-content",
                     children: [
-                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h1", {
-                            children: "\uD83D\uDC68\u200D\uD83C\uDFEB Staff Dashboard"
+                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                            className: "header-left",
+                            children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h1", {
+                                children: "\uD83D\uDC68\u200D\uD83C\uDFEB Staff Dashboard"
+                            }, void 0, false, {
+                                fileName: "src/components/StaffDashboard.jsx",
+                                lineNumber: 32,
+                                columnNumber: 25
+                            }, this)
                         }, void 0, false, {
                             fileName: "src/components/StaffDashboard.jsx",
-                            lineNumber: 19,
+                            lineNumber: 31,
+                            columnNumber: 21
+                        }, this),
+                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                            className: "header-center",
+                            children: user && user.name && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                className: "welcome-message",
+                                children: [
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                        className: "welcome-text",
+                                        children: "Welcome,"
+                                    }, void 0, false, {
+                                        fileName: "src/components/StaffDashboard.jsx",
+                                        lineNumber: 37,
+                                        columnNumber: 33
+                                    }, this),
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                        className: "staff-name",
+                                        children: user.name
+                                    }, void 0, false, {
+                                        fileName: "src/components/StaffDashboard.jsx",
+                                        lineNumber: 38,
+                                        columnNumber: 33
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "src/components/StaffDashboard.jsx",
+                                lineNumber: 36,
+                                columnNumber: 29
+                            }, this)
+                        }, void 0, false, {
+                            fileName: "src/components/StaffDashboard.jsx",
+                            lineNumber: 34,
                             columnNumber: 21
                         }, this),
                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -767,7 +819,7 @@ function StaffDashboard({ user, onLogout }) {
                                     children: "\uD83C\uDF19"
                                 }, void 0, false, {
                                     fileName: "src/components/StaffDashboard.jsx",
-                                    lineNumber: 21,
+                                    lineNumber: 43,
                                     columnNumber: 25
                                 }, this),
                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
@@ -776,24 +828,24 @@ function StaffDashboard({ user, onLogout }) {
                                     children: "Logout"
                                 }, void 0, false, {
                                     fileName: "src/components/StaffDashboard.jsx",
-                                    lineNumber: 22,
+                                    lineNumber: 44,
                                     columnNumber: 25
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "src/components/StaffDashboard.jsx",
-                            lineNumber: 20,
+                            lineNumber: 42,
                             columnNumber: 21
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "src/components/StaffDashboard.jsx",
-                    lineNumber: 18,
+                    lineNumber: 30,
                     columnNumber: 17
                 }, this)
             }, void 0, false, {
                 fileName: "src/components/StaffDashboard.jsx",
-                lineNumber: 17,
+                lineNumber: 29,
                 columnNumber: 13
             }, this),
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -809,7 +861,7 @@ function StaffDashboard({ user, onLogout }) {
                                     children: "\uD83D\uDCC5"
                                 }, void 0, false, {
                                     fileName: "src/components/StaffDashboard.jsx",
-                                    lineNumber: 32,
+                                    lineNumber: 54,
                                     columnNumber: 25
                                 }, this),
                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h2", {
@@ -817,18 +869,61 @@ function StaffDashboard({ user, onLogout }) {
                                     children: "My Timetable"
                                 }, void 0, false, {
                                     fileName: "src/components/StaffDashboard.jsx",
-                                    lineNumber: 33,
+                                    lineNumber: 55,
                                     columnNumber: 25
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "src/components/StaffDashboard.jsx",
-                            lineNumber: 31,
+                            lineNumber: 53,
                             columnNumber: 21
                         }, this),
                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                             className: "card",
-                            children: !staffTimetables ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                            children: !user || !user.name ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                style: {
+                                    padding: '60px 20px',
+                                    textAlign: 'center'
+                                },
+                                children: [
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                        style: {
+                                            fontSize: '60px',
+                                            marginBottom: '20px'
+                                        },
+                                        children: "\u26A0\uFE0F"
+                                    }, void 0, false, {
+                                        fileName: "src/components/StaffDashboard.jsx",
+                                        lineNumber: 61,
+                                        columnNumber: 33
+                                    }, this),
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h3", {
+                                        style: {
+                                            marginBottom: '10px',
+                                            color: '#1e293b'
+                                        },
+                                        children: "User Information Missing"
+                                    }, void 0, false, {
+                                        fileName: "src/components/StaffDashboard.jsx",
+                                        lineNumber: 62,
+                                        columnNumber: 33
+                                    }, this),
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
+                                        style: {
+                                            color: '#64748b'
+                                        },
+                                        children: "Please logout and login again."
+                                    }, void 0, false, {
+                                        fileName: "src/components/StaffDashboard.jsx",
+                                        lineNumber: 65,
+                                        columnNumber: 33
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "src/components/StaffDashboard.jsx",
+                                lineNumber: 60,
+                                columnNumber: 29
+                            }, this) : !staffTimetables ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                 style: {
                                     padding: '60px 20px',
                                     textAlign: 'center'
@@ -842,7 +937,7 @@ function StaffDashboard({ user, onLogout }) {
                                         children: "\uD83D\uDCCB"
                                     }, void 0, false, {
                                         fileName: "src/components/StaffDashboard.jsx",
-                                        lineNumber: 39,
+                                        lineNumber: 71,
                                         columnNumber: 33
                                     }, this),
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h3", {
@@ -853,7 +948,7 @@ function StaffDashboard({ user, onLogout }) {
                                         children: "No Timetable Generated"
                                     }, void 0, false, {
                                         fileName: "src/components/StaffDashboard.jsx",
-                                        lineNumber: 40,
+                                        lineNumber: 72,
                                         columnNumber: 33
                                     }, this),
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
@@ -863,29 +958,53 @@ function StaffDashboard({ user, onLogout }) {
                                         children: "Please contact the administrator to generate a timetable."
                                     }, void 0, false, {
                                         fileName: "src/components/StaffDashboard.jsx",
-                                        lineNumber: 43,
+                                        lineNumber: 75,
                                         columnNumber: 33
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "src/components/StaffDashboard.jsx",
-                                lineNumber: 38,
+                                lineNumber: 70,
                                 columnNumber: 29
                             }, this) : /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _jsxDevRuntime.Fragment), {
                                 children: [
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                        className: "timetable-header-info",
+                                        children: [
+                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h3", {
+                                                children: "\uD83D\uDCCA Your Schedule"
+                                            }, void 0, false, {
+                                                fileName: "src/components/StaffDashboard.jsx",
+                                                lineNumber: 82,
+                                                columnNumber: 37
+                                            }, this),
+                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
+                                                children: "Below is your weekly teaching schedule"
+                                            }, void 0, false, {
+                                                fileName: "src/components/StaffDashboard.jsx",
+                                                lineNumber: 83,
+                                                columnNumber: 37
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "src/components/StaffDashboard.jsx",
+                                        lineNumber: 81,
+                                        columnNumber: 33
+                                    }, this),
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _staffTimetableGridDefault.default), {
                                         timetable: staffTimetables,
                                         staffName: user.name
                                     }, void 0, false, {
                                         fileName: "src/components/StaffDashboard.jsx",
-                                        lineNumber: 50,
+                                        lineNumber: 86,
                                         columnNumber: 33
                                     }, this),
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                         style: {
                                             marginTop: '20px',
                                             display: 'flex',
-                                            gap: '10px'
+                                            gap: '10px',
+                                            justifyContent: 'center'
                                         },
                                         className: "no-print",
                                         children: [
@@ -895,7 +1014,7 @@ function StaffDashboard({ user, onLogout }) {
                                                 children: "\uD83D\uDCC4 Download PDF"
                                             }, void 0, false, {
                                                 fileName: "src/components/StaffDashboard.jsx",
-                                                lineNumber: 58,
+                                                lineNumber: 100,
                                                 columnNumber: 37
                                             }, this),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
@@ -904,37 +1023,37 @@ function StaffDashboard({ user, onLogout }) {
                                                 children: "\uD83D\uDDA8\uFE0F Print"
                                             }, void 0, false, {
                                                 fileName: "src/components/StaffDashboard.jsx",
-                                                lineNumber: 67,
+                                                lineNumber: 109,
                                                 columnNumber: 37
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/components/StaffDashboard.jsx",
-                                        lineNumber: 54,
+                                        lineNumber: 91,
                                         columnNumber: 33
                                     }, this)
                                 ]
                             }, void 0, true)
                         }, void 0, false, {
                             fileName: "src/components/StaffDashboard.jsx",
-                            lineNumber: 36,
+                            lineNumber: 58,
                             columnNumber: 21
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "src/components/StaffDashboard.jsx",
-                    lineNumber: 30,
+                    lineNumber: 52,
                     columnNumber: 17
                 }, this)
             }, void 0, false, {
                 fileName: "src/components/StaffDashboard.jsx",
-                lineNumber: 29,
+                lineNumber: 51,
                 columnNumber: 13
             }, this)
         ]
     }, void 0, true);
 }
-_s(StaffDashboard, "y1TAunA0ESrI+UHXzcMNiyjTD/Q=");
+_s(StaffDashboard, "n/2N2FIrnZjHEZbiB7kfzSfgiNw=");
 _c = StaffDashboard;
 var _c;
 $RefreshReg$(_c, "StaffDashboard");
