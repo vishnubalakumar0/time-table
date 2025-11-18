@@ -266,7 +266,7 @@ const fetchData = async () => {
 
             const docRef = await addDoc(collection(db, 'staff'), staffData);
             await setDoc(doc(db, 'users', uid), {
-                fullName: newStaff.name,
+                name: newStaff.name,
                 username: newStaff.username,
                 role: 'staff'
             });
@@ -554,7 +554,6 @@ const fetchData = async () => {
                 <div className="header-content">
                     <h1>🏫 Admin Dashboard</h1>
                     <div className="header-actions">
-                        <button className="theme-toggle">🌙</button>
                         <button className="btn btn-danger btn-sm" onClick={onLogout}>
                             Logout
                         </button>

@@ -21,30 +21,21 @@ export default function Login({ onLogin }) {
         }
 
         try {
-            // Convert Username → Email format for Firebase
             const email = `${username}@timetable.com`;
-
-            // Firebase Authentication
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const uid = userCredential.user.uid;
 
-            // Get User Profile from Firestore
             const snap = await getDoc(doc(db, 'users', uid));
 
             if (!snap.exists()) {
                 setLoading(false);
-                return showError('User profile not found. Contact administrator.');
+                return showError('User profile not found');
             }
 
             const profile = snap.data();
 
-            // Handle different user roles
             if (profile.role === 'admin') {
-                onLogin({ 
-                    id: uid, 
-                    name: profile.name || 'Admin',
-                    role: 'admin' 
-                });
+                onLogin({ id: uid, name: profile.name || 'Admin', role: 'admin' });
             } 
             else if (profile.role === 'staff') {
                 onLogin({ 
@@ -55,16 +46,11 @@ export default function Login({ onLogin }) {
                 });
             } 
             else if (profile.role === 'student') {
-                onLogin({ 
-                    id: uid, 
-                    name: profile.name || username,
-                    className: profile.className,
-                    role: 'student' 
-                });
+                onLogin({ id: uid, name: profile.name || username, className: profile.className, role: 'student' });
             } 
             else {
                 setLoading(false);
-                return showError('Invalid user role.');
+                return showError('Invalid user role');
             }
 
         } catch (err) {
@@ -72,15 +58,11 @@ export default function Login({ onLogin }) {
             console.error('Login error:', err);
 
             if (err.code === 'auth/user-not-found') {
-                showError('User not found. Check your username.');
+                showError('User not found');
             } else if (err.code === 'auth/wrong-password') {
-                showError('Incorrect password. Please try again.');
-            } else if (err.code === 'auth/invalid-email') {
-                showError('Invalid username format.');
-            } else if (err.code === 'auth/network-request-failed') {
-                showError('Network error. Check your connection.');
+                showError('Incorrect password');
             } else {
-                showError('Login failed. Please check your credentials.');
+                showError('Login failed. Check credentials.');
             }
         }
     };
@@ -101,7 +83,7 @@ export default function Login({ onLogin }) {
 
                     <div className="login-header">
                         <h1>Welcome Back</h1>
-                        <p>Sign in to continue to Timetable Manager</p>
+                        <p>Sign in to Timetable Manager</p>
                     </div>
 
                     <form onSubmit={handleLogin} className="login-form">
@@ -115,9 +97,8 @@ export default function Login({ onLogin }) {
                                 type="text"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
-                                placeholder="Enter your username"
+                                placeholder="Enter username"
                                 className="input modern"
-                                autoComplete="username"
                                 required
                             />
                         </div>
@@ -132,9 +113,8 @@ export default function Login({ onLogin }) {
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                placeholder="Enter your password"
+                                placeholder="Enter password"
                                 className="input modern"
-                                autoComplete="current-password"
                                 required
                             />
                         </div>

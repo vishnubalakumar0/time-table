@@ -1,45 +1,68 @@
 import React from 'react';
 
-export default function HoursTracker({ className, subjects }) {
-    const allocated = subjects
-        .filter(s => s.className === className)
-        .reduce((sum, s) => sum + s.hoursPerWeek, 0);
+export default function HoursTracker({ timetable, staff }) {
+  if (!timetable || !timetable.staffTimetables) {
+    return null;
+  }
 
-    const remaining = 30 - allocated;
-    const percentage = (allocated / 30) * 100;
+  const teachers = staff.filter(s => s.role === 'staff');
 
-    return (
-        <div className="hours-tracker">
-            <div className="hours-grid">
-                <div className="hours-item">
-                    <div className="hours-label">Allocated</div>
-                    <div className="hours-value">{allocated}</div>
-                </div>
-                <div className="hours-item">
-                    <div className="hours-label">Remaining</div>
-                    <div className="hours-value">{remaining}</div>
-                </div>
-                <div className="hours-item">
-                    <div className="hours-label">Total</div>
-                    <div className="hours-value">30</div>
-                </div>
-            </div>
-            <div className="progress-bar">
-                <div 
-                    className="progress-fill" 
-                    style={{ width: `${Math.min(percentage, 100)}%` }} 
-                />
-            </div>
-            {remaining === 0 && (
-                <div style={{ marginTop: '12px', textAlign: 'center', fontWeight: 'bold' }}>
-                    ✓ Perfect! No free periods.
-                </div>
-            )}
-            {remaining < 0 && (
-                <div style={{ marginTop: '12px', textAlign: 'center', fontWeight: 'bold', color: '#ef4444' }}>
-                    ⚠ Over by {Math.abs(remaining)} hours!
-                </div>
-            )}
-        </div>
-    );
+  return (
+    <div style={{ marginBottom: '30px' }}>
+      <h3 style={{ marginBottom: '15px' }}>📊 Staff Hours Summary</h3>
+      <table className="data-table">
+        <thead>
+          <tr>
+            <th>Staff Name</th>
+            <th>Teaching Hours</th>
+            <th>Free Periods</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {teachers.map((teacher) => {
+            const staffTT = timetable.staffTimetables[teacher.name];
+            if (!staffTT) {
+              return (
+                <tr key={teacher.id}>
+                  <td>{teacher.name}</td>
+                  <td>0</td>
+                  <td>30</td>
+                  <td>⚠️ Not Assigned</td>
+                </tr>
+              );
+            }
+
+            // Count teaching hours
+            let teachingHours = 0;
+            let freePeriods = 0;
+
+            staffTT.forEach(day => {
+              day.forEach(period => {
+                if (period && period.type !== 'free') {
+                  teachingHours++;
+                } else {
+                  freePeriods++;
+                }
+              });
+            });
+
+            const status = teachingHours >= 24 ? '✅ Full Load' :
+                          teachingHours >= 18 ? '⚡ Good' :
+                          teachingHours > 0 ? '⚠️ Low Load' :
+                          '❌ No Classes';
+
+            return (
+              <tr key={teacher.id}>
+                <td>{teacher.name}</td>
+                <td>{teachingHours}/30</td>
+                <td>{freePeriods}/30</td>
+                <td>{status}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
 }

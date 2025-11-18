@@ -1,6 +1,213 @@
 /* Smart Timetable Generator - Complete CSS
  * Performance-optimized for faster loading
  */
+/* ═══════════════════════════════════════════════════════════════════════════════
+   MODERN LOGIN STYLES - Add to your main.css
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.login-card.modern {
+    max-width: 420px;
+    padding: 0;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    border-radius: 20px;
+}
+
+.login-logo {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 40px 0 30px 0;
+    text-align: center;
+}
+
+.logo-icon {
+    font-size: 72px;
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+
+.login-header {
+    padding: 30px 40px 20px 40px;
+    text-align: center;
+}
+
+.login-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+    color: #1e293b;
+}
+
+.login-header p {
+    font-size: 14px;
+    color: #64748b;
+    margin: 0;
+}
+
+.login-form {
+    padding: 0 40px 40px 40px;
+}
+
+.form-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 8px;
+}
+
+.label-icon {
+    font-size: 16px;
+}
+
+.input.modern {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 15px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    background: #f8fafc;
+}
+
+.input.modern:focus {
+    outline: none;
+    border-color: #667eea;
+    background: white;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.error-message.modern {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #fee2e2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    margin-bottom: 20px;
+    animation: shake 0.4s ease;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+}
+
+.error-icon {
+    font-size: 18px;
+}
+
+.btn.modern {
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.btn.modern:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+}
+
+.btn.modern:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.btn.modern:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Staff Dashboard Name Display */
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.header-left h1 {
+    margin: 0;
+    font-size: 24px;
+}
+
+.header-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+}
+
+.welcome-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.welcome-text {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 500;
+}
+
+.staff-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.timetable-header-info {
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%);
+    border-radius: 12px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.timetable-header-info h3 {
+    margin: 0 0 5px 0;
+    color: #1e293b;
+    font-size: 20px;
+}
+
+.timetable-header-info p {
+    margin: 0;
+    color: #64748b;
+    font-size: 14px;
+}
 
 /* ========== LOGIN PAGE STYLES ========== */
 .login-container {
@@ -56,6 +263,153 @@
 
 .input-wrapper input {
     padding-left: 50px;
+}
+
+/* Staff Name Display in Header - Add to main.css */
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 20px;
+}
+
+.header-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.staff-name-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 10px 30px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+}
+
+.staff-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.staff-name-text {
+    font-size: 20px;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.timetable-info-header {
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%);
+    border-radius: 12px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.timetable-info-header h3 {
+    margin: 0 0 8px 0;
+    color: #1e293b;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.timetable-info-header p {
+    margin: 0;
+    color: #64748b;
+    font-size: 14px;
+}
+
+/* Timetable Styling */
+.timetable-container {
+    overflow-x: auto;
+    margin: 20px 0;
+}
+
+.timetable {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.day-header, .period-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px;
+    font-weight: 600;
+    text-align: center;
+    font-size: 14px;
+}
+
+.day-cell {
+    background: #f8fafc;
+    padding: 15px;
+    font-weight: 600;
+    text-align: center;
+    color: #334155;
+    border-right: 2px solid #e2e8f0;
+}
+
+.period-cell {
+    padding: 12px;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+    min-width: 120px;
+}
+
+.period-cell.class-period {
+    background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%);
+}
+
+.period-cell.free-period {
+    background: #f1f5f9;
+}
+
+.period-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+}
+
+.subject-name {
+    font-weight: 600;
+    color: #1e293b;
+    font-size: 13px;
+}
+
+.class-name {
+    font-size: 11px;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.period-content.free .subject-name {
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    .header {
+        background: white !important;
+        color: black !important;
+    }
 }
 
 /* ========== GLOBAL STYLES ========== */
@@ -172,6 +526,138 @@ body {
     -webkit-backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.3);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* Add to your main.css */
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.staff-name-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 24px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+}
+
+.staff-label {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.8);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 2px;
+}
+
+.staff-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.timetable-info {
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%);
+    border-radius: 12px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.timetable-info h3 {
+    margin: 0 0 8px 0;
+    color: #1e293b;
+    font-size: 20px;
+}
+
+.timetable-info p {
+    margin: 0;
+    color: #64748b;
+    font-size: 14px;
+}
+
+/* Add to your main.css - Welcome box in corner */
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.welcome-box {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.welcome-text {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.user-name-text {
+    font-size: 16px;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.theme-toggle {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.theme-toggle:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(1.05);
+}
+
+.timetable-info {
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%);
+    border-radius: 12px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.timetable-info h3 {
+    margin: 0 0 8px 0;
+    color: #1e293b;
+    font-size: 20px;
+}
+
+.timetable-info p {
+    margin: 0;
+    color: #64748b;
+    font-size: 14px;
 }
 
 /* ========== HEADER ========== */
