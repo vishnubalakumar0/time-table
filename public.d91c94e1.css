@@ -149,13 +149,6 @@
   }
 }
 
-.header-content {
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
-  display: flex;
-}
-
 .header-left h1 {
   margin: 0;
   font-size: 24px;
@@ -178,13 +171,6 @@
   color: #fffc;
   font-size: 13px;
   font-weight: 500;
-}
-
-.staff-name {
-  color: #fff;
-  text-shadow: 0 2px 4px #0000001a;
-  font-size: 18px;
-  font-weight: 700;
 }
 
 .timetable-header-info {
@@ -525,6 +511,109 @@ body {
   background: #fffffff2;
   border: 1px solid #ffffff4d;
   box-shadow: 0 8px 32px #0000001a;
+}
+
+.header-content {
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  display: flex;
+}
+
+.staff-name-box {
+  backdrop-filter: blur(10px);
+  background: #fff3;
+  border-radius: 10px;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 24px;
+  display: flex;
+}
+
+.staff-label {
+  color: #fffc;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 2px;
+  font-size: 11px;
+}
+
+.staff-name {
+  color: #fff;
+  text-shadow: 0 2px 4px #0003;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.header-content {
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  display: flex;
+}
+
+.header-right {
+  align-items: center;
+  gap: 15px;
+  display: flex;
+}
+
+.welcome-box {
+  backdrop-filter: blur(10px);
+  background: #ffffff26;
+  border: 1px solid #fff3;
+  border-radius: 10px;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 8px 16px;
+  display: flex;
+}
+
+.welcome-text {
+  color: #ffffffd9;
+  letter-spacing: .5px;
+  margin-bottom: 2px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.user-name-text {
+  color: #fff;
+  text-shadow: 0 2px 4px #0003;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.theme-toggle {
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  background: #ffffff26;
+  border: 1px solid #fff3;
+  border-radius: 10px;
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+  transition: all .3s;
+}
+
+.timetable-info {
+  text-align: center;
+  background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%);
+  border-radius: 12px;
+  margin-bottom: 20px;
+  padding: 20px;
+}
+
+.timetable-info h3 {
+  color: #1e293b;
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+.timetable-info p {
+  color: #64748b;
+  margin: 0;
+  font-size: 14px;
 }
 
 .header {

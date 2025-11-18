@@ -25113,19 +25113,15 @@ function Login({ onLogin }) {
             return showError('Please enter username and password');
         }
         try {
-            // Convert Username → Email format for Firebase
             const email = `${username}@timetable.com`;
-            // Firebase Authentication
             const userCredential = await (0, _auth.signInWithEmailAndPassword)((0, _firebase.auth), email, password);
             const uid = userCredential.user.uid;
-            // Get User Profile from Firestore
             const snap = await (0, _firestore.getDoc)((0, _firestore.doc)((0, _firebase.db), 'users', uid));
             if (!snap.exists()) {
                 setLoading(false);
-                return showError('User profile not found. Contact administrator.');
+                return showError('User profile not found');
             }
             const profile = snap.data();
-            // Handle different user roles
             if (profile.role === 'admin') onLogin({
                 id: uid,
                 name: profile.name || 'Admin',
@@ -25145,16 +25141,14 @@ function Login({ onLogin }) {
             });
             else {
                 setLoading(false);
-                return showError('Invalid user role.');
+                return showError('Invalid user role');
             }
         } catch (err) {
             setLoading(false);
             console.error('Login error:', err);
-            if (err.code === 'auth/user-not-found') showError('User not found. Check your username.');
-            else if (err.code === 'auth/wrong-password') showError('Incorrect password. Please try again.');
-            else if (err.code === 'auth/invalid-email') showError('Invalid username format.');
-            else if (err.code === 'auth/network-request-failed') showError('Network error. Check your connection.');
-            else showError('Login failed. Please check your credentials.');
+            if (err.code === 'auth/user-not-found') showError('User not found');
+            else if (err.code === 'auth/wrong-password') showError('Incorrect password');
+            else showError('Login failed. Check credentials.');
         }
     };
     const showError = (msg)=>{
@@ -25165,7 +25159,7 @@ function Login({ onLogin }) {
         children: [
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _animatedBackgroundDefault.default), {}, void 0, false, {
                 fileName: "src/components/Login.jsx",
-                lineNumber: 95,
+                lineNumber: 77,
                 columnNumber: 13
             }, this),
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -25180,12 +25174,12 @@ function Login({ onLogin }) {
                                 children: "\uD83D\uDCDA"
                             }, void 0, false, {
                                 fileName: "src/components/Login.jsx",
-                                lineNumber: 99,
+                                lineNumber: 81,
                                 columnNumber: 25
                             }, this)
                         }, void 0, false, {
                             fileName: "src/components/Login.jsx",
-                            lineNumber: 98,
+                            lineNumber: 80,
                             columnNumber: 21
                         }, this),
                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -25195,20 +25189,20 @@ function Login({ onLogin }) {
                                     children: "Welcome Back"
                                 }, void 0, false, {
                                     fileName: "src/components/Login.jsx",
-                                    lineNumber: 103,
+                                    lineNumber: 85,
                                     columnNumber: 25
                                 }, this),
                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
-                                    children: "Sign in to continue to Timetable Manager"
+                                    children: "Sign in to Timetable Manager"
                                 }, void 0, false, {
                                     fileName: "src/components/Login.jsx",
-                                    lineNumber: 104,
+                                    lineNumber: 86,
                                     columnNumber: 25
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "src/components/Login.jsx",
-                            lineNumber: 102,
+                            lineNumber: 84,
                             columnNumber: 21
                         }, this),
                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("form", {
@@ -25226,14 +25220,14 @@ function Login({ onLogin }) {
                                                     children: "\uD83D\uDC64"
                                                 }, void 0, false, {
                                                     fileName: "src/components/Login.jsx",
-                                                    lineNumber: 110,
+                                                    lineNumber: 92,
                                                     columnNumber: 33
                                                 }, this),
                                                 "Username"
                                             ]
                                         }, void 0, true, {
                                             fileName: "src/components/Login.jsx",
-                                            lineNumber: 109,
+                                            lineNumber: 91,
                                             columnNumber: 29
                                         }, this),
                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("input", {
@@ -25241,19 +25235,18 @@ function Login({ onLogin }) {
                                             type: "text",
                                             value: username,
                                             onChange: (e)=>setUsername(e.target.value),
-                                            placeholder: "Enter your username",
+                                            placeholder: "Enter username",
                                             className: "input modern",
-                                            autoComplete: "username",
                                             required: true
                                         }, void 0, false, {
                                             fileName: "src/components/Login.jsx",
-                                            lineNumber: 113,
+                                            lineNumber: 95,
                                             columnNumber: 29
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "src/components/Login.jsx",
-                                    lineNumber: 108,
+                                    lineNumber: 90,
                                     columnNumber: 25
                                 }, this),
                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -25267,14 +25260,14 @@ function Login({ onLogin }) {
                                                     children: "\uD83D\uDD12"
                                                 }, void 0, false, {
                                                     fileName: "src/components/Login.jsx",
-                                                    lineNumber: 127,
+                                                    lineNumber: 108,
                                                     columnNumber: 33
                                                 }, this),
                                                 "Password"
                                             ]
                                         }, void 0, true, {
                                             fileName: "src/components/Login.jsx",
-                                            lineNumber: 126,
+                                            lineNumber: 107,
                                             columnNumber: 29
                                         }, this),
                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("input", {
@@ -25282,19 +25275,18 @@ function Login({ onLogin }) {
                                             type: "password",
                                             value: password,
                                             onChange: (e)=>setPassword(e.target.value),
-                                            placeholder: "Enter your password",
+                                            placeholder: "Enter password",
                                             className: "input modern",
-                                            autoComplete: "current-password",
                                             required: true
                                         }, void 0, false, {
                                             fileName: "src/components/Login.jsx",
-                                            lineNumber: 130,
+                                            lineNumber: 111,
                                             columnNumber: 29
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "src/components/Login.jsx",
-                                    lineNumber: 125,
+                                    lineNumber: 106,
                                     columnNumber: 25
                                 }, this),
                                 error && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -25305,14 +25297,14 @@ function Login({ onLogin }) {
                                             children: "\u26A0\uFE0F"
                                         }, void 0, false, {
                                             fileName: "src/components/Login.jsx",
-                                            lineNumber: 144,
+                                            lineNumber: 124,
                                             columnNumber: 33
                                         }, this),
                                         error
                                     ]
                                 }, void 0, true, {
                                     fileName: "src/components/Login.jsx",
-                                    lineNumber: 143,
+                                    lineNumber: 123,
                                     columnNumber: 29
                                 }, this),
                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
@@ -25325,7 +25317,7 @@ function Login({ onLogin }) {
                                                 className: "spinner"
                                             }, void 0, false, {
                                                 fileName: "src/components/Login.jsx",
-                                                lineNumber: 156,
+                                                lineNumber: 136,
                                                 columnNumber: 37
                                             }, this),
                                             "Signing in..."
@@ -25333,24 +25325,24 @@ function Login({ onLogin }) {
                                     }, void 0, true) : 'Sign In'
                                 }, void 0, false, {
                                     fileName: "src/components/Login.jsx",
-                                    lineNumber: 149,
+                                    lineNumber: 129,
                                     columnNumber: 25
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "src/components/Login.jsx",
-                            lineNumber: 107,
+                            lineNumber: 89,
                             columnNumber: 21
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "src/components/Login.jsx",
-                    lineNumber: 97,
+                    lineNumber: 79,
                     columnNumber: 17
                 }, this)
             }, void 0, false, {
                 fileName: "src/components/Login.jsx",
-                lineNumber: 96,
+                lineNumber: 78,
                 columnNumber: 13
             }, this)
         ]
@@ -66495,9 +66487,6 @@ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "Storage", ()=>Storage);
 parcelHelpers.export(exports, "initializeData", ()=>initializeData);
-parcelHelpers.export(exports, "getUserByUsername", ()=>getUserByUsername);
-parcelHelpers.export(exports, "saveTimetable", ()=>saveTimetable);
-parcelHelpers.export(exports, "getTimetable", ()=>getTimetable);
 const Storage = {
     get: (key)=>{
         try {
@@ -66521,38 +66510,13 @@ const Storage = {
         } catch (error) {
             console.error('Storage remove error:', error);
         }
-    },
-    clear: ()=>{
-        try {
-            localStorage.clear();
-        } catch (error) {
-            console.error('Storage clear error:', error);
-        }
     }
 };
 const initializeData = ()=>{
-    // Initialize timetable if not present
     if (!Storage.get('timetable')) Storage.set('timetable', {
         classTimetables: {},
         staffTimetables: {}
     });
-    // Initialize classes if not present
-    if (!Storage.get('classes')) Storage.set('classes', []);
-    // Initialize staff if not present
-    if (!Storage.get('staff')) Storage.set('staff', []);
-    // Initialize subjects if not present
-    if (!Storage.get('subjects')) Storage.set('subjects', []);
-    console.log('Storage initialized');
-};
-const getUserByUsername = (username)=>{
-    const staff = Storage.get('staff') || [];
-    return staff.find((s)=>s.username === username);
-};
-const saveTimetable = (timetableData)=>{
-    Storage.set('timetable', timetableData);
-};
-const getTimetable = ()=>{
-    return Storage.get('timetable');
 };
 
 },{"@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT"}],"hZ41r":[function(require,module,exports,__globalThis) {
