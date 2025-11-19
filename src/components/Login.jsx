@@ -1,148 +1,189 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AnimatedBackground from './AnimatedBackground';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../utils/firebase';
 
 export default function Login({ onLogin }) {
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-    const handleLogin = async (e) => {
-        e.preventDefault();
-        setError('');
-        setLoading(true);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-        if (!username || !password) {
-            setLoading(false);
-            return showError('Please enter username and password');
-        }
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
 
-        try {
-            const email = `${username}@timetable.com`;
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            const uid = userCredential.user.uid;
+    if (!username || !password) {
+      setLoading(false);
+      return showError('Please enter username and password');
+    }
 
-            const snap = await getDoc(doc(db, 'users', uid));
+    try {
+      const email = `${username}@timetable.com`;
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const uid = userCredential.user.uid;
+      const snap = await getDoc(doc(db, 'users', uid));
 
-            if (!snap.exists()) {
-                setLoading(false);
-                return showError('User profile not found');
-            }
+      if (!snap.exists()) {
+        setLoading(false);
+        return showError('User profile not found');
+      }
 
-            const profile = snap.data();
+      const profile = snap.data();
 
-            if (profile.role === 'admin') {
-                onLogin({ id: uid, name: profile.name || 'Admin', role: 'admin' });
-            } 
-            else if (profile.role === 'staff') {
-                onLogin({ 
-                    id: uid, 
-                    name: profile.name,
-                    username: profile.username || username,
-                    role: 'staff' 
-                });
-            } 
-            else if (profile.role === 'student') {
-                onLogin({ id: uid, name: profile.name || username, className: profile.className, role: 'student' });
-            } 
-            else {
-                setLoading(false);
-                return showError('Invalid user role');
-            }
+      if (profile.role === 'admin') {
+        onLogin({ id: uid, name: profile.name || 'Admin', role: 'admin' });
+      } else if (profile.role === 'staff') {
+        onLogin({
+          id: uid,
+          name: profile.name,
+          username: profile.username || username,
+          role: 'staff'
+        });
+      } else if (profile.role === 'student') {
+        onLogin({ id: uid, name: profile.name || username, className: profile.className, role: 'student' });
+      } else {
+        setLoading(false);
+        return showError('Invalid user role');
+      }
+    } catch (err) {
+      setLoading(false);
+      console.error('Login error:', err);
+      if (err.code === 'auth/user-not-found') {
+        showError('User not found');
+      } else if (err.code === 'auth/wrong-password') {
+        showError('Incorrect password');
+      } else {
+        showError('Login failed. Check credentials.');
+      }
+    }
+  };
 
-        } catch (err) {
-            setLoading(false);
-            console.error('Login error:', err);
+  const showError = (msg) => {
+    setError(msg);
+    setTimeout(() => setError(''), 4000);
+  };
 
-            if (err.code === 'auth/user-not-found') {
-                showError('User not found');
-            } else if (err.code === 'auth/wrong-password') {
-                showError('Incorrect password');
-            } else {
-                showError('Login failed. Check credentials.');
-            }
-        }
-    };
-
-    const showError = (msg) => {
-        setError(msg);
-        setTimeout(() => setError(''), 4000);
-    };
-
-    return (
-        <>
-            <AnimatedBackground />
-            <div className="login-container">
-                <div className="login-card modern">
-                    <div className="login-logo">
-                        <div className="logo-icon">📚</div>
-                    </div>
-
-                    <div className="login-header">
-                        <h1>Welcome Back</h1>
-                        <p>Sign in to Timetable Manager</p>
-                    </div>
-
-                    <form onSubmit={handleLogin} className="login-form">
-                        <div className="form-group">
-                            <label htmlFor="username">
-                                <span className="label-icon">👤</span>
-                                Username
-                            </label>
-                            <input
-                                id="username"
-                                type="text"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                placeholder="Enter username"
-                                className="input modern"
-                                required
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label htmlFor="password">
-                                <span className="label-icon">🔒</span>
-                                Password
-                            </label>
-                            <input
-                                id="password"
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="Enter password"
-                                className="input modern"
-                                required
-                            />
-                        </div>
-
-                        {error && (
-                            <div className="error-message modern">
-                                <span className="error-icon">⚠️</span>
-                                {error}
-                            </div>
-                        )}
-
-                        <button 
-                            type="submit" 
-                            className="btn btn-primary modern"
-                            disabled={loading}
-                        >
-                            {loading ? (
-                                <>
-                                    <span className="spinner"></span>
-                                    Signing in...
-                                </>
-                            ) : (
-                                'Sign In'
-                            )}
-                        </button>
-                    </form>
-                </div>
+  return (
+    <>
+      <AnimatedBackground />
+      <div className="login-container">
+        <div className={`login-card enhanced ${mounted ? 'mounted' : ''}`}>
+          {/* Animated Logo Section */}
+          <div className="login-logo-section">
+            {/* Floating particles */}
+            <div className="header-particle"></div>
+            <div className="header-particle"></div>
+            <div className="header-particle"></div>
+            <div className="header-particle"></div>
+            
+            <div className="logo-circle">
+              <span className="logo-icon">📅</span>
             </div>
-        </>
-    );
+            <h1 className="login-main-title">Timetable Manager</h1>
+            <p className="login-tagline">Smart Scheduling Made Simple</p>
+          </div>
+
+          {/* Login Form */}
+          <form onSubmit={handleLogin} className="login-form-enhanced">
+            <div className="form-header">
+              <h2 className="form-title">Welcome Back</h2>
+              <p className="form-subtitle">Sign in to continue</p>
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="error-alert animated">
+                <span className="error-icon">⚠️</span>
+                <span className="error-text">{error}</span>
+              </div>
+            )}
+
+            {/* Username Input */}
+            <div className="input-group enhanced">
+              <div className="input-icon-wrapper">
+                <span className="input-icon">👤</span>
+              </div>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="input-field"
+                required
+                disabled={loading}
+              />
+              <label className={`floating-label ${username ? 'active' : ''}`}>
+                Username
+              </label>
+              <div className="input-underline"></div>
+            </div>
+
+            {/* Password Input */}
+            <div className="input-group enhanced">
+              <div className="input-icon-wrapper">
+                <span className="input-icon">🔒</span>
+              </div>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input-field"
+                required
+                disabled={loading}
+              />
+              <label className={`floating-label ${password ? 'active' : ''}`}>
+                Password
+              </label>
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword(!showPassword)}
+                disabled={loading}
+              >
+                {showPassword ? '👁️' : '👁️‍🗨️'}
+              </button>
+              <div className="input-underline"></div>
+            </div>
+
+            {/* Remember Me & Forgot Password */}
+            <div className="form-options">
+              <label className="remember-checkbox">
+                <input type="checkbox" />
+                <span className="checkbox-custom"></span>
+                <span className="checkbox-label">Remember me</span>
+              </label>
+              <a href="#" className="forgot-link">Forgot Password?</a>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              className={`btn-login enhanced ${loading ? 'loading' : ''}`}
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <span className="spinner-circle"></span>
+                  <span>Signing in...</span>
+                </>
+              ) : (
+                <>
+                  <span>Sign In</span>
+                  <span className="btn-arrow">→</span>
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+      </div>
+    </>
+  );
 }

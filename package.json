@@ -5,6 +5,8 @@
   "scripts": {
     "start": "parcel public/index.html",
     "build": "parcel build public/index.html --dist-dir dist --public-url ./",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist",
     "android": "npm run build && npx cap sync android && npx cap open android",
     "android:dev": "npx cap run android -l --external",
     "android:debug": "npm run build && npx cap sync android && cd android && .\\gradlew assembleDebug",
@@ -23,6 +25,7 @@
     "@capacitor/android": "^5.7.8",
     "@capacitor/core": "^5.7.8",
     "firebase": "^10.7.1",
+    "gh-pages": "^6.3.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.1",
     "react": "^18.2.0",
