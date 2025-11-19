@@ -25379,55 +25379,6 @@ function Login({ onLogin }) {
                                     lineNumber: 124,
                                     columnNumber: 13
                                 }, this),
-                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                    className: "form-options",
-                                    children: [
-                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("label", {
-                                            className: "remember-checkbox",
-                                            children: [
-                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("input", {
-                                                    type: "checkbox"
-                                                }, void 0, false, {
-                                                    fileName: "src/components/Login.jsx",
-                                                    lineNumber: 153,
-                                                    columnNumber: 17
-                                                }, this),
-                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                                    className: "checkbox-custom"
-                                                }, void 0, false, {
-                                                    fileName: "src/components/Login.jsx",
-                                                    lineNumber: 154,
-                                                    columnNumber: 17
-                                                }, this),
-                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                                    className: "checkbox-label",
-                                                    children: "Remember me"
-                                                }, void 0, false, {
-                                                    fileName: "src/components/Login.jsx",
-                                                    lineNumber: 155,
-                                                    columnNumber: 17
-                                                }, this)
-                                            ]
-                                        }, void 0, true, {
-                                            fileName: "src/components/Login.jsx",
-                                            lineNumber: 152,
-                                            columnNumber: 15
-                                        }, this),
-                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("a", {
-                                            href: "#",
-                                            className: "forgot-link",
-                                            children: "Forgot Password?"
-                                        }, void 0, false, {
-                                            fileName: "src/components/Login.jsx",
-                                            lineNumber: 157,
-                                            columnNumber: 15
-                                        }, this)
-                                    ]
-                                }, void 0, true, {
-                                    fileName: "src/components/Login.jsx",
-                                    lineNumber: 151,
-                                    columnNumber: 13
-                                }, this),
                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
                                     type: "submit",
                                     className: `btn-login enhanced ${loading ? 'loading' : ''}`,
@@ -25438,14 +25389,14 @@ function Login({ onLogin }) {
                                                 className: "spinner-circle"
                                             }, void 0, false, {
                                                 fileName: "src/components/Login.jsx",
-                                                lineNumber: 168,
+                                                lineNumber: 158,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
                                                 children: "Signing in..."
                                             }, void 0, false, {
                                                 fileName: "src/components/Login.jsx",
-                                                lineNumber: 169,
+                                                lineNumber: 159,
                                                 columnNumber: 19
                                             }, this)
                                         ]
@@ -25455,7 +25406,7 @@ function Login({ onLogin }) {
                                                 children: "Sign In"
                                             }, void 0, false, {
                                                 fileName: "src/components/Login.jsx",
-                                                lineNumber: 173,
+                                                lineNumber: 163,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
@@ -25463,14 +25414,14 @@ function Login({ onLogin }) {
                                                 children: "\u2192"
                                             }, void 0, false, {
                                                 fileName: "src/components/Login.jsx",
-                                                lineNumber: 174,
+                                                lineNumber: 164,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true)
                                 }, void 0, false, {
                                     fileName: "src/components/Login.jsx",
-                                    lineNumber: 161,
+                                    lineNumber: 151,
                                     columnNumber: 13
                                 }, this)
                             ]
