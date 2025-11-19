@@ -25472,75 +25472,11 @@ function Login({ onLogin }) {
                                     fileName: "src/components/Login.jsx",
                                     lineNumber: 161,
                                     columnNumber: 13
-                                }, this),
-                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                    className: "role-info",
-                                    children: [
-                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
-                                            className: "role-text",
-                                            children: "Login as:"
-                                        }, void 0, false, {
-                                            fileName: "src/components/Login.jsx",
-                                            lineNumber: 181,
-                                            columnNumber: 15
-                                        }, this),
-                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                            className: "role-badges",
-                                            children: [
-                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                                    className: "role-badge admin",
-                                                    children: "Admin"
-                                                }, void 0, false, {
-                                                    fileName: "src/components/Login.jsx",
-                                                    lineNumber: 183,
-                                                    columnNumber: 17
-                                                }, this),
-                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                                    className: "role-badge staff",
-                                                    children: "Staff"
-                                                }, void 0, false, {
-                                                    fileName: "src/components/Login.jsx",
-                                                    lineNumber: 184,
-                                                    columnNumber: 17
-                                                }, this),
-                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                                    className: "role-badge student",
-                                                    children: "Student"
-                                                }, void 0, false, {
-                                                    fileName: "src/components/Login.jsx",
-                                                    lineNumber: 185,
-                                                    columnNumber: 17
-                                                }, this)
-                                            ]
-                                        }, void 0, true, {
-                                            fileName: "src/components/Login.jsx",
-                                            lineNumber: 182,
-                                            columnNumber: 15
-                                        }, this)
-                                    ]
-                                }, void 0, true, {
-                                    fileName: "src/components/Login.jsx",
-                                    lineNumber: 180,
-                                    columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "src/components/Login.jsx",
                             lineNumber: 90,
-                            columnNumber: 11
-                        }, this),
-                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                            className: "login-footer",
-                            children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
-                                children: "\xa9 2025 Timetable Manager. All rights reserved."
-                            }, void 0, false, {
-                                fileName: "src/components/Login.jsx",
-                                lineNumber: 192,
-                                columnNumber: 13
-                            }, this)
-                        }, void 0, false, {
-                            fileName: "src/components/Login.jsx",
-                            lineNumber: 191,
                             columnNumber: 11
                         }, this)
                     ]
@@ -25584,53 +25520,164 @@ var _reactDefault = parcelHelpers.interopDefault(_react);
 var _s = $RefreshSig$();
 function AnimatedBackground() {
     _s();
+    const canvasRef = (0, _react.useRef)(null);
+    // Static decorative particles
     const particles = (0, _react.useMemo)(()=>{
         return Array.from({
-            length: 30
+            length: 40
         }, (_, i)=>({
                 id: i,
                 left: Math.random() * 100,
                 delay: Math.random() * 60,
-                size: Math.random() * 15 + 5,
+                size: Math.random() * 20 + 5,
                 duration: Math.random() * 20 + 30
             }));
+    }, []);
+    (0, _react.useEffect)(()=>{
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        // Particle system
+        const particlesArray = [];
+        const particleCount = 80;
+        const maxDistance = 120;
+        class Particle {
+            constructor(){
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 3 + 1;
+                this.speedX = (Math.random() - 0.5) * 1.5;
+                this.speedY = (Math.random() - 0.5) * 1.5;
+                this.color = `rgba(255, 255, 255, ${Math.random() * 0.5 + 0.3})`;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                // Bounce off edges
+                if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
+                if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
+            }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        // Initialize particles
+        for(let i = 0; i < particleCount; i++)particlesArray.push(new Particle());
+        // Connect particles with lines
+        function connectParticles() {
+            for(let i = 0; i < particlesArray.length; i++)for(let j = i + 1; j < particlesArray.length; j++){
+                const dx = particlesArray[i].x - particlesArray[j].x;
+                const dy = particlesArray[i].y - particlesArray[j].y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < maxDistance) {
+                    const opacity = 1 - distance / maxDistance;
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${opacity * 0.3})`;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(particlesArray[i].x, particlesArray[i].y);
+                    ctx.lineTo(particlesArray[j].x, particlesArray[j].y);
+                    ctx.stroke();
+                }
+            }
+        }
+        // Animation loop
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particlesArray.forEach((particle)=>{
+                particle.update();
+                particle.draw();
+            });
+            connectParticles();
+            requestAnimationFrame(animate);
+        }
+        animate();
+        // Handle resize
+        const handleResize = ()=>{
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        };
+        window.addEventListener('resize', handleResize);
+        return ()=>{
+            window.removeEventListener('resize', handleResize);
+        };
     }, []);
     return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
         className: "animated-bg enhanced",
         children: [
+            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("canvas", {
+                ref: canvasRef,
+                className: "particle-canvas"
+            }, void 0, false, {
+                fileName: "src/components/AnimatedBackground.jsx",
+                lineNumber: 114,
+                columnNumber: 7
+            }, this),
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                 className: "gradient-overlay animated"
             }, void 0, false, {
                 fileName: "src/components/AnimatedBackground.jsx",
-                lineNumber: 17,
+                lineNumber: 117,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                className: "shape shape-1"
+                className: "blob blob-1"
             }, void 0, false, {
                 fileName: "src/components/AnimatedBackground.jsx",
-                lineNumber: 20,
+                lineNumber: 120,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                className: "shape shape-2"
+                className: "blob blob-2"
             }, void 0, false, {
                 fileName: "src/components/AnimatedBackground.jsx",
-                lineNumber: 21,
+                lineNumber: 121,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                className: "shape shape-3"
+                className: "blob blob-3"
             }, void 0, false, {
                 fileName: "src/components/AnimatedBackground.jsx",
-                lineNumber: 22,
+                lineNumber: 122,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                className: "shape shape-4"
+                className: "blob blob-4"
             }, void 0, false, {
                 fileName: "src/components/AnimatedBackground.jsx",
-                lineNumber: 23,
+                lineNumber: 123,
+                columnNumber: 7
+            }, this),
+            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                className: "blob blob-5"
+            }, void 0, false, {
+                fileName: "src/components/AnimatedBackground.jsx",
+                lineNumber: 124,
+                columnNumber: 7
+            }, this),
+            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                className: "ring ring-1"
+            }, void 0, false, {
+                fileName: "src/components/AnimatedBackground.jsx",
+                lineNumber: 127,
+                columnNumber: 7
+            }, this),
+            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                className: "ring ring-2"
+            }, void 0, false, {
+                fileName: "src/components/AnimatedBackground.jsx",
+                lineNumber: 128,
+                columnNumber: 7
+            }, this),
+            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                className: "ring ring-3"
+            }, void 0, false, {
+                fileName: "src/components/AnimatedBackground.jsx",
+                lineNumber: 129,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -25640,27 +25687,27 @@ function AnimatedBackground() {
                         className: "wave wave-1"
                     }, void 0, false, {
                         fileName: "src/components/AnimatedBackground.jsx",
-                        lineNumber: 27,
+                        lineNumber: 133,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                         className: "wave wave-2"
                     }, void 0, false, {
                         fileName: "src/components/AnimatedBackground.jsx",
-                        lineNumber: 28,
+                        lineNumber: 134,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                         className: "wave wave-3"
                     }, void 0, false, {
                         fileName: "src/components/AnimatedBackground.jsx",
-                        lineNumber: 29,
+                        lineNumber: 135,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "src/components/AnimatedBackground.jsx",
-                lineNumber: 26,
+                lineNumber: 132,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -25676,29 +25723,29 @@ function AnimatedBackground() {
                         }
                     }, particle.id, false, {
                         fileName: "src/components/AnimatedBackground.jsx",
-                        lineNumber: 35,
+                        lineNumber: 141,
                         columnNumber: 11
                     }, this))
             }, void 0, false, {
                 fileName: "src/components/AnimatedBackground.jsx",
-                lineNumber: 33,
+                lineNumber: 139,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                 className: "grid-pattern"
             }, void 0, false, {
                 fileName: "src/components/AnimatedBackground.jsx",
-                lineNumber: 50,
+                lineNumber: 156,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "src/components/AnimatedBackground.jsx",
-        lineNumber: 15,
+        lineNumber: 112,
         columnNumber: 5
     }, this);
 }
-_s(AnimatedBackground, "4A8/E2ZKMQMOCuaGnTg4x6kwo4w=");
+_s(AnimatedBackground, "TewuH96IYk6ppsQqiICNCjR77ME=");
 _c = AnimatedBackground;
 var _c;
 $RefreshReg$(_c, "AnimatedBackground");
