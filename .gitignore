@@ -1,5 +1,23 @@
-node_modules
-.parcel-cache
-dist
-.DS_Store
+# Node / Parcel
+node_modules/
+.parcel-cache/
+dist/
+
+# Environment
 .env
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Android platform (Keep android/, ignore build/cache only)
+android/.gradle/
+android/.idea/
+android/app/build/
+android/build/
+android/capacitor-cordova-android-plugins/build/
+android/app/release/
+
+# Keystore (important if signing for Play Store — do NOT upload)
+*.keystore
+*.jks

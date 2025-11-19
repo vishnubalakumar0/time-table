@@ -1,0 +1,10 @@
+{
+  "appId": "com.vishnu.timetable",
+  "appName": "Smart Timetable",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "https://vishnu15.me",
+    "cleartext": false
+  }
+}
