@@ -88,7 +88,7 @@ export default function Login({ onLogin }) {
             <div className="logo-circle">
               <span className="logo-icon">📅</span>
             </div>
-            <h1 className="login-main-title">Timetable Manager</h1>
+            <h1 className="login-main-title">Timetable Generator</h1>
             <p className="login-tagline">Smart Scheduling Made Simple</p>
           </div>
 
@@ -153,16 +153,7 @@ export default function Login({ onLogin }) {
               <div className="input-underline"></div>
             </div>
 
-            {/* Remember Me & Forgot Password */}
-            <div className="form-options">
-              <label className="remember-checkbox">
-                <input type="checkbox" />
-                <span className="checkbox-custom"></span>
-                <span className="checkbox-label">Remember me</span>
-              </label>
-              <a href="#" className="forgot-link">Forgot Password?</a>
-            </div>
-
+           
             {/* Submit Button */}
             <button
               type="submit"

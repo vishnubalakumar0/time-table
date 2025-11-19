@@ -211,6 +211,7 @@
     font-size: 14px;
 }
 
+
 /* ========== LOGIN PAGE STYLES ========== */
 .login-container {
     min-height: 100vh;
@@ -2478,4 +2479,3 @@ html {
 * {
     scroll-behavior: smooth;
 }
-
