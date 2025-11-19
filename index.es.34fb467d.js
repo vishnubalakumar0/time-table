@@ -10965,6 +10965,6 @@ var shgTable = [
     this.next = null;
 };
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT"}]},["dUoCN"], null, "parcelRequire3f2f", {})
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT"}]},["dUoCN"], null, "parcelRequireb79f", {})
 
 //# sourceMappingURL=index.es.34fb467d.js.map

@@ -4073,81 +4073,186 @@ parcelHelpers.export(exports, "default", ()=>StaffTimetableGrid);
 var _jsxDevRuntime = require("react/jsx-dev-runtime");
 var _react = require("react");
 var _reactDefault = parcelHelpers.interopDefault(_react);
-const DAYS = [
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday'
-];
 function StaffTimetableGrid({ timetable, staffName }) {
-    // Debug logging
-    console.log('=== StaffTimetableGrid Debug ===');
-    console.log('Received timetable:', timetable);
-    console.log('Received staffName:', staffName);
-    console.log('timetable keys:', timetable ? Object.keys(timetable) : 'timetable is null');
-    // Check if timetable exists
-    if (!timetable) {
-        console.warn('No timetable data received');
-        return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-            style: {
-                padding: '40px',
-                textAlign: 'center',
-                color: '#64748b'
-            },
+    const days = [
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday'
+    ];
+    const periods = [
+        'P1',
+        'P2',
+        'P3',
+        'P4',
+        'P5',
+        'P6'
+    ];
+    const staffSchedule = timetable[staffName];
+    console.log('StaffTimetableGrid - Staff:', staffName);
+    console.log('StaffTimetableGrid - Available:', Object.keys(timetable));
+    if (!staffSchedule) return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+        style: {
+            padding: '40px',
+            textAlign: 'center'
+        },
+        children: [
+            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                style: {
+                    fontSize: '48px',
+                    marginBottom: '20px'
+                },
+                children: "\u26A0\uFE0F"
+            }, void 0, false, {
+                fileName: "src/components/StaffTimetableGrid.jsx",
+                lineNumber: 15,
+                columnNumber: 17
+            }, this),
+            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h3", {
+                children: "No Timetable Found"
+            }, void 0, false, {
+                fileName: "src/components/StaffTimetableGrid.jsx",
+                lineNumber: 16,
+                columnNumber: 17
+            }, this),
+            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
+                style: {
+                    color: '#64748b'
+                },
+                children: [
+                    'No timetable for "',
+                    staffName,
+                    '"'
+                ]
+            }, void 0, true, {
+                fileName: "src/components/StaffTimetableGrid.jsx",
+                lineNumber: 17,
+                columnNumber: 17
+            }, this),
+            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
+                style: {
+                    color: '#64748b',
+                    fontSize: '14px'
+                },
+                children: [
+                    "Available: ",
+                    Object.keys(timetable).join(', ')
+                ]
+            }, void 0, true, {
+                fileName: "src/components/StaffTimetableGrid.jsx",
+                lineNumber: 18,
+                columnNumber: 17
+            }, this)
+        ]
+    }, void 0, true, {
+        fileName: "src/components/StaffTimetableGrid.jsx",
+        lineNumber: 14,
+        columnNumber: 13
+    }, this);
+    return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+        className: "timetable-container",
+        id: "staff-timetable-export",
+        children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("table", {
+            className: "timetable",
             children: [
-                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
-                    children: "No timetable data available"
+                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("thead", {
+                    children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("tr", {
+                        children: [
+                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("th", {
+                                className: "day-header",
+                                children: "DAY/PERIOD"
+                            }, void 0, false, {
+                                fileName: "src/components/StaffTimetableGrid.jsx",
+                                lineNumber: 28,
+                                columnNumber: 25
+                            }, this),
+                            periods.map((p)=>/*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("th", {
+                                    className: "period-header",
+                                    children: p
+                                }, p, false, {
+                                    fileName: "src/components/StaffTimetableGrid.jsx",
+                                    lineNumber: 29,
+                                    columnNumber: 43
+                                }, this))
+                        ]
+                    }, void 0, true, {
+                        fileName: "src/components/StaffTimetableGrid.jsx",
+                        lineNumber: 27,
+                        columnNumber: 21
+                    }, this)
                 }, void 0, false, {
                     fileName: "src/components/StaffTimetableGrid.jsx",
-                    lineNumber: 17,
+                    lineNumber: 26,
                     columnNumber: 17
                 }, this),
-                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
-                    style: {
-                        fontSize: '14px',
-                        marginTop: '10px'
-                    },
-                    children: "Please generate a timetable first from the Admin Dashboard"
-                }, void 0, false, {
-                    fileName: "src/components/StaffTimetableGrid.jsx",
-                    lineNumber: 18,
-                    columnNumber: 17
-                }, this)
-            ]
-        }, void 0, true, {
-            fileName: "src/components/StaffTimetableGrid.jsx",
-            lineNumber: 16,
-            columnNumber: 13
-        }, this);
-    }
-    // Check if staff timetable exists
-    if (!timetable[staffName]) {
-        console.warn(`No timetable found for staff: ${staffName}`);
-        console.log('Available staff timetables:', Object.keys(timetable));
-        return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-            style: {
-                padding: '40px',
-                textAlign: 'center',
-                color: '#64748b'
-            },
-            children: [
-                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
-                    children: [
-                        "No timetable available for ",
-                        staffName
-                    ]
-                }, void 0, true, {
-                    fileName: "src/components/StaffTimetableGrid.jsx",
-                    lineNumber: 31,
-                    columnNumber: 17
-                }, this),
-                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
-                    style: {
-                        fontSize: '14px',
-                        marginTop: '10px'
-                    },
-                    children: "Timetable may not have been generated yet or you are not assigned any classes."
+                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("tbody", {
+                    children: days.map((day, dayIdx)=>/*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("tr", {
+                            children: [
+                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
+                                    className: "day-cell",
+                                    children: day
+                                }, void 0, false, {
+                                    fileName: "src/components/StaffTimetableGrid.jsx",
+                                    lineNumber: 35,
+                                    columnNumber: 29
+                                }, this),
+                                periods.map((period, periodIdx)=>{
+                                    const slot = staffSchedule[dayIdx]?.[periodIdx];
+                                    const isFree = !slot || slot.type === 'free' || slot.subject === 'FREE';
+                                    return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
+                                        className: `period-cell ${isFree ? 'free-period' : 'class-period'}`,
+                                        children: isFree ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                            className: "period-content free",
+                                            children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                                className: "subject-name",
+                                                children: "FREE"
+                                            }, void 0, false, {
+                                                fileName: "src/components/StaffTimetableGrid.jsx",
+                                                lineNumber: 44,
+                                                columnNumber: 49
+                                            }, this)
+                                        }, void 0, false, {
+                                            fileName: "src/components/StaffTimetableGrid.jsx",
+                                            lineNumber: 43,
+                                            columnNumber: 45
+                                        }, this) : /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                            className: "period-content",
+                                            children: [
+                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                                    className: "subject-name",
+                                                    children: slot.subject
+                                                }, void 0, false, {
+                                                    fileName: "src/components/StaffTimetableGrid.jsx",
+                                                    lineNumber: 48,
+                                                    columnNumber: 49
+                                                }, this),
+                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                                    className: "class-name",
+                                                    children: slot.class
+                                                }, void 0, false, {
+                                                    fileName: "src/components/StaffTimetableGrid.jsx",
+                                                    lineNumber: 49,
+                                                    columnNumber: 49
+                                                }, this)
+                                            ]
+                                        }, void 0, true, {
+                                            fileName: "src/components/StaffTimetableGrid.jsx",
+                                            lineNumber: 47,
+                                            columnNumber: 45
+                                        }, this)
+                                    }, period, false, {
+                                        fileName: "src/components/StaffTimetableGrid.jsx",
+                                        lineNumber: 41,
+                                        columnNumber: 37
+                                    }, this);
+                                })
+                            ]
+                        }, day, true, {
+                            fileName: "src/components/StaffTimetableGrid.jsx",
+                            lineNumber: 34,
+                            columnNumber: 25
+                        }, this))
                 }, void 0, false, {
                     fileName: "src/components/StaffTimetableGrid.jsx",
                     lineNumber: 32,
@@ -4156,161 +4261,12 @@ function StaffTimetableGrid({ timetable, staffName }) {
             ]
         }, void 0, true, {
             fileName: "src/components/StaffTimetableGrid.jsx",
-            lineNumber: 30,
+            lineNumber: 25,
             columnNumber: 13
-        }, this);
-    }
-    const grid = timetable[staffName];
-    // Validate grid structure
-    console.log('Grid data:', grid);
-    console.log('Grid is array?', Array.isArray(grid));
-    console.log('Grid length:', grid ? grid.length : 0);
-    if (!Array.isArray(grid) || grid.length === 0) {
-        console.error('Invalid grid structure');
-        return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-            style: {
-                padding: '40px',
-                textAlign: 'center',
-                color: '#64748b'
-            },
-            children: [
-                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
-                    children: "Invalid timetable format"
-                }, void 0, false, {
-                    fileName: "src/components/StaffTimetableGrid.jsx",
-                    lineNumber: 50,
-                    columnNumber: 17
-                }, this),
-                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
-                    style: {
-                        fontSize: '14px',
-                        marginTop: '10px'
-                    },
-                    children: "Please regenerate the timetable from Admin Dashboard"
-                }, void 0, false, {
-                    fileName: "src/components/StaffTimetableGrid.jsx",
-                    lineNumber: 51,
-                    columnNumber: 17
-                }, this)
-            ]
-        }, void 0, true, {
-            fileName: "src/components/StaffTimetableGrid.jsx",
-            lineNumber: 49,
-            columnNumber: 13
-        }, this);
-    }
-    console.log('Rendering timetable grid...');
-    return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-        id: "staff-timetable-export",
-        className: "timetable-grid",
-        children: [
-            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                className: "timetable-header",
-                children: "Day/Period"
-            }, void 0, false, {
-                fileName: "src/components/StaffTimetableGrid.jsx",
-                lineNumber: 63,
-                columnNumber: 13
-            }, this),
-            [
-                ...Array(6)
-            ].map((_, i)=>/*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                    className: "timetable-header",
-                    children: [
-                        "P",
-                        i + 1
-                    ]
-                }, i, true, {
-                    fileName: "src/components/StaffTimetableGrid.jsx",
-                    lineNumber: 65,
-                    columnNumber: 17
-                }, this)),
-            DAYS.map((day, dayIndex)=>{
-                // Safety check for each day
-                if (!grid[dayIndex] || !Array.isArray(grid[dayIndex])) {
-                    console.warn(`Invalid data for day ${day} (index ${dayIndex})`);
-                    return null;
-                }
-                return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _reactDefault.default).Fragment, {
-                    children: [
-                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                            className: "timetable-day",
-                            children: day
-                        }, void 0, false, {
-                            fileName: "src/components/StaffTimetableGrid.jsx",
-                            lineNumber: 78,
-                            columnNumber: 25
-                        }, this),
-                        grid[dayIndex].map((slot, periodIndex)=>{
-                            // Safety check for slot
-                            if (!slot) return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                className: "timetable-cell subject-free",
-                                children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                    style: {
-                                        color: '#94a3b8'
-                                    },
-                                    children: "FREE"
-                                }, void 0, false, {
-                                    fileName: "src/components/StaffTimetableGrid.jsx",
-                                    lineNumber: 84,
-                                    columnNumber: 41
-                                }, this)
-                            }, periodIndex, false, {
-                                fileName: "src/components/StaffTimetableGrid.jsx",
-                                lineNumber: 83,
-                                columnNumber: 37
-                            }, this);
-                            const subjectType = slot.type ? slot.type.toLowerCase() : 'free';
-                            const isFree = slot.subject === 'FREE' || !slot.subject;
-                            return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                className: `timetable-cell subject-${subjectType}`,
-                                children: !isFree ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _jsxDevRuntime.Fragment), {
-                                    children: [
-                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                            className: "subject-name",
-                                            children: slot.subject
-                                        }, void 0, false, {
-                                            fileName: "src/components/StaffTimetableGrid.jsx",
-                                            lineNumber: 99,
-                                            columnNumber: 45
-                                        }, this),
-                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                            className: "teacher-name",
-                                            children: slot.class || '-'
-                                        }, void 0, false, {
-                                            fileName: "src/components/StaffTimetableGrid.jsx",
-                                            lineNumber: 102,
-                                            columnNumber: 45
-                                        }, this)
-                                    ]
-                                }, void 0, true) : /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                    style: {
-                                        color: '#94a3b8',
-                                        fontWeight: '500'
-                                    },
-                                    children: "FREE"
-                                }, void 0, false, {
-                                    fileName: "src/components/StaffTimetableGrid.jsx",
-                                    lineNumber: 107,
-                                    columnNumber: 41
-                                }, this)
-                            }, periodIndex, false, {
-                                fileName: "src/components/StaffTimetableGrid.jsx",
-                                lineNumber: 93,
-                                columnNumber: 33
-                            }, this);
-                        })
-                    ]
-                }, day, true, {
-                    fileName: "src/components/StaffTimetableGrid.jsx",
-                    lineNumber: 77,
-                    columnNumber: 21
-                }, this);
-            })
-        ]
-    }, void 0, true, {
+        }, this)
+    }, void 0, false, {
         fileName: "src/components/StaffTimetableGrid.jsx",
-        lineNumber: 61,
+        lineNumber: 24,
         columnNumber: 9
     }, this);
 }
@@ -4704,6 +4660,6 @@ class TimetableGenerator {
     }
 }
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT"}]},["ifaHC"], null, "parcelRequire3f2f", {})
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT"}]},["ifaHC"], null, "parcelRequireb79f", {})
 
 //# sourceMappingURL=AdminDashboard.c1fc38ab.js.map

@@ -30348,6 +30348,6 @@ module.exports = import("./purify.f659f139.js").then(()=>module.bundle.root('1IH
 },{"1IHUz":"1IHUz"}],"97tTU":[function(require,module,exports,__globalThis) {
 module.exports = import("./index.es.34fb467d.js").then(()=>module.bundle.root('63Yt8'));
 
-},{"63Yt8":"63Yt8"}]},["izmxk"], null, "parcelRequire3f2f", {})
+},{"63Yt8":"63Yt8"}]},["izmxk"], null, "parcelRequireb79f", {})
 
 //# sourceMappingURL=AdminDashboard.188e0317.js.map

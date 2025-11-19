@@ -2450,6 +2450,6 @@ function hmrAccept(bundle /*: ParcelRequire */ , id /*: string */ ) {
     return purify;
 });
 
-},{}]},["7RJNW"], null, "parcelRequire3f2f", {})
+},{}]},["7RJNW"], null, "parcelRequireb79f", {})
 
 //# sourceMappingURL=purify.f659f139.js.map
