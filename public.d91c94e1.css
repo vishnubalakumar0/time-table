@@ -1068,15 +1068,6 @@ body {
   left: 0;
 }
 
-.gradient-overlay.animated {
-  z-index: 0;
-  background: linear-gradient(45deg, #667eea66 0%, #764ba266 25%, #f093fb66 50%, #667eea66 75%, #764ba266 100%) 0 0 / 400% 400%;
-  width: 100%;
-  height: 100%;
-  animation: 15s infinite gradientFlow;
-  position: absolute;
-}
-
 .blob {
   filter: blur(40px);
   opacity: .3;
@@ -1130,13 +1121,6 @@ body {
   animation: 28s ease-in-out infinite morphBlob5;
   bottom: 20%;
   left: 15%;
-}
-
-.ring {
-  z-index: 3;
-  border: 2px solid #ffffff1a;
-  border-radius: 50%;
-  position: absolute;
 }
 
 .ring-1 {
@@ -2608,55 +2592,215 @@ html, * {
   }
 }
 
-.mobile-glass {
-  -webkit-backdrop-filter: blur(6.5px);
-  background: #ffffff2e;
-  border: 1px solid #ffffff3d;
-  border-radius: 2rem;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 4px 30px #00000014;
-}
-
-.waves {
-  z-index: 2;
-  pointer-events: none;
-  width: 100%;
-  height: 80px;
-  position: absolute;
-  bottom: 0;
+.animated-bg.enhanced {
+  z-index: -1;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  width: 100vw;
+  min-width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  position: fixed;
+  top: 0;
   left: 0;
+  overflow: hidden;
 }
 
-.wave-1, .wave-2 {
-  fill: #fff5;
+.gradient-overlay.animated {
+  z-index: 1;
+  background: linear-gradient(45deg, #667eea3b 0%, #764ba233 50%, #f093fb1c 100%) 0 0 / 400% 400%;
+  width: 100vw;
+  height: 100vh;
+  animation: 17s ease-in-out infinite gradientFlow;
+  position: absolute;
 }
 
-.wave-1 {
-  animation: 6s linear infinite waveAnimation;
+.blob {
+  filter: blur(38px);
+  opacity: .16;
+  z-index: 2;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  border-radius: 40% 60% 70% 30% / 40% 50% 60%;
+  width: 340px;
+  height: 340px;
+  animation: 23s ease-in-out infinite alternate blobFloat;
+  position: absolute;
+  top: 10%;
+  left: 8%;
 }
 
-.wave-2 {
-  animation: 8s linear infinite reverse waveAnimation;
-}
-
-@keyframes waveAnimation {
+@keyframes blobFloat {
   0% {
-    transform: translateX(0);
+    transform: scale(1)translateY(0);
   }
 
   100% {
-    transform: translateX(-80px);
+    transform: scale(.98)translateY(-22px);
   }
 }
 
-@media (width <= 800px) {
-  .mobile-glass {
-    border-radius: 1.2rem;
+.blob-2, .blob-3 {
+  filter: blur(30px);
+  z-index: 2;
+  opacity: .13;
+  border-radius: 50%;
+  display: block;
+  position: absolute;
+}
+
+.blob-2 {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  width: 260px;
+  height: 260px;
+  animation: 28s ease-in-out infinite alternate blobFloat2;
+  top: 60%;
+  left: 55%;
+}
+
+.blob-3 {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  width: 180px;
+  height: 180px;
+  animation: 32s ease-in-out infinite alternate blobFloat3;
+  bottom: 10%;
+  right: 12vw;
+}
+
+@keyframes blobFloat2 {
+  0% {
+    transform: translate(0);
   }
 
-  .waves {
-    height: 54px;
+  100% {
+    transform: translate(-18px, 24px);
+  }
+}
+
+@keyframes blobFloat3 {
+  0% {
+    transform: scale(1);
+  }
+
+  100% {
+    transform: scale(.97);
+  }
+}
+
+.ring {
+  z-index: 5;
+  border: 2px solid #ffffff1a;
+  border-radius: 50%;
+  position: absolute;
+}
+
+.ring-1 {
+  width: 350px;
+  height: 350px;
+  animation: 36s linear infinite rotateRing;
+  bottom: 16%;
+  right: 18%;
+}
+
+.ring-2 {
+  width: 140px;
+  height: 140px;
+  animation: 50s linear infinite rotateRing2;
+  top: 14vw;
+  right: 22vw;
+}
+
+.ring-3 {
+  width: 190px;
+  height: 190px;
+  animation: 80s linear infinite reverse rotateRing3;
+  top: 30vw;
+  left: 12vw;
+}
+
+@keyframes rotateRing2 {
+  0% {
+    transform: rotate(0);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes rotateRing3 {
+  100% {
+    transform: rotate(0);
+  }
+
+  0% {
+    transform: rotate(360deg);
+  }
+}
+
+.grid-pattern {
+  z-index: 1;
+  background-image: linear-gradient(#ffffff06 1px, #0000 1px), linear-gradient(90deg, #ffffff06 1px, #0000 1px);
+  background-size: 48px 48px;
+  width: 100vw;
+  height: 100vh;
+  animation: 20s linear infinite gridScroll;
+  position: absolute;
+}
+
+@keyframes gridScroll {
+  from {
+    background-position: 0 0;
+  }
+
+  to {
+    background-position: 24px 24px;
+  }
+}
+
+@media (width <= 768px) {
+  .blob-2, .blob-3, .ring-2, .ring-3, .particle, .particles-container {
+    display: none !important;
+  }
+
+  .blob {
+    top: 36vw;
+    left: 20vw;
+    opacity: .09 !important;
+    filter: blur(16px) !important;
+    width: 140px !important;
+    height: 140px !important;
+    animation-name: blobFloatMobile !important;
+    animation-duration: 58s !important;
+  }
+
+  @keyframes blobFloatMobile {
+    0% {
+      transform: scale(1)translateY(0);
+    }
+
+    100% {
+      transform: scale(.96)translateY(-8px);
+    }
+  }
+
+  .ring-1 {
+    bottom: 4vw;
+    right: 8vw;
+    width: 80px !important;
+    height: 80px !important;
+    animation-duration: 88s !important;
+  }
+
+  .grid-pattern {
+    background-size: 22px 22px !important;
+  }
+
+  .gradient-overlay.animated {
+    animation-duration: 36s !important;
+  }
+
+  .animated-bg.enhanced {
+    min-width: 100vw;
+    min-height: 100vh;
   }
 }
 /*# sourceMappingURL=public.d91c94e1.css.map */
