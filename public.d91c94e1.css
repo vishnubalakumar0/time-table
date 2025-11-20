@@ -2272,4 +2272,20 @@ html, * {
     transform: translateY(-5px);
   }
 }
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in {
+  animation: .3s ease-out slide-in;
+}
 /*# sourceMappingURL=public.d91c94e1.css.map */
