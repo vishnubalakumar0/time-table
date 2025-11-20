@@ -2607,4 +2607,56 @@ html, * {
     text-size-adjust: 100%;
   }
 }
+
+.mobile-glass {
+  -webkit-backdrop-filter: blur(6.5px);
+  background: #ffffff2e;
+  border: 1px solid #ffffff3d;
+  border-radius: 2rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 30px #00000014;
+}
+
+.waves {
+  z-index: 2;
+  pointer-events: none;
+  width: 100%;
+  height: 80px;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+}
+
+.wave-1, .wave-2 {
+  fill: #fff5;
+}
+
+.wave-1 {
+  animation: 6s linear infinite waveAnimation;
+}
+
+.wave-2 {
+  animation: 8s linear infinite reverse waveAnimation;
+}
+
+@keyframes waveAnimation {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-80px);
+  }
+}
+
+@media (width <= 800px) {
+  .mobile-glass {
+    border-radius: 1.2rem;
+  }
+
+  .waves {
+    height: 54px;
+  }
+}
 /*# sourceMappingURL=public.d91c94e1.css.map */
