@@ -25184,12 +25184,12 @@ function Login({ onLogin }) {
                                     }, void 0, false, {
                                         fileName: "src/components/Login.jsx",
                                         lineNumber: 83,
-                                        columnNumber: 5
+                                        columnNumber: 14
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "src/components/Login.jsx",
                                     lineNumber: 82,
-                                    columnNumber: 3
+                                    columnNumber: 12
                                 }, this),
                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h1", {
                                     className: "login-main-title",
@@ -25197,7 +25197,7 @@ function Login({ onLogin }) {
                                 }, void 0, false, {
                                     fileName: "src/components/Login.jsx",
                                     lineNumber: 89,
-                                    columnNumber: 3
+                                    columnNumber: 12
                                 }, this),
                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
                                     className: "login-tagline",
@@ -25205,7 +25205,7 @@ function Login({ onLogin }) {
                                 }, void 0, false, {
                                     fileName: "src/components/Login.jsx",
                                     lineNumber: 90,
-                                    columnNumber: 3
+                                    columnNumber: 10
                                 }, this)
                             ]
                         }, void 0, true, {
