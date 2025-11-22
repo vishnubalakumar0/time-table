@@ -28,7 +28,7 @@ export default function TimetableGrid({ timetable, className }) {
     }
 
     return (
-        <div id="class-timetable-export" className="timetable-grid">
+        <div id="timetable-export" className="timetable-grid">
             <div className="timetable-header">Day/Period</div>
             {[...Array(6)].map((_, i) => (
                 <div key={i} className="timetable-header">P{i + 1}</div>

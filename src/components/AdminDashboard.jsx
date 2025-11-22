@@ -7,7 +7,6 @@ import StaffTimetableGrid from './StaffTimetableGrid';
 import { exportToPDF } from '../utils/pdfUtils';
 import { TimetableGenerator } from '../utils/timetableGenerator';
 
-
 import { auth, db } from '../utils/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import {
@@ -28,11 +27,20 @@ export default function AdminDashboard({ user, onLogout }) {
     const [toasts, setToasts] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // Refs for scrolling
+    // ✅ NEW: Toggle states for collapsible forms
+    const [showClassForm, setShowClassForm] = useState(false);
+    const [showStaffForm, setShowStaffForm] = useState(false);
+    const [showSubjectForm, setShowSubjectForm] = useState(false);
+
+    // Refs for scrolling and PDF export
     const staffFormRef = useRef(null);
     const subjectFormRef = useRef(null);
+    const classFormRef = useRef(null);
 
-    // Form Models - FIX 3: Added hallNumber for classes
+    // Undo stack for deleted items
+    const undoStackRef = useRef([]);
+
+    // Form Models
     const [newClass, setNewClass] = useState({ name: '', hallNumber: '' });
     const [newStaff, setNewStaff] = useState({
         id: null,
@@ -55,106 +63,71 @@ export default function AdminDashboard({ user, onLogout }) {
 
     const teachers = staff.filter(s => s.role === "staff");
 
-    // FIX 7: Toast duration reduced to 3 seconds
-    const showToast = (message, type) => {
-        const newToast = { message, type, id: Date.now() };
+    // Toast system with undo support
+    const showToast = (message, type, undoAction = null, duration = 3000) => {
+        const newToast = { 
+            message, 
+            type, 
+            id: Date.now(),
+            undoAction: undoAction || null
+        };
         setToasts(prev => [...prev, newToast]);
-        setTimeout(() => removeToast(newToast.id), 3000);
+        setTimeout(() => removeToast(newToast.id), duration);
     };
 
     const removeToast = (id) => {
         setToasts(prev => prev.filter(t => t.id !== id));
     };
-// Helper function to convert Firebase flat format to nested arrays
-const convertFlatToNested = (flatTimetable) => {
-    if (!flatTimetable) return null;
 
-    const nested = {};
+    // Helper function to convert Firebase flat format to nested arrays
+    const convertFlatToNested = (flatTimetable) => {
+        if (!flatTimetable) return null;
 
-    Object.keys(flatTimetable).forEach(key => {
-        const slots = flatTimetable[key];
+        const nested = {};
 
-        // Check if already nested (array of arrays)
-        if (Array.isArray(slots) && slots.length > 0 && Array.isArray(slots[0])) {
-            // Already nested format
-            nested[key] = slots;
-        } else if (Array.isArray(slots)) {
-            // Flat format - convert to nested
-            const days = [[], [], [], [], []]; // 5 days
+        Object.keys(flatTimetable).forEach(key => {
+            const slots = flatTimetable[key];
 
-            slots.forEach(slot => {
-                if (slot && typeof slot.day === 'number' && typeof slot.period === 'number') {
-                    if (!days[slot.day]) days[slot.day] = [];
-                    days[slot.day][slot.period] = {
-                        subject: slot.subject,
-                        teacher: slot.teacher,
-                        class: slot.class,
-                        type: slot.type
-                    };
-                }
-            });
+            // Check if already nested (array of arrays)
+            if (Array.isArray(slots) && slots.length > 0 && Array.isArray(slots[0])) {
+                nested[key] = slots;
+            } else if (Array.isArray(slots)) {
+                // Flat format - convert to nested
+                const days = [[], [], [], [], []]; // 5 days
 
-            // Fill empty periods
-            days.forEach((day, idx) => {
-                if (!days[idx]) days[idx] = [];
-                for (let p = 0; p < 6; p++) {
-                    if (!days[idx][p]) {
-                        // For class timetables, use null
-                        // For staff timetables, use FREE
-                        days[idx][p] = slots[0]?.class !== undefined 
-                            ? { subject: 'FREE', class: '-', type: 'free' }
-                            : null;
+                slots.forEach(slot => {
+                    if (slot && typeof slot.day === 'number' && typeof slot.period === 'number') {
+                        if (!days[slot.day]) days[slot.day] = [];
+                        days[slot.day][slot.period] = {
+                            subject: slot.subject,
+                            teacher: slot.teacher,
+                            class: slot.class,
+                            type: slot.type
+                        };
                     }
-                }
-            });
+                });
 
-            nested[key] = days;
-        }
-    });
+                // Fill empty periods
+                days.forEach((day, idx) => {
+                    if (!days[idx]) days[idx] = [];
+                    for (let p = 0; p < 6; p++) {
+                        if (!days[idx][p]) {
+                            days[idx][p] = slots[0]?.class !== undefined 
+                                ? { subject: 'FREE', class: '-', type: 'free' }
+                                : null;
+                        }
+                    }
+                });
 
-    return nested;
-};
+                nested[key] = days;
+            }
+        });
 
+        return nested;
+    };
 
-// Now UPDATE your fetchData function to use this helper
-// Find the section where you set timetable data and modify it:
-
-const fetchData = async () => {
-    setLoading(true);
-
-    try {
-        const [cls, st, sb, tt] = await Promise.all([
-            getDocs(collection(db, 'classes')),
-            getDocs(collection(db, 'staff')),
-            getDocs(collection(db, 'subjects')),
-            getDocs(collection(db, 'timetable'))
-        ]);
-
-        setClasses(cls.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        setStaff(st.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        setSubjects(sb.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-
-        // FIX: Convert flat format from Firebase to nested arrays
-        if (!tt.empty) {
-            const ttData = tt.docs[0].data();
-
-            // Convert both class and staff timetables
-            const convertedData = {
-                classTimetables: convertFlatToNested(ttData.classTimetables),
-                staffTimetables: convertFlatToNested(ttData.staffTimetables)
-            };
-
-            setTimetable(convertedData);
-        }
-    } catch (error) {
-        showToast('❌ Error loading data: ' + error.message, 'error');
-        console.error(error);
-    }
-
-    setLoading(false);
-};
-    // FIX 1: Faster loading - optimized data fetching
-      useEffect(() => {
+    // Optimized data fetching
+    useEffect(() => {
         const fetchAll = async () => {
             try {
                 const [cls, st, sb, tt] = await Promise.all([
@@ -168,7 +141,6 @@ const fetchData = async () => {
                 setStaff(st.docs.map(doc => ({ id: doc.id, ...doc.data() })));
                 setSubjects(sb.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-                // ✅ REPLACE WITH THIS - IT'S CORRECT:
                 if (!tt.empty) {
                     const ttData = tt.docs[0].data();
                     const convertedData = {
@@ -188,8 +160,7 @@ const fetchData = async () => {
         fetchAll();
     }, []);
 
-
-    // ------------------- CLASS CRUD - FIX 3: Added hallNumber & edit -------------------
+    // ==================== CLASS CRUD ==================== 
     const addClass = async () => {
         if (!newClass.name) return showToast("Enter class name", "error");
         if (classes.find(c => c.name === newClass.name && !newClass.id))
@@ -214,28 +185,63 @@ const fetchData = async () => {
                 showToast("✅ Class added!", "success");
             }
             setNewClass({ name: '', hallNumber: '' });
+            setShowClassForm(false); // ✅ Collapse form after success
         } catch (error) {
             showToast("❌ Operation failed", "error");
         }
     };
 
+    // ✅ IMPROVED: Edit scrolls and expands form
     const editClass = (cls) => {
         setNewClass({ id: cls.id, name: cls.name, hallNumber: cls.hallNumber || '' });
+        setShowClassForm(true); // ✅ Expand form
+        setTimeout(() => {
+            classFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
     };
 
     const deleteClass = async (id) => {
         if (!window.confirm("Delete this class?")) return;
 
+        const classToDelete = classes.find(c => c.id === id);
+        if (!classToDelete) return;
+
         try {
             await deleteDoc(doc(db, 'classes', id));
             setClasses(classes.filter(c => c.id !== id));
-            showToast("✅ Class deleted", "success");
+
+            const undoEntry = {
+                type: 'class',
+                data: classToDelete,
+                timestamp: Date.now()
+            };
+            undoStackRef.current.push(undoEntry);
+
+            const undoAction = async () => {
+                try {
+                    await setDoc(doc(db, 'classes', classToDelete.id), {
+                        name: classToDelete.name,
+                        hallNumber: classToDelete.hallNumber || ''
+                    });
+
+                    setClasses(prev => [...prev, classToDelete]);
+                    undoStackRef.current = undoStackRef.current.filter(
+                        entry => entry.timestamp !== undoEntry.timestamp
+                    );
+
+                    showToast("✅ Class restored", "success");
+                } catch (error) {
+                    showToast("❌ Failed to restore", "error");
+                }
+            };
+
+            showToast("Class deleted — Undo?", "success", undoAction, 5000);
         } catch (error) {
             showToast("❌ Failed to delete", "error");
         }
     };
 
-    // ------------------- STAFF CRUD - FIX 4: Scroll to form -------------------
+    // ==================== STAFF CRUD ==================== 
     const addOrUpdateStaff = async () => {
         if (!newStaff.name || !newStaff.username)
             return showToast("Fill all required fields", "error");
@@ -246,6 +252,7 @@ const fetchData = async () => {
                 await updateDoc(doc(db, 'staff', newStaff.id), updateData);
                 setStaff(staff.map(s => s.id === newStaff.id ? { ...s, ...updateData } : s));
                 resetStaffForm();
+                setShowStaffForm(false); // ✅ Collapse after success
                 return showToast("✅ Staff updated!", "success");
             }
 
@@ -273,6 +280,7 @@ const fetchData = async () => {
 
             setStaff([...staff, { id: docRef.id, ...staffData }]);
             resetStaffForm();
+            setShowStaffForm(false); // ✅ Collapse after success
             showToast("✅ Staff added!", "success");
 
         } catch (error) {
@@ -280,8 +288,10 @@ const fetchData = async () => {
         }
     };
 
+    // ✅ IMPROVED: Edit opens form automatically
     const editStaff = (staffMember) => {
         setNewStaff({ ...staffMember, password: '' });
+        setShowStaffForm(true); // ✅ Expand form
         setTimeout(() => {
             staffFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
@@ -301,16 +311,49 @@ const fetchData = async () => {
     const deleteStaff = async (id) => {
         if (!window.confirm("Delete this staff member?")) return;
 
+        const staffToDelete = staff.find(x => x.id === id);
+        if (!staffToDelete) return;
+
         try {
             await deleteDoc(doc(db, 'staff', id));
             setStaff(staff.filter(x => x.id !== id));
-            showToast("✅ Staff deleted", "success");
+
+            const undoEntry = {
+                type: 'staff',
+                data: staffToDelete,
+                timestamp: Date.now()
+            };
+            undoStackRef.current.push(undoEntry);
+
+            const undoAction = async () => {
+                try {
+                    await setDoc(doc(db, 'staff', staffToDelete.id), {
+                        name: staffToDelete.name,
+                        username: staffToDelete.username,
+                        freePeriodMode: staffToDelete.freePeriodMode,
+                        manualFreePeriods: staffToDelete.manualFreePeriods || 0,
+                        role: staffToDelete.role || 'staff',
+                        firebaseUid: staffToDelete.firebaseUid || null
+                    });
+
+                    setStaff(prev => [...prev, staffToDelete]);
+                    undoStackRef.current = undoStackRef.current.filter(
+                        entry => entry.timestamp !== undoEntry.timestamp
+                    );
+
+                    showToast("✅ Staff restored", "success");
+                } catch (error) {
+                    showToast("❌ Failed to restore", "error");
+                }
+            };
+
+            showToast("Staff deleted — Undo?", "success", undoAction, 5000);
         } catch (error) {
             showToast("❌ Failed to delete", "error");
         }
     };
 
-    // ------------------- SUBJECT CRUD - FIX 5: Fixed edit/delete, scroll -------------------
+    // ==================== SUBJECT CRUD ==================== 
     const addOrUpdateSubject = async () => {
         if (!newSubject.className || !newSubject.name || !newSubject.teacher)
             return showToast("Fill all required fields", "error");
@@ -336,12 +379,14 @@ const fetchData = async () => {
                 showToast("✅ Subject added!", "success");
             }
             resetSubjectForm();
+            setShowSubjectForm(false); // ✅ Collapse after success
         } catch (error) {
             showToast("❌ Operation failed", "error");
             console.error(error);
         }
     };
 
+    // ✅ IMPROVED: Edit opens form automatically
     const editSubject = (subject) => {
         setNewSubject({
             id: subject.id,
@@ -353,6 +398,7 @@ const fetchData = async () => {
             blockSize: subject.blockSize || 2,
             teacher: subject.teacher
         });
+        setShowSubjectForm(true); // ✅ Expand form
         setTimeout(() => {
             subjectFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
@@ -374,156 +420,188 @@ const fetchData = async () => {
     const deleteSubject = async (id) => {
         if (!window.confirm("Delete this subject?")) return;
 
+        const subjectToDelete = subjects.find(s => s.id === id);
+        if (!subjectToDelete) return;
+
         try {
             await deleteDoc(doc(db, 'subjects', id));
             setSubjects(subjects.filter(s => s.id !== id));
-            showToast("✅ Subject deleted", "success");
+
+            const undoEntry = {
+                type: 'subject',
+                data: subjectToDelete,
+                timestamp: Date.now()
+            };
+            undoStackRef.current.push(undoEntry);
+
+            const undoAction = async () => {
+                try {
+                    await setDoc(doc(db, 'subjects', subjectToDelete.id), {
+                        className: subjectToDelete.className,
+                        name: subjectToDelete.name,
+                        subjectType: subjectToDelete.subjectType,
+                        hoursPerWeek: subjectToDelete.hoursPerWeek,
+                        isContinuous: subjectToDelete.isContinuous || false,
+                        blockSize: subjectToDelete.blockSize || 2,
+                        teacher: subjectToDelete.teacher
+                    });
+
+                    setSubjects(prev => [...prev, subjectToDelete]);
+                    undoStackRef.current = undoStackRef.current.filter(
+                        entry => entry.timestamp !== undoEntry.timestamp
+                    );
+
+                    showToast("✅ Subject restored", "success");
+                } catch (error) {
+                    showToast("❌ Failed to restore", "error");
+                }
+            };
+
+            showToast("Subject deleted — Undo?", "success", undoAction, 5000);
         } catch (error) {
             showToast("❌ Failed to delete", "error");
         }
     };
 
-    // ------------------- TIMETABLE GENERATION - FIX 6: Save to staff -------------------
-  const generateTimetable = async () => {
-    setLoading(true);
+    // ==================== TIMETABLE GENERATION ==================== 
+    const generateTimetable = async () => {
+        setLoading(true);
 
-    try {
-        const generator = new TimetableGenerator(classes, staff.filter(s => s.role === 'staff'), subjects);
-        const validation = generator.validate();
+        try {
+            const generator = new TimetableGenerator(classes, staff.filter(s => s.role === 'staff'), subjects);
+            const validation = generator.validate();
 
-        if (!validation.valid) {
-            showToast('❌ Validation: ' + validation.errors[0], 'error');
-            setLoading(false);
-            return;
-        }
-
-        const result = generator.generate();
-
-        if (result.success) {
-            // Convert nested arrays to Firebase-friendly format
-            const serializableClassTimetables = {};
-            const serializableStaffTimetables = {};
-
-            // Flatten class timetables
-            Object.keys(result.classTimetables).forEach(className => {
-                serializableClassTimetables[className] = result.classTimetables[className].map((day, dayIndex) => {
-                    return day.map((period, periodIndex) => ({
-                        day: dayIndex,
-                        period: periodIndex,
-                        subject: period?.subject || null,
-                        teacher: period?.teacher || null,
-                        type: period?.type || null
-                    }));
-                }).flat();
-            });
-
-            // Flatten staff timetables
-            Object.keys(result.staffTimetables).forEach(staffName => {
-                serializableStaffTimetables[staffName] = result.staffTimetables[staffName].map((day, dayIndex) => {
-                    return day.map((period, periodIndex) => ({
-                        day: dayIndex,
-                        period: periodIndex,
-                        subject: period?.subject || null,
-                        class: period?.class || null,
-                        type: period?.type || null
-                    }));
-                }).flat();
-            });
-
-            const timetableData = {
-                classTimetables: serializableClassTimetables,
-                staffTimetables: serializableStaffTimetables,
-                generatedAt: new Date().toISOString()
-            };
-
-            // Save to Firebase
-            const ttRef = collection(db, 'timetable');
-            const existing = await getDocs(ttRef);
-
-            if (!existing.empty) {
-                await updateDoc(doc(db, 'timetable', existing.docs[0].id), timetableData);
-            } else {
-                await addDoc(ttRef, timetableData);
+            if (!validation.valid) {
+                showToast('❌ Validation: ' + validation.errors[0], 'error');
+                setLoading(false);
+                return;
             }
 
-            // Save individual staff timetables
-            const teachers = staff.filter(s => s.role === 'staff');
-            for (const teacher of teachers) {
-                const staffTT = serializableStaffTimetables[teacher.name];
-                if (staffTT) {
-                    await setDoc(doc(db, 'staffTimetables', teacher.id), {
-                        staffName: teacher.name,
-                        timetable: staffTT,
-                        generatedAt: new Date().toISOString()
-                    });
+            const result = generator.generate();
+
+            if (result.success) {
+                // Convert nested arrays to Firebase-friendly format
+                const serializableClassTimetables = {};
+                const serializableStaffTimetables = {};
+
+                // Flatten class timetables
+                Object.keys(result.classTimetables).forEach(className => {
+                    serializableClassTimetables[className] = result.classTimetables[className].map((day, dayIndex) => {
+                        return day.map((period, periodIndex) => ({
+                            day: dayIndex,
+                            period: periodIndex,
+                            subject: period?.subject || null,
+                            teacher: period?.teacher || null,
+                            type: period?.type || null
+                        }));
+                    }).flat();
+                });
+
+                // Flatten staff timetables
+                Object.keys(result.staffTimetables).forEach(staffName => {
+                    serializableStaffTimetables[staffName] = result.staffTimetables[staffName].map((day, dayIndex) => {
+                        return day.map((period, periodIndex) => ({
+                            day: dayIndex,
+                            period: periodIndex,
+                            subject: period?.subject || null,
+                            class: period?.class || null,
+                            type: period?.type || null
+                        }));
+                    }).flat();
+                });
+
+                const timetableData = {
+                    classTimetables: serializableClassTimetables,
+                    staffTimetables: serializableStaffTimetables,
+                    generatedAt: new Date().toISOString()
+                };
+
+                // Save to Firebase
+                const ttRef = collection(db, 'timetable');
+                const existing = await getDocs(ttRef);
+
+                if (!existing.empty) {
+                    await updateDoc(doc(db, 'timetable', existing.docs[0].id), timetableData);
+                } else {
+                    await addDoc(ttRef, timetableData);
                 }
-            }
 
-            // Convert back to nested arrays for display
-            const displayClassTimetables = {};
-            Object.keys(serializableClassTimetables).forEach(className => {
-                const days = [[], [], [], [], []];
-                serializableClassTimetables[className].forEach(slot => {
-                    if (!days[slot.day]) days[slot.day] = [];
-                    days[slot.day][slot.period] = {
-                        subject: slot.subject,
-                        teacher: slot.teacher,
-                        type: slot.type
-                    };
-                });
-                // Fill empty periods with null
-                days.forEach((day, idx) => {
-                    if (!days[idx]) days[idx] = [];
-                    for (let p = 0; p < 6; p++) {
-                        if (!days[idx][p]) days[idx][p] = null;
+                // Save individual staff timetables
+                const teachersList = staff.filter(s => s.role === 'staff');
+                for (const teacher of teachersList) {
+                    const staffTT = serializableStaffTimetables[teacher.name];
+                    if (staffTT) {
+                        await setDoc(doc(db, 'staffTimetables', teacher.id), {
+                            staffName: teacher.name,
+                            timetable: staffTT,
+                            generatedAt: new Date().toISOString()
+                        });
                     }
-                });
-                displayClassTimetables[className] = days;
-            });
+                }
 
-            const displayStaffTimetables = {};
-            Object.keys(serializableStaffTimetables).forEach(staffName => {
-                const days = [[], [], [], [], []];
-                serializableStaffTimetables[staffName].forEach(slot => {
-                    if (!days[slot.day]) days[slot.day] = [];
-                    days[slot.day][slot.period] = {
-                        subject: slot.subject,
-                        class: slot.class,
-                        type: slot.type
-                    };
-                });
-                // Fill empty periods with FREE
-                days.forEach((day, idx) => {
-                    if (!days[idx]) days[idx] = [];
-                    for (let p = 0; p < 6; p++) {
-                        if (!days[idx][p]) {
-                            days[idx][p] = { subject: 'FREE', class: '-', type: 'free' };
+                // Convert back to nested arrays for display
+                const displayClassTimetables = {};
+                Object.keys(serializableClassTimetables).forEach(className => {
+                    const days = [[], [], [], [], []];
+                    serializableClassTimetables[className].forEach(slot => {
+                        if (!days[slot.day]) days[slot.day] = [];
+                        days[slot.day][slot.period] = {
+                            subject: slot.subject,
+                            teacher: slot.teacher,
+                            type: slot.type
+                        };
+                    });
+                    days.forEach((day, idx) => {
+                        if (!days[idx]) days[idx] = [];
+                        for (let p = 0; p < 6; p++) {
+                            if (!days[idx][p]) days[idx][p] = null;
                         }
-                    }
+                    });
+                    displayClassTimetables[className] = days;
                 });
-                displayStaffTimetables[staffName] = days;
-            });
 
-            setTimetable({
-                classTimetables: displayClassTimetables,
-                staffTimetables: displayStaffTimetables
-            });
+                const displayStaffTimetables = {};
+                Object.keys(serializableStaffTimetables).forEach(staffName => {
+                    const days = [[], [], [], [], []];
+                    serializableStaffTimetables[staffName].forEach(slot => {
+                        if (!days[slot.day]) days[slot.day] = [];
+                        days[slot.day][slot.period] = {
+                            subject: slot.subject,
+                            class: slot.class,
+                            type: slot.type
+                        };
+                    });
+                    days.forEach((day, idx) => {
+                        if (!days[idx]) days[idx] = [];
+                        for (let p = 0; p < 6; p++) {
+                            if (!days[idx][p]) {
+                                days[idx][p] = { subject: 'FREE', class: '-', type: 'free' };
+                            }
+                        }
+                    });
+                    displayStaffTimetables[staffName] = days;
+                });
 
-            showToast('✅ Timetable generated & saved!', 'success');
+                setTimetable({
+                    classTimetables: displayClassTimetables,
+                    staffTimetables: displayStaffTimetables
+                });
 
-            setTimeout(() => {
-                document.getElementById('view-timetables')?.scrollIntoView({ behavior: 'smooth' });
-            }, 1000);
-        } else {
-            showToast('❌ Failed: ' + result.error, 'error');
+                showToast('✅ Timetable generated & saved!', 'success');
+
+                setTimeout(() => {
+                    document.getElementById('view-timetables')?.scrollIntoView({ behavior: 'smooth' });
+                }, 1000);
+            } else {
+                showToast('❌ Failed: ' + result.error, 'error');
+            }
+        } catch (error) {
+            showToast('❌ Error: ' + error.message, 'error');
+            console.error(error);
         }
-    } catch (error) {
-        showToast('❌ Error: ' + error.message, 'error');
-        console.error(error);
-    }
 
-    setLoading(false);
-};;
+        setLoading(false);
+    };
 
     if (loading) {
         return (
@@ -563,52 +641,33 @@ const fetchData = async () => {
 
             <div className="content">
 
-                {/* ==================== CLASSES SECTION - FIX 3 ==================== */}
+                {/* ==================== IMPROVEMENT 1: MANAGE CLASSES SECTION ==================== */}
                 <div className="section">
                     <div className="section-header">
                         <span className="section-icon">📚</span>
                         <h2 className="section-title">Manage Classes</h2>
                     </div>
 
+                    {/* ✅ FIRST: Show existing classes */}
                     <div className="card">
-                        <h3>{newClass.id ? '✏️ Edit Class' : '➕ Add New Class'}</h3>
-                        <div className="grid-2">
-                            <div className="form-group">
-                                <label>Class Name *</label>
-                                <input
-                                    type="text"
-                                    value={newClass.name}
-                                    onChange={e => setNewClass({ ...newClass, name: e.target.value.toUpperCase() })}
-                                    placeholder="CS3A, EE2B"
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Hall Number (Optional)</label>
-                                <input
-                                    type="text"
-                                    value={newClass.hallNumber}
-                                    onChange={e => setNewClass({ ...newClass, hallNumber: e.target.value })}
-                                    placeholder="Hall 101"
-                                />
-                            </div>
-                        </div>
-                        <div style={{display: 'flex', gap: '10px'}}>
-                            <button className="btn btn-primary" onClick={addClass}>
-                                {newClass.id ? '💾 Update Class' : '➕ Add Class'}
+                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
+                            <h3>Existing Classes ({classes.length})</h3>
+                            <button 
+                                className="btn btn-primary btn-sm" 
+                                onClick={() => {
+                                    setShowClassForm(!showClassForm);
+                                    if (!showClassForm && newClass.id) {
+                                        setNewClass({ name: '', hallNumber: '' });
+                                    }
+                                }}
+                            >
+                                {showClassForm ? '❌ Cancel' : '➕ Add New Class'}
                             </button>
-                            {newClass.id && (
-                                <button className="btn btn-secondary" onClick={() => setNewClass({ name: '', hallNumber: '' })}>
-                                    ❌ Cancel
-                                </button>
-                            )}
                         </div>
-                    </div>
 
-                    <div className="card">
-                        <h3>Existing Classes ({classes.length})</h3>
                         {classes.length === 0 ? (
                             <p style={{color: '#64748b', textAlign: 'center', padding: '20px'}}>
-                                No classes added yet
+                                No classes added yet. Click "Add New Class" to start.
                             </p>
                         ) : (
                             <>
@@ -705,94 +764,79 @@ const fetchData = async () => {
                             </>
                         )}
                     </div>
+
+                    {/* ✅ SECOND: Collapsible Add/Edit Form */}
+                    {showClassForm && (
+                        <div className="card" ref={classFormRef} style={{
+                            animation: 'slideIn 0.3s ease-out',
+                            border: '2px solid #3b82f6'
+                        }}>
+                            <h3>{newClass.id ? '✏️ Edit Class' : '➕ Add New Class'}</h3>
+                            <div className="grid-2">
+                                <div className="form-group">
+                                    <label>Class Name *</label>
+                                    <input
+                                        type="text"
+                                        value={newClass.name}
+                                        onChange={e => setNewClass({ ...newClass, name: e.target.value.toUpperCase() })}
+                                        placeholder="CS3A, EE2B"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Hall Number (Optional)</label>
+                                    <input
+                                        type="text"
+                                        value={newClass.hallNumber}
+                                        onChange={e => setNewClass({ ...newClass, hallNumber: e.target.value })}
+                                        placeholder="Hall 101"
+                                    />
+                                </div>
+                            </div>
+                            <div style={{display: 'flex', gap: '10px'}}>
+                                <button className="btn btn-primary" onClick={addClass}>
+                                    {newClass.id ? '💾 Update Class' : '➕ Add Class'}
+                                </button>
+                                <button 
+                                    className="btn btn-secondary" 
+                                    onClick={() => {
+                                        setNewClass({ name: '', hallNumber: '' });
+                                        setShowClassForm(false);
+                                    }}
+                                >
+                                    ❌ Cancel
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
-                {/* ==================== STAFF SECTION - FIX 4 ==================== */}
+                {/* ==================== IMPROVEMENT 2: MANAGE STAFF SECTION ==================== */}
                 <div className="section">
                     <div className="section-header">
                         <span className="section-icon">👥</span>
                         <h2 className="section-title">Manage Staff</h2>
                     </div>
 
-                    <div className="card" ref={staffFormRef}>
-                        <h3>{newStaff.id ? '✏️ Edit Staff' : '➕ Add New Staff'}</h3>
-                        <div className="grid-2">
-                            <div className="form-group">
-                                <label>Full Name *</label>
-                                <input
-                                    type="text"
-                                    placeholder="Dr. John Doe"
-                                    value={newStaff.name}
-                                    onChange={e => setNewStaff({ ...newStaff, name: e.target.value })}
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Username *</label>
-                                <input
-                                    type="text"
-                                    placeholder="john"
-                                    disabled={!!newStaff.id}
-                                    value={newStaff.username}
-                                    onChange={e => setNewStaff({ ...newStaff, username: e.target.value })}
-                                    style={newStaff.id ? {background: '#f1f5f9', cursor: 'not-allowed'} : {}}
-                                />
-                            </div>
-                            {!newStaff.id && (
-                                <div className="form-group">
-                                    <label>Password *</label>
-                                    <input
-                                        type="password"
-                                        placeholder="Password"
-                                        value={newStaff.password}
-                                        onChange={e => setNewStaff({ ...newStaff, password: e.target.value })}
-                                    />
-                                </div>
-                            )}
-                            <div className="form-group">
-                                <label>Free Period Mode</label>
-                                <select
-                                    value={newStaff.freePeriodMode}
-                                    onChange={e => setNewStaff({ ...newStaff, freePeriodMode: e.target.value })}
-                                >
-                                    <option value="auto">Auto</option>
-                                    <option value="manual">Manual</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        {newStaff.freePeriodMode === 'manual' && (
-                            <div className="form-group">
-                                <label>Free Periods per Week</label>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    max="30"
-                                    value={newStaff.manualFreePeriods}
-                                    onChange={e => setNewStaff({ 
-                                        ...newStaff, 
-                                        manualFreePeriods: parseInt(e.target.value) || 0 
-                                    })}
-                                />
-                            </div>
-                        )}
-
-                        <div className="button-group">
-                            <button className="btn btn-primary" onClick={addOrUpdateStaff}>
-                                {newStaff.id ? '💾 Save Changes' : '➕ Add Staff'}
-                            </button>
-                            {newStaff.id && (
-                                <button className="btn btn-secondary" onClick={resetStaffForm}>
-                                    ❌ Cancel
-                                </button>
-                            )}
-                        </div>
-                    </div>
-
+                    {/* ✅ FIRST: Show existing staff */}
                     <div className="card">
-                        <h3>Existing Staff ({teachers.length})</h3>
+                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
+                            <h3>Existing Staff ({teachers.length})</h3>
+                            <button 
+                                className="btn btn-primary btn-sm" 
+                                onClick={() => {
+                                    setShowStaffForm(!showStaffForm);
+                                    if (!showStaffForm && newStaff.id) {
+                                        resetStaffForm();
+                                    }
+                                }}
+                            >
+                                {showStaffForm ? '❌ Cancel' : '➕ Add Staff'}
+                            </button>
+                        </div>
+
                         {teachers.length === 0 ? (
                             <p style={{color: '#64748b', textAlign: 'center', padding: '20px'}}>
-                                No staff added yet
+                                No staff added yet. Click "Add Staff" to start.
                             </p>
                         ) : (
                             <>
@@ -877,127 +921,119 @@ const fetchData = async () => {
                             </>
                         )}
                     </div>
+
+                    {/* ✅ SECOND: Collapsible Add/Edit Form */}
+                    {showStaffForm && (
+                        <div className="card" ref={staffFormRef} style={{
+                            animation: 'slideIn 0.3s ease-out',
+                            border: '2px solid #3b82f6'
+                        }}>
+                            <h3>{newStaff.id ? '✏️ Edit Staff' : '➕ Add New Staff'}</h3>
+                            <div className="grid-2">
+                                <div className="form-group">
+                                    <label>Full Name *</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Dr. John Doe"
+                                        value={newStaff.name}
+                                        onChange={e => setNewStaff({ ...newStaff, name: e.target.value })}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Username *</label>
+                                    <input
+                                        type="text"
+                                        placeholder="john"
+                                        disabled={!!newStaff.id}
+                                        value={newStaff.username}
+                                        onChange={e => setNewStaff({ ...newStaff, username: e.target.value })}
+                                        style={newStaff.id ? {background: '#f1f5f9', cursor: 'not-allowed'} : {}}
+                                    />
+                                </div>
+                                {!newStaff.id && (
+                                    <div className="form-group">
+                                        <label>Password *</label>
+                                        <input
+                                            type="password"
+                                            placeholder="Password"
+                                            value={newStaff.password}
+                                            onChange={e => setNewStaff({ ...newStaff, password: e.target.value })}
+                                        />
+                                    </div>
+                                )}
+                                <div className="form-group">
+                                    <label>Free Period Mode</label>
+                                    <select
+                                        value={newStaff.freePeriodMode}
+                                        onChange={e => setNewStaff({ ...newStaff, freePeriodMode: e.target.value })}
+                                    >
+                                        <option value="auto">Auto</option>
+                                        <option value="manual">Manual</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {newStaff.freePeriodMode === 'manual' && (
+                                <div className="form-group">
+                                    <label>Free Periods per Week</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="30"
+                                        value={newStaff.manualFreePeriods}
+                                        onChange={e => setNewStaff({ 
+                                            ...newStaff, 
+                                            manualFreePeriods: parseInt(e.target.value) || 0 
+                                        })}
+                                    />
+                                </div>
+                            )}
+
+                            <div className="button-group">
+                                <button className="btn btn-primary" onClick={addOrUpdateStaff}>
+                                    {newStaff.id ? '💾 Save Changes' : '➕ Add Staff'}
+                                </button>
+                                <button 
+                                    className="btn btn-secondary" 
+                                    onClick={() => {
+                                        resetStaffForm();
+                                        setShowStaffForm(false);
+                                    }}
+                                >
+                                    ❌ Cancel
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
-                {/* ==================== SUBJECTS SECTION - FIX 5 ==================== */}
+                {/* ==================== IMPROVEMENT 3: MANAGE SUBJECTS SECTION ==================== */}
                 <div className="section" id="subject-section">
                     <div className="section-header">
                         <span className="section-icon">📖</span>
                         <h2 className="section-title">Manage Subjects</h2>
                     </div>
 
-                    {newSubject.className && (
-                        <HoursTracker className={newSubject.className} subjects={subjects} />
-                    )}
-
-                    <div className="card" ref={subjectFormRef}>
-                        <h3>{newSubject.id ? '✏️ Edit Subject' : '➕ Add New Subject'}</h3>
-                        <div className="grid-2">
-                            <div className="form-group">
-                                <label>Select Class *</label>
-                                <select
-                                    value={newSubject.className}
-                                    onChange={e => setNewSubject({ ...newSubject, className: e.target.value })}
-                                >
-                                    <option value="">-- Select Class --</option>
-                                    {classes.map(cls => (
-                                        <option key={cls.id} value={cls.name}>{cls.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="form-group">
-                                <label>Subject Name *</label>
-                                <input
-                                    type="text"
-                                    value={newSubject.name}
-                                    onChange={e => setNewSubject({ ...newSubject, name: e.target.value })}
-                                    placeholder="DBMS, AI Lab, etc."
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Subject Type *</label>
-                                <select
-                                    value={newSubject.subjectType}
-                                    onChange={e => setNewSubject({ ...newSubject, subjectType: e.target.value })}
-                                >
-                                    <option value="Core">Core</option>
-                                    <option value="Elective">Elective</option>
-                                    <option value="Lab">Lab</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                            </div>
-                            <div className="form-group">
-                                <label>Hours per Week *</label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max="30"
-                                    value={newSubject.hoursPerWeek}
-                                    onChange={e => setNewSubject({ 
-                                        ...newSubject, 
-                                        hoursPerWeek: parseInt(e.target.value) || 6 
-                                    })}
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Teacher *</label>
-                                <select
-                                    value={newSubject.teacher}
-                                    onChange={e => setNewSubject({ ...newSubject, teacher: e.target.value })}
-                                >
-                                    <option value="">-- Select Teacher --</option>
-                                    {teachers.map(t => (
-                                        <option key={t.id} value={t.name}>{t.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="checkbox-group">
-                            <input
-                                type="checkbox"
-                                id="continuous"
-                                checked={newSubject.isContinuous}
-                                onChange={e => setNewSubject({ ...newSubject, isContinuous: e.target.checked })}
-                            />
-                            <label htmlFor="continuous" style={{marginBottom: 0}}>
-                                Continuous Period (Lab)
-                            </label>
-                        </div>
-
-                        {newSubject.isContinuous && (
-                            <div className="form-group">
-                                <label>Block Size</label>
-                                <select
-                                    value={newSubject.blockSize}
-                                    onChange={e => setNewSubject({ 
-                                        ...newSubject, 
-                                        blockSize: parseInt(e.target.value) 
-                                    })}
-                                >
-                                    <option value={2}>2 Periods</option>
-                                    <option value={3}>3 Periods</option>
-                                </select>
-                            </div>
-                        )}
-
-                        <div className="button-group">
-                            <button className="btn btn-primary" onClick={addOrUpdateSubject}>
-                                {newSubject.id ? '💾 Save Changes' : '➕ Add Subject'}
-                            </button>
-                            {newSubject.id && (
-                                <button className="btn btn-secondary" onClick={resetSubjectForm}>
-                                    ❌ Cancel
-                                </button>
-                            )}
-                        </div>
-                    </div>
-
+                    {/* ✅ FIRST: Show existing subjects grouped by class with hours tracker */}
                     <div className="card">
-                        <h3>Existing Subjects ({subjects.length})</h3>
+                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
+                            <h3>Existing Subjects ({subjects.length})</h3>
+                            <button 
+                                className="btn btn-primary btn-sm" 
+                                onClick={() => {
+                                    setShowSubjectForm(!showSubjectForm);
+                                    if (!showSubjectForm && newSubject.id) {
+                                        resetSubjectForm();
+                                    }
+                                }}
+                            >
+                                {showSubjectForm ? '❌ Cancel' : '➕ Add Subject'}
+                            </button>
+                        </div>
+
                         {subjects.length === 0 ? (
                             <p style={{color: '#64748b', textAlign: 'center', padding: '20px'}}>
-                                No subjects added yet
+                                No subjects added yet. Click "Add Subject" to start.
                             </p>
                         ) : (
                             <>
@@ -1006,30 +1042,76 @@ const fetchData = async () => {
                                     if (classSubjects.length === 0) return null;
 
                                     const totalHours = classSubjects.reduce((sum, s) => sum + s.hoursPerWeek, 0);
+                                    const remainingHours = 30 - totalHours;
+                                    const progressPercent = (totalHours / 30) * 100;
 
                                     return (
-                                        <div key={cls.id} style={{marginBottom: '30px'}}>
-                                            <h4 style={{
-                                                marginBottom: '15px', 
-                                                display: 'flex', 
-                                                alignItems: 'center', 
-                                                gap: '10px', 
-                                                color: '#1e293b',
-                                                flexWrap: 'wrap'
+                                        <div key={cls.id} style={{
+                                            marginBottom: '30px',
+                                            padding: '20px',
+                                            background: '#f8fafc',
+                                            borderRadius: '12px',
+                                            border: '1px solid #e2e8f0'
+                                        }}>
+                                            {/* ✅ Class header with hours progress */}
+                                            <div style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                marginBottom: '15px',
+                                                flexWrap: 'wrap',
+                                                gap: '10px'
                                             }}>
-                                                Class: {cls.name}
-                                                <span className={`badge ${totalHours === 30 ? 'badge-success' : 'badge-danger'}`}>
-                                                    {totalHours}/30 hours
-                                                </span>
-                                            </h4>
+                                                <h4 style={{
+                                                    margin: 0,
+                                                    color: '#1e293b',
+                                                    fontSize: '18px',
+                                                    fontWeight: '600'
+                                                }}>
+                                                    📚 Class: {cls.name}
+                                                </h4>
+                                                <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+                                                    <span className={`badge ${totalHours === 30 ? 'badge-success' : totalHours > 30 ? 'badge-danger' : 'badge-warning'}`}>
+                                                        {totalHours}/30 hours
+                                                    </span>
+                                                    {remainingHours > 0 && (
+                                                        <span className="badge badge-info">
+                                                            {remainingHours}h remaining
+                                                        </span>
+                                                    )}
+                                                    {totalHours > 30 && (
+                                                        <span className="badge badge-danger">
+                                                            ⚠️ {totalHours - 30}h overflow!
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
 
+                                            {/* ✅ Visual progress bar */}
+                                            <div style={{
+                                                width: '100%',
+                                                height: '12px',
+                                                background: '#e2e8f0',
+                                                borderRadius: '6px',
+                                                overflow: 'hidden',
+                                                marginBottom: '15px'
+                                            }}>
+                                                <div style={{
+                                                    width: `${Math.min(progressPercent, 100)}%`,
+                                                    height: '100%',
+                                                    background: totalHours === 30 ? '#10b981' : totalHours > 30 ? '#ef4444' : '#f59e0b',
+                                                    transition: 'width 0.3s ease'
+                                                }} />
+                                            </div>
+
+                                            {/* ✅ Subjects table */}
                                             <div className="desktop-table">
                                                 <table>
                                                     <thead>
                                                         <tr>
                                                             <th>Subject</th>
                                                             <th>Type</th>
-                                                            <th>Hours</th>
+                                                            <th>Hours/Week</th>
                                                             <th>Teacher</th>
                                                             <th>Continuous</th>
                                                             <th>Actions</th>
@@ -1039,11 +1121,28 @@ const fetchData = async () => {
                                                         {classSubjects.map(sub => (
                                                             <tr key={sub.id}>
                                                                 <td><strong>{sub.name}</strong></td>
-                                                                <td>{sub.subjectType}</td>
-                                                                <td>{sub.hoursPerWeek}h</td>
+                                                                <td>
+                                                                    <span className={`badge badge-${
+                                                                        sub.subjectType === 'Lab' ? 'info' :
+                                                                        sub.subjectType === 'Core' ? 'primary' : 'secondary'
+                                                                    }`}>
+                                                                        {sub.subjectType}
+                                                                    </span>
+                                                                </td>
+                                                                <td>
+                                                                    <span style={{fontWeight: '600', color: '#3b82f6'}}>
+                                                                        {sub.hoursPerWeek}h
+                                                                    </span>
+                                                                </td>
                                                                 <td>{sub.teacher}</td>
                                                                 <td>
-                                                                    {sub.isContinuous ? `Yes (${sub.blockSize}p)` : 'No'}
+                                                                    {sub.isContinuous ? (
+                                                                        <span className="badge badge-success">
+                                                                            ✓ {sub.blockSize}p blocks
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span style={{color: '#64748b'}}>No</span>
+                                                                    )}
                                                                 </td>
                                                                 <td>
                                                                     <div className="action-buttons">
@@ -1069,6 +1168,7 @@ const fetchData = async () => {
                                                 </table>
                                             </div>
 
+                                            {/* Mobile cards for subjects */}
                                             <div className="mobile-cards">
                                                 {classSubjects.map(sub => (
                                                     <div key={sub.id} className="mobile-card">
@@ -1109,6 +1209,125 @@ const fetchData = async () => {
                             </>
                         )}
                     </div>
+
+                    {/* ✅ SECOND: Collapsible Add/Edit Form */}
+                    {showSubjectForm && (
+                        <div className="card" ref={subjectFormRef} style={{
+                            animation: 'slideIn 0.3s ease-out',
+                            border: '2px solid #3b82f6'
+                        }}>
+                            <h3>{newSubject.id ? '✏️ Edit Subject' : '➕ Add New Subject'}</h3>
+
+                            {/* ✅ Show hours tracker when class is selected */}
+                            {newSubject.className && (
+                                <HoursTracker className={newSubject.className} subjects={subjects} />
+                            )}
+
+                            <div className="grid-2">
+                                <div className="form-group">
+                                    <label>Select Class *</label>
+                                    <select
+                                        value={newSubject.className}
+                                        onChange={e => setNewSubject({ ...newSubject, className: e.target.value })}
+                                    >
+                                        <option value="">-- Select Class --</option>
+                                        {classes.map(cls => (
+                                            <option key={cls.id} value={cls.name}>{cls.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Subject Name *</label>
+                                    <input
+                                        type="text"
+                                        value={newSubject.name}
+                                        onChange={e => setNewSubject({ ...newSubject, name: e.target.value })}
+                                        placeholder="DBMS, AI Lab, etc."
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Subject Type *</label>
+                                    <select
+                                        value={newSubject.subjectType}
+                                        onChange={e => setNewSubject({ ...newSubject, subjectType: e.target.value })}
+                                    >
+                                        <option value="Core">Core</option>
+                                        <option value="Elective">Elective</option>
+                                        <option value="Lab">Lab</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Hours per Week *</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="30"
+                                        value={newSubject.hoursPerWeek}
+                                        onChange={e => setNewSubject({ 
+                                            ...newSubject, 
+                                            hoursPerWeek: parseInt(e.target.value) || 6 
+                                        })}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Teacher *</label>
+                                    <select
+                                        value={newSubject.teacher}
+                                        onChange={e => setNewSubject({ ...newSubject, teacher: e.target.value })}
+                                    >
+                                        <option value="">-- Select Teacher --</option>
+                                        {teachers.map(t => (
+                                            <option key={t.id} value={t.name}>{t.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="checkbox-group">
+                                <input
+                                    type="checkbox"
+                                    id="continuous"
+                                    checked={newSubject.isContinuous}
+                                    onChange={e => setNewSubject({ ...newSubject, isContinuous: e.target.checked })}
+                                />
+                                <label htmlFor="continuous" style={{marginBottom: 0}}>
+                                    Continuous Period (Lab)
+                                </label>
+                            </div>
+
+                            {newSubject.isContinuous && (
+                                <div className="form-group">
+                                    <label>Block Size</label>
+                                    <select
+                                        value={newSubject.blockSize}
+                                        onChange={e => setNewSubject({ 
+                                            ...newSubject, 
+                                            blockSize: parseInt(e.target.value) 
+                                        })}
+                                    >
+                                        <option value={2}>2 Periods</option>
+                                        <option value={3}>3 Periods</option>
+                                    </select>
+                                </div>
+                            )}
+
+                            <div className="button-group">
+                                <button className="btn btn-primary" onClick={addOrUpdateSubject}>
+                                    {newSubject.id ? '💾 Save Changes' : '➕ Add Subject'}
+                                </button>
+                                <button 
+                                    className="btn btn-secondary" 
+                                    onClick={() => {
+                                        resetSubjectForm();
+                                        setShowSubjectForm(false);
+                                    }}
+                                >
+                                    ❌ Cancel
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* ==================== GENERATE TIMETABLE ==================== */}
@@ -1158,7 +1377,7 @@ const fetchData = async () => {
                     </div>
                 </div>
 
-                {/* ==================== VIEW TIMETABLES - FIX 6 ==================== */}
+                {/* ==================== IMPROVEMENT 4: VIEW TIMETABLES WITH FIXED PDF EXPORT ==================== */}
                 {timetable && (
                     <div className="section" id="view-timetables">
                         <div className="section-header">
@@ -1166,23 +1385,61 @@ const fetchData = async () => {
                             <h2 className="section-title">Generated Timetables</h2>
                         </div>
 
+                        {/* Class-wise Timetables */}
                         <div className="card">
                             <h3>Class-wise Timetables</h3>
                             {classes.map(cls => (
-                                <div key={cls.id} className="timetable-container">
+                                <div key={cls.id} className="timetable-container" style={{marginBottom: '40px'}}>
                                     <h4 className="timetable-title">
                                         Class: {cls.name} {cls.hallNumber && `(${cls.hallNumber})`}
                                     </h4>
-                                    <div className="timetable-scroll">
+
+                                    {/* ✅ FIXED: Wrapper for PDF export with unique ID */}
+                                    <div 
+                                        id={`timetable-${cls.name}`} 
+                                        className="timetable-export-wrapper"
+                                        style={{
+                                            width: '100%',
+                                            overflow: 'visible',
+                                            background: 'white',
+                                            padding: '20px',
+                                            marginBottom: '15px'
+                                        }}
+                                    >
                                         <TimetableGrid 
                                             timetable={timetable.classTimetables} 
                                             className={cls.name} 
                                         />
                                     </div>
+
                                     <div className="timetable-actions no-print">
                                         <button 
                                             className="btn btn-primary btn-sm"
-                                            onClick={() => exportToPDF('timetable-export', `${cls.name}_Timetable.pdf`)}
+                                            onClick={() => {
+                                                // ✅ IMPROVED: Export specific timetable by ID
+                                                const element = document.getElementById(`timetable-${cls.name}`);
+                                                if (element) {
+                                                    exportToPDF(
+                                                        `timetable-${cls.name}`, 
+                                                        `${cls.name}_Timetable.pdf`,
+                                                        {
+                                                            filename: `${cls.name}_Timetable.pdf`,
+                                                            html2canvas: { 
+                                                                scale: 2,
+                                                                useCORS: true,
+                                                                logging: false,
+                                                                width: element.scrollWidth,
+                                                                height: element.scrollHeight
+                                                            },
+                                                            jsPDF: { 
+                                                                unit: 'mm', 
+                                                                format: 'a4', 
+                                                                orientation: 'landscape' 
+                                                            }
+                                                        }
+                                                    );
+                                                }
+                                            }}
                                         >
                                             📄 Download PDF
                                         </button>
@@ -1191,23 +1448,62 @@ const fetchData = async () => {
                             ))}
                         </div>
 
+                        {/* Staff-wise Timetables */}
                         <div className="card">
                             <h3>Staff-wise Timetables</h3>
                             {teachers.map(teacher => (
-                                <div key={teacher.id} className="timetable-container">
+                                <div key={teacher.id} className="timetable-container" style={{marginBottom: '40px'}}>
                                     <h4 className="timetable-title">
                                         Teacher: {teacher.name}
                                     </h4>
-                                    <div className="timetable-scroll">
+
+                                    {/* ✅ FIXED: Wrapper for PDF export with unique ID */}
+                                    <div 
+                                        id={`staff-timetable-${teacher.name.replace(/\s+/g, '-')}`}
+                                        className="timetable-export-wrapper"
+                                        style={{
+                                            width: '100%',
+                                            overflow: 'visible',
+                                            background: 'white',
+                                            padding: '20px',
+                                            marginBottom: '15px'
+                                        }}
+                                    >
                                         <StaffTimetableGrid 
                                             timetable={timetable.staffTimetables} 
                                             staffName={teacher.name} 
                                         />
                                     </div>
+
                                     <div className="timetable-actions no-print">
                                         <button 
                                             className="btn btn-primary btn-sm"
-                                            onClick={() => exportToPDF('staff-timetable-export', `${teacher.name}_Timetable.pdf`)}
+                                            onClick={() => {
+                                                // ✅ IMPROVED: Export specific staff timetable by ID
+                                                const safeName = teacher.name.replace(/\s+/g, '-');
+                                                const element = document.getElementById(`staff-timetable-${safeName}`);
+                                                if (element) {
+                                                    exportToPDF(
+                                                        `staff-timetable-${safeName}`, 
+                                                        `${teacher.name}_Timetable.pdf`,
+                                                        {
+                                                            filename: `${teacher.name}_Timetable.pdf`,
+                                                            html2canvas: { 
+                                                                scale: 2,
+                                                                useCORS: true,
+                                                                logging: false,
+                                                                width: element.scrollWidth,
+                                                                height: element.scrollHeight
+                                                            },
+                                                            jsPDF: { 
+                                                                unit: 'mm', 
+                                                                format: 'a4', 
+                                                                orientation: 'landscape' 
+                                                            }
+                                                        }
+                                                    );
+                                                }
+                                            }}
                                         >
                                             📄 Download PDF
                                         </button>
@@ -1220,7 +1516,7 @@ const fetchData = async () => {
 
             </div>
 
-            <ToastContainer toasts={toasts} removeToast={removeToast} />
+            <ToastContainer toasts={toasts} onRemove={removeToast} />
         </>
     );
 }
