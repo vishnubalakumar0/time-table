@@ -122,10 +122,10 @@ export default function StaffDashboard({ user, onLogout }) {
                                     staffName={user.name} 
                                 />
 
-                                <div style={{marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'center'}} className="no-print">
+                                <div style={{marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'center'}} className="no-print no-export">
                                     <button 
                                         className="btn btn-primary btn-sm"
-                                        onClick={() => exportToPDF('staff-timetable-export', `${user.name}_Timetable.pdf`)}
+                                        onClick={() => exportToPDF('staff-timetable-export', `${user.name}_Timetable.pdf`, { title: `Staff Timetable — ${user.name}` })}
                                     >
                                         📄 Download PDF
                                     </button>

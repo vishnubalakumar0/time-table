@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import AnimatedBackground from './AnimatedBackground';
-import TimetableGrid from './TimetableGrid';
+import TimetableGrid from './timetableGrid';
 import { Storage } from '../utils/storage';
 import { exportToPDF } from '../utils/pdfUtils';
 
@@ -69,13 +69,14 @@ export default function StudentDashboard({ user, onLogout }) {
                                 />
                                 <div 
                                     style={{marginTop: '20px', display: 'flex', gap: '10px'}} 
-                                    className="no-print"
+                                    className="no-print no-export"
                                 >
                                     <button 
                                         className="btn btn-primary btn-sm"
                                         onClick={() => exportToPDF(
-                                            'timetable-export', 
-                                            `${selectedClass}_Timetable.pdf`
+                                            'class-timetable-export', 
+                                            `${selectedClass}_Timetable.pdf`,
+                                            { title: selectedClass }
                                         )}
                                     >
                                         📄 Download PDF

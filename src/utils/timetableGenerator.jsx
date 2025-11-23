@@ -9,6 +9,8 @@ export class TimetableGenerator {
         this.teacherWeeklyCount = {};
         this.teacherDailyCount = {};
         this.subjectLastUsed = {}; // Track when subject was last used
+        this.classDailyLabCount = {};
+        this.staffSettings = {};
         this.DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
         this.PERIODS = 6;
         this.MAX_TEACHER_HOURS_PER_DAY = 6;
@@ -93,6 +95,8 @@ export class TimetableGenerator {
                 this.classTimetables[cls.name] = this.DAYS.map(() => 
                     Array(this.PERIODS).fill(null)
                 );
+                this.classDailyLabCount[cls.name] = {};
+                this.DAYS.forEach(day => { this.classDailyLabCount[cls.name][day] = 0; });
             }
         });
 
@@ -105,6 +109,10 @@ export class TimetableGenerator {
                 this.DAYS.forEach(day => {
                     this.teacherDailyCount[teacher.name][day] = 0;
                 });
+                this.staffSettings[teacher.name] = {
+                    freePeriodMode: teacher.freePeriodMode || 'auto',
+                    manualFreePeriods: typeof teacher.manualFreePeriods === 'number' ? teacher.manualFreePeriods : 0
+                };
             }
         });
     }
@@ -139,10 +147,16 @@ export class TimetableGenerator {
                         if (prevSlot && prevSlot.isLabContinuation) {
                             const labSubject = classSubjects.find(s => s.name === prevSlot.subject);
                             if (labSubject && labSubject.currentBlockRemaining > 0) {
-                                this._placeAt(className, dayIdx, period, labSubject, true);
-                                labSubject.currentBlockRemaining--;
-                                console.log(`    P${period + 1}: ${labSubject.name} (continuing lab block)`);
-                                continue;
+                                const tName = labSubject.teacher;
+                                const slotKey = `${day}-P${period + 1}`;
+                                if (this.teacherBusySlots[tName]?.[slotKey]) {
+                                    console.log(`    P${period + 1}: Teacher ${tName} busy, cannot continue lab block`);
+                                } else {
+                                    this._placeAt(className, dayIdx, period, labSubject, true);
+                                    labSubject.currentBlockRemaining--;
+                                    console.log(`    P${period + 1}: ${labSubject.name} (continuing lab block)`);
+                                    continue;
+                                }
                             }
                         }
                     }
@@ -158,11 +172,30 @@ export class TimetableGenerator {
                                           period <= this.PERIODS - (bestSubject.blockSize || 2);
 
                         if (isLabStart) {
-                            bestSubject.currentBlockRemaining = (bestSubject.blockSize || 2) - 1;
+                            // Enforce teacher availability for all consecutive periods
+                            const blockSize = bestSubject.blockSize || 2;
+                            let teacherFreeForBlock = true;
+                            for (let i = 0; i < blockSize; i++) {
+                                const k = `${day}-P${period + 1 + i}`;
+                                if (this.teacherBusySlots[bestSubject.teacher]?.[k]) {
+                                    teacherFreeForBlock = false;
+                                    break;
+                                }
+                            }
+                            if (!teacherFreeForBlock) {
+                                console.log(`    P${period + 1}: Cannot start lab, teacher busy in block`);
+                            } else {
+                                bestSubject.currentBlockRemaining = blockSize - 1;
+                                this._placeAt(className, dayIdx, period, bestSubject, true);
+                                console.log(`    P${period + 1}: ${bestSubject.name} (lab start)`);
+                                continue;
+                            }
                         }
 
-                        this._placeAt(className, dayIdx, period, bestSubject, isLabStart);
-                        console.log(`    P${period + 1}: ${bestSubject.name} ${isLabStart ? '(lab start)' : ''}`);
+                        if (!bestSubject.isContinuous) {
+                            this._placeAt(className, dayIdx, period, bestSubject, false);
+                            console.log(`    P${period + 1}: ${bestSubject.name}`);
+                        }
                     } else {
                         // Rule 12: Revision period if no subject available
                         const revisionSubject = this._getRevisionSubject(classSubjects);
@@ -202,6 +235,10 @@ export class TimetableGenerator {
             // Skip if teacher unavailable (Rule 10 - but continue for class)
             const slotKey = `${day}-P${period + 1}`;
             const teacherBusy = this.teacherBusySlots[subject.teacher]?.[slotKey];
+            if (teacherBusy) {
+                // Hard constraint: teacher cannot teach two classes in same period
+                continue;
+            }
 
             let score = 100; // Start with high score
             const reasons = [];
@@ -253,6 +290,19 @@ export class TimetableGenerator {
                         score += 10;
                         reasons.push('Different difficulty +10');
                     }
+                    // Avoid >3 continuous theory of same subject
+                    if (!subject.isContinuous) {
+                        let sameStreak = 0;
+                        for (let i = 1; i <= 3; i++) {
+                            const ps = this.classTimetables[className][dayIdx][period - i];
+                            if (ps && ps.subject === subject.name && !ps.isLabContinuation) sameStreak++;
+                            else break;
+                        }
+                        if (sameStreak >= 3) {
+                            score -= 50;
+                            reasons.push('Too many continuous theory periods -50');
+                        }
+                    }
                 }
             }
 
@@ -275,10 +325,7 @@ export class TimetableGenerator {
             }
 
             // Teacher availability check (warn but don't block - Rule 10)
-            if (teacherBusy) {
-                score -= 100; // Strong penalty but not impossible
-                reasons.push('Teacher busy -100 (will find alternative if needed)');
-            }
+            // Enforced above
 
             // Lab placement logic
             if (subject.isContinuous) {
@@ -306,18 +353,57 @@ export class TimetableGenerator {
                             score += 20;
                             reasons.push('Lab in afternoon +20');
                         }
+                        // Avoid last period if possible
+                        if (period === this.PERIODS - 1) {
+                            score -= 30;
+                            reasons.push('Avoid lab at last period -30');
+                        }
+                        // Prefer only 1 lab per day, allow 2 with penalty
+                        const labsToday = this.classDailyLabCount[className][day] || 0;
+                        if (labsToday >= 1) {
+                            score -= 25;
+                            reasons.push('Second lab same day -25');
+                        }
                     }
                 }
             }
 
             // Core subjects prefer morning, electives prefer afternoon
             if (subject.subjectType === 'core' && period <= 2) {
-                score += 10;
-                reasons.push('Core in morning +10');
+                score += 5;
+                reasons.push('Core in morning +5');
             }
             if (subject.subjectType === 'elective' && period >= 3) {
                 score += 10;
                 reasons.push('Elective in afternoon +10');
+            }
+
+            // Prefer middle periods for theory (2–5)
+            if (!subject.isContinuous) {
+                if (period === 0 || period === this.PERIODS - 1) {
+                    score -= 10;
+                    reasons.push('Avoid edge periods for theory -10');
+                } else {
+                    score += 5;
+                    reasons.push('Middle period for theory +5');
+                }
+            }
+
+            // Teacher free period rules (auto/manual)
+            const tSettings = this.staffSettings[subject.teacher] || { freePeriodMode: 'auto', manualFreePeriods: 0 };
+            const usedTodayByTeacher = this.teacherDailyCount[subject.teacher][day] || 0;
+            if (tSettings.freePeriodMode === 'manual') {
+                const maxDaily = this.PERIODS - (tSettings.manualFreePeriods || 0);
+                if (usedTodayByTeacher >= maxDaily) {
+                    score = -1000;
+                    reasons.push('Manual free periods reached');
+                }
+            } else {
+                // Auto: prefer leaving one free period per day when possible
+                if (usedTodayByTeacher >= this.PERIODS - 1) {
+                    score -= 40;
+                    reasons.push('Prefer leaving one free period -40');
+                }
             }
 
             candidates.push({ subject, score, reasons });
@@ -414,6 +500,11 @@ export class TimetableGenerator {
             this.teacherDailyCount[subject.teacher][day] = 0;
         }
         this.teacherDailyCount[subject.teacher][day]++;
+
+        // Track lab count per day when starting
+        if (subject.isContinuous && isLabContinuation) {
+            this.classDailyLabCount[className][day] = (this.classDailyLabCount[className][day] || 0) + 1;
+        }
     }
 
     _generateStaffTimetables() {
@@ -471,6 +562,20 @@ export class TimetableGenerator {
 
             if (emptySlots > 0) {
                 warnings.push(`${cls.name}: ${emptySlots} empty periods (Rule 9 - should be filled)`);
+            }
+        });
+
+        // Weekly teacher hours should match assigned subject hours
+        const expectedTeacherHours = {};
+        this.subjects.forEach(s => {
+            if (!s || !s.teacher || !s.hoursPerWeek) return;
+            expectedTeacherHours[s.teacher] = (expectedTeacherHours[s.teacher] || 0) + s.hoursPerWeek;
+        });
+        Object.keys(expectedTeacherHours).forEach(t => {
+            const expected = expectedTeacherHours[t];
+            const actual = this.teacherWeeklyCount[t] || 0;
+            if (actual !== expected) {
+                warnings.push(`${t}: expected ${expected} hours, scheduled ${actual}`);
             }
         });
 

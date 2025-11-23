@@ -8,7 +8,7 @@ import { exportToPDF } from '../utils/pdfUtils';
 import { TimetableGenerator } from '../utils/timetableGenerator';
 
 import { auth, db } from '../utils/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updatePassword, signInWithEmailAndPassword } from 'firebase/auth';
 import {
     collection,
     addDoc,
@@ -21,27 +21,23 @@ import {
 
 export default function AdminDashboard({ user, onLogout }) {
     const [classes, setClasses] = useState([]);
+    const [departments, setDepartments] = useState([]);
     const [staff, setStaff] = useState([]);
     const [subjects, setSubjects] = useState([]);
     const [timetable, setTimetable] = useState(null);
     const [toasts, setToasts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [showAddStaffForm, setShowAddStaffForm] = useState(false);
+    const [showAddSubjectForm, setShowAddSubjectForm] = useState(false);
+    const [showAddDepartmentForm, setShowAddDepartmentForm] = useState(false);
+    const [showAddClassForm, setShowAddClassForm] = useState(false);
 
-    // ✅ NEW: Toggle states for collapsible forms
-    const [showClassForm, setShowClassForm] = useState(false);
-    const [showStaffForm, setShowStaffForm] = useState(false);
-    const [showSubjectForm, setShowSubjectForm] = useState(false);
-
-    // Refs for scrolling and PDF export
+    // Refs for scrolling
     const staffFormRef = useRef(null);
     const subjectFormRef = useRef(null);
-    const classFormRef = useRef(null);
-
-    // Undo stack for deleted items
-    const undoStackRef = useRef([]);
 
     // Form Models
-    const [newClass, setNewClass] = useState({ name: '', hallNumber: '' });
+    const [newClass, setNewClass] = useState({ name: '', hallNumber: '', department: '' });
     const [newStaff, setNewStaff] = useState({
         id: null,
         name: '',
@@ -61,16 +57,12 @@ export default function AdminDashboard({ user, onLogout }) {
         teacher: ''
     });
 
+    const [newDepartment, setNewDepartment] = useState({ id: null, name: '' });
+
     const teachers = staff.filter(s => s.role === "staff");
 
-    // Toast system with undo support
-    const showToast = (message, type, undoAction = null, duration = 3000) => {
-        const newToast = { 
-            message, 
-            type, 
-            id: Date.now(),
-            undoAction: undoAction || null
-        };
+    const showToast = (message, type, duration = 3000, undoAction = null) => {
+        const newToast = { message, type, id: Date.now(), undoAction };
         setToasts(prev => [...prev, newToast]);
         setTimeout(() => removeToast(newToast.id), duration);
     };
@@ -79,7 +71,6 @@ export default function AdminDashboard({ user, onLogout }) {
         setToasts(prev => prev.filter(t => t.id !== id));
     };
 
-    // Helper function to convert Firebase flat format to nested arrays
     const convertFlatToNested = (flatTimetable) => {
         if (!flatTimetable) return null;
 
@@ -88,12 +79,10 @@ export default function AdminDashboard({ user, onLogout }) {
         Object.keys(flatTimetable).forEach(key => {
             const slots = flatTimetable[key];
 
-            // Check if already nested (array of arrays)
             if (Array.isArray(slots) && slots.length > 0 && Array.isArray(slots[0])) {
                 nested[key] = slots;
             } else if (Array.isArray(slots)) {
-                // Flat format - convert to nested
-                const days = [[], [], [], [], []]; // 5 days
+                const days = [[], [], [], [], []];
 
                 slots.forEach(slot => {
                     if (slot && typeof slot.day === 'number' && typeof slot.period === 'number') {
@@ -107,7 +96,6 @@ export default function AdminDashboard({ user, onLogout }) {
                     }
                 });
 
-                // Fill empty periods
                 days.forEach((day, idx) => {
                     if (!days[idx]) days[idx] = [];
                     for (let p = 0; p < 6; p++) {
@@ -126,41 +114,78 @@ export default function AdminDashboard({ user, onLogout }) {
         return nested;
     };
 
-    // Optimized data fetching
-    useEffect(() => {
-        const fetchAll = async () => {
-            try {
-                const [cls, st, sb, tt] = await Promise.all([
-                    getDocs(collection(db, 'classes')),
-                    getDocs(collection(db, 'staff')),
-                    getDocs(collection(db, 'subjects')),
-                    getDocs(collection(db, 'timetable'))
-                ]);
+    const fetchData = async () => {
+        setLoading(true);
 
-                setClasses(cls.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-                setStaff(st.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-                setSubjects(sb.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        try {
+            const [cls, st, sb, tt, dp] = await Promise.all([
+                getDocs(collection(db, 'classes')),
+                getDocs(collection(db, 'staff')),
+                getDocs(collection(db, 'subjects')),
+                getDocs(collection(db, 'timetable')),
+                getDocs(collection(db, 'departments'))
+            ]);
 
-                if (!tt.empty) {
-                    const ttData = tt.docs[0].data();
-                    const convertedData = {
-                        classTimetables: convertFlatToNested(ttData.classTimetables),
-                        staffTimetables: convertFlatToNested(ttData.staffTimetables)
-                    };
-                    setTimetable(convertedData);
-                }
+            setClasses(cls.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setStaff(st.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setSubjects(sb.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setDepartments(dp.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-            } catch (error) {
-                showToast('❌ Error: ' + error.message, 'error');
-            } finally {
-                setLoading(false);
+            if (!tt.empty) {
+                const ttData = tt.docs[0].data();
+                const convertedData = {
+                    classTimetables: convertFlatToNested(ttData.classTimetables),
+                    staffTimetables: convertFlatToNested(ttData.staffTimetables)
+                };
+                setTimetable(convertedData);
             }
-        };
+        } catch (error) {
+            showToast('❌ Error loading data: ' + error.message, 'error');
+            console.error(error);
+        }
 
-        fetchAll();
+        setLoading(false);
+    };
+
+    useEffect(() => {
+        fetchData();
     }, []);
 
-    // ==================== CLASS CRUD ==================== 
+    // ==================== UNDO HANDLER ====================
+  
+
+// Undo handler: correctly restore by document id—no duplicates!
+// ==================== UNDO HANDLER ====================
+  const restoreFromUndo = async (undoItem) => {
+    try {
+      if (undoItem.type === 'class') {
+        const { id, ...classData } = undoItem.data;
+        await setDoc(doc(db, 'classes', id), classData);
+      } else if (undoItem.type === 'staff') {
+        const { id, ...staffData } = undoItem.data;
+        await setDoc(doc(db, 'staff', id), staffData);
+        if (undoItem.data.firebaseUid) {
+          await setDoc(doc(db, 'users', undoItem.data.firebaseUid), {
+            name: undoItem.data.name,
+            username: undoItem.data.username,
+            role: 'staff'
+          });
+        }
+      } else if (undoItem.type === 'subject') {
+        const { id, ...subjectData } = undoItem.data;
+        await setDoc(doc(db, 'subjects', id), subjectData);
+      }
+      await fetchData(); // reload UI
+      showToast('✅ Data restored!', 'success');
+    } catch (error) {
+      console.error('Restore error:', error);
+      showToast('❌ Restore failed: ' + error.message, 'error');
+    }
+    };
+
+
+
+    // ==================== CLASS CRUD ====================
     const addClass = async () => {
         if (!newClass.name) return showToast("Enter class name", "error");
         if (classes.find(c => c.name === newClass.name && !newClass.id))
@@ -168,94 +193,141 @@ export default function AdminDashboard({ user, onLogout }) {
 
         try {
             if (newClass.id) {
-                // Update existing
                 await updateDoc(doc(db, 'classes', newClass.id), { 
                     name: newClass.name, 
-                    hallNumber: newClass.hallNumber 
+                    hallNumber: newClass.hallNumber,
+                    department: newClass.department || ''
                 });
-                setClasses(classes.map(c => c.id === newClass.id ? { ...newClass } : c));
+                setClasses(classes.map(c => c.id === newClass.id ? { id: newClass.id, ...newClass } : c));
                 showToast("✅ Class updated!", "success");
             } else {
-                // Add new
                 const docRef = await addDoc(collection(db, 'classes'), { 
                     name: newClass.name, 
-                    hallNumber: newClass.hallNumber || '' 
+                    hallNumber: newClass.hallNumber || '',
+                    department: newClass.department || ''
                 });
-                setClasses([...classes, { id: docRef.id, name: newClass.name, hallNumber: newClass.hallNumber || '' }]);
+                setClasses([...classes, { id: docRef.id, name: newClass.name, hallNumber: newClass.hallNumber || '', department: newClass.department || '' }]);
                 showToast("✅ Class added!", "success");
             }
-            setNewClass({ name: '', hallNumber: '' });
-            setShowClassForm(false); // ✅ Collapse form after success
+            setNewClass({ name: '', hallNumber: '', department: '' });
         } catch (error) {
             showToast("❌ Operation failed", "error");
         }
     };
 
-    // ✅ IMPROVED: Edit scrolls and expands form
     const editClass = (cls) => {
-        setNewClass({ id: cls.id, name: cls.name, hallNumber: cls.hallNumber || '' });
-        setShowClassForm(true); // ✅ Expand form
-        setTimeout(() => {
-            classFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
+        setNewClass({ id: cls.id, name: cls.name, hallNumber: cls.hallNumber || '', department: cls.department || '' });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const deleteClass = async (id) => {
-        if (!window.confirm("Delete this class?")) return;
-
-        const classToDelete = classes.find(c => c.id === id);
-        if (!classToDelete) return;
-
+    const addOrUpdateDepartment = async () => {
+        if (!newDepartment.name.trim()) return showToast("Enter department name", "error");
         try {
-            await deleteDoc(doc(db, 'classes', id));
-            setClasses(classes.filter(c => c.id !== id));
+            if (newDepartment.id) {
+                await updateDoc(doc(db, 'departments', newDepartment.id), { name: newDepartment.name });
+                setDepartments(departments.map(d => d.id === newDepartment.id ? { ...d, name: newDepartment.name } : d));
+                showToast("✅ Department updated!", "success");
+            } else {
+                const ref = await addDoc(collection(db, 'departments'), { name: newDepartment.name });
+                setDepartments([...departments, { id: ref.id, name: newDepartment.name }]);
+                showToast("✅ Department added!", "success");
+            }
+            setNewDepartment({ id: null, name: '' });
+        } catch (error) {
+            showToast("❌ Operation failed", "error");
+        }
+    };
 
-            const undoEntry = {
-                type: 'class',
-                data: classToDelete,
-                timestamp: Date.now()
-            };
-            undoStackRef.current.push(undoEntry);
+    const editDepartment = (dept) => {
+        setNewDepartment({ id: dept.id, name: dept.name });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
 
-            const undoAction = async () => {
-                try {
-                    await setDoc(doc(db, 'classes', classToDelete.id), {
-                        name: classToDelete.name,
-                        hallNumber: classToDelete.hallNumber || ''
-                    });
-
-                    setClasses(prev => [...prev, classToDelete]);
-                    undoStackRef.current = undoStackRef.current.filter(
-                        entry => entry.timestamp !== undoEntry.timestamp
-                    );
-
-                    showToast("✅ Class restored", "success");
-                } catch (error) {
-                    showToast("❌ Failed to restore", "error");
-                }
-            };
-
-            showToast("Class deleted — Undo?", "success", undoAction, 5000);
+    const deleteDepartment = async (id) => {
+        if (!window.confirm("Delete this department?")) return;
+        try {
+            await deleteDoc(doc(db, 'departments', id));
+            setDepartments(departments.filter(d => d.id !== id));
+            showToast("✅ Department deleted", "success");
         } catch (error) {
             showToast("❌ Failed to delete", "error");
         }
     };
 
-    // ==================== STAFF CRUD ==================== 
+// ==================== CLASS CRUD ====================
+  const deleteClass = async (id) => {
+    if (!window.confirm("Delete this class?")) return;
+    try {
+      const classToDelete = classes.find(c => c.id === id);
+      if (!classToDelete) return;
+      const undoItem = { type: 'class', data: { ...classToDelete } };
+      await deleteDoc(doc(db, 'classes', id));
+      setClasses(classes.filter(c => c.id !== id));
+      showToast(
+        `✅ Class deleted`,
+        'success',
+        5000,
+        () => restoreFromUndo(undoItem)
+      );
+    } catch (error) {
+      console.error('Delete error:', error);
+      showToast("❌ Failed to delete", "error");
+    }
+  };
+
+    // ==================== STAFF CRUD ====================
     const addOrUpdateStaff = async () => {
         if (!newStaff.name || !newStaff.username)
             return showToast("Fill all required fields", "error");
 
         try {
             if (newStaff.id) {
+                // Editing existing staff
+                const staffToUpdate = staff.find(s => s.id === newStaff.id);
                 const { password, ...updateData } = newStaff;
-                await updateDoc(doc(db, 'staff', newStaff.id), updateData);
-                setStaff(staff.map(s => s.id === newStaff.id ? { ...s, ...updateData } : s));
+                
+                // Update Firestore staff document with name, freePeriodMode, manualFreePeriods
+                const firestoreUpdateData = {
+                    name: updateData.name,
+                    freePeriodMode: updateData.freePeriodMode,
+                    manualFreePeriods: updateData.manualFreePeriods
+                };
+                
+                // Include username if it changed
+                if (staffToUpdate.username !== updateData.username) {
+                    firestoreUpdateData.username = updateData.username;
+                }
+                
+                await updateDoc(doc(db, 'staff', newStaff.id), firestoreUpdateData);
+                
+                // Update users collection with new data
+                if (staffToUpdate.firebaseUid) {
+                    await updateDoc(doc(db, 'users', staffToUpdate.firebaseUid), {
+                        name: newStaff.name,
+                        username: newStaff.username,
+                        role: 'staff'
+                    });
+                }
+                
+                // Handle password change if provided
+                if (password && password.trim()) {
+                    await updateDoc(doc(db, 'staff', newStaff.id), {
+                        tempPassword: password,
+                        passwordLastChanged: new Date().toISOString(),
+                        needsPasswordChange: true
+                    });
+                    showToast("✅ Temporary password set. Share it with staff.", "success");
+                } else {
+                    showToast("✅ Staff updated!", "success");
+                }
+                
+                setStaff(staff.map(s => s.id === newStaff.id ? { ...s, ...firestoreUpdateData } : s));
                 resetStaffForm();
-                setShowStaffForm(false); // ✅ Collapse after success
-                return showToast("✅ Staff updated!", "success");
+                setShowAddStaffForm(false);
+                return;
             }
 
+            // Adding new staff
             if (!newStaff.password) return showToast("Password required", "error");
 
             const email = `${newStaff.username}@timetable.com`;
@@ -280,18 +352,18 @@ export default function AdminDashboard({ user, onLogout }) {
 
             setStaff([...staff, { id: docRef.id, ...staffData }]);
             resetStaffForm();
-            setShowStaffForm(false); // ✅ Collapse after success
+            setShowAddStaffForm(false);
             showToast("✅ Staff added!", "success");
 
         } catch (error) {
             showToast("❌ Operation failed: " + error.message, "error");
+            console.error(error);
         }
     };
 
-    // ✅ IMPROVED: Edit opens form automatically
     const editStaff = (staffMember) => {
         setNewStaff({ ...staffMember, password: '' });
-        setShowStaffForm(true); // ✅ Expand form
+        setShowAddStaffForm(true);
         setTimeout(() => {
             staffFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
@@ -308,52 +380,31 @@ export default function AdminDashboard({ user, onLogout }) {
         });
     };
 
-    const deleteStaff = async (id) => {
-        if (!window.confirm("Delete this staff member?")) return;
+const deleteStaff = async (id) => {
+    if (!window.confirm("Delete this staff member?")) return;
+    try {
+      const staffToDelete = staff.find(s => s.id === id);
+      if (!staffToDelete) return;
+      const undoItem = { type: 'staff', data: { ...staffToDelete } };
+      await deleteDoc(doc(db, 'staff', id));
+      if (staffToDelete.firebaseUid) {
+        await deleteDoc(doc(db, 'users', staffToDelete.firebaseUid));
+      }
+      setStaff(staff.filter(x => x.id !== id));
+      showToast(
+        '✅ Staff deleted',
+        'success',
+        5000,
+        () => restoreFromUndo(undoItem)
+      );
+    } catch (error) {
+      console.error('Delete staff error:', error);
+      showToast('❌ Failed to delete', 'error');
+    }
+  };
 
-        const staffToDelete = staff.find(x => x.id === id);
-        if (!staffToDelete) return;
 
-        try {
-            await deleteDoc(doc(db, 'staff', id));
-            setStaff(staff.filter(x => x.id !== id));
-
-            const undoEntry = {
-                type: 'staff',
-                data: staffToDelete,
-                timestamp: Date.now()
-            };
-            undoStackRef.current.push(undoEntry);
-
-            const undoAction = async () => {
-                try {
-                    await setDoc(doc(db, 'staff', staffToDelete.id), {
-                        name: staffToDelete.name,
-                        username: staffToDelete.username,
-                        freePeriodMode: staffToDelete.freePeriodMode,
-                        manualFreePeriods: staffToDelete.manualFreePeriods || 0,
-                        role: staffToDelete.role || 'staff',
-                        firebaseUid: staffToDelete.firebaseUid || null
-                    });
-
-                    setStaff(prev => [...prev, staffToDelete]);
-                    undoStackRef.current = undoStackRef.current.filter(
-                        entry => entry.timestamp !== undoEntry.timestamp
-                    );
-
-                    showToast("✅ Staff restored", "success");
-                } catch (error) {
-                    showToast("❌ Failed to restore", "error");
-                }
-            };
-
-            showToast("Staff deleted — Undo?", "success", undoAction, 5000);
-        } catch (error) {
-            showToast("❌ Failed to delete", "error");
-        }
-    };
-
-    // ==================== SUBJECT CRUD ==================== 
+    // ==================== SUBJECT CRUD ====================
     const addOrUpdateSubject = async () => {
         if (!newSubject.className || !newSubject.name || !newSubject.teacher)
             return showToast("Fill all required fields", "error");
@@ -379,14 +430,13 @@ export default function AdminDashboard({ user, onLogout }) {
                 showToast("✅ Subject added!", "success");
             }
             resetSubjectForm();
-            setShowSubjectForm(false); // ✅ Collapse after success
+            setShowAddSubjectForm(false);
         } catch (error) {
             showToast("❌ Operation failed", "error");
             console.error(error);
         }
     };
 
-    // ✅ IMPROVED: Edit opens form automatically
     const editSubject = (subject) => {
         setNewSubject({
             id: subject.id,
@@ -398,7 +448,7 @@ export default function AdminDashboard({ user, onLogout }) {
             blockSize: subject.blockSize || 2,
             teacher: subject.teacher
         });
-        setShowSubjectForm(true); // ✅ Expand form
+        setShowAddSubjectForm(true);
         setTimeout(() => {
             subjectFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
@@ -417,53 +467,29 @@ export default function AdminDashboard({ user, onLogout }) {
         });
     };
 
-    const deleteSubject = async (id) => {
-        if (!window.confirm("Delete this subject?")) return;
+  const deleteSubject = async (id) => {
+    if (!window.confirm("Delete this subject?")) return;
+    try {
+      const subjectToDelete = subjects.find(s => s.id === id);
+      if (!subjectToDelete) return;
+      const undoItem = { type: 'subject', data: { ...subjectToDelete } };
+      await deleteDoc(doc(db, 'subjects', id));
+      setSubjects(subjects.filter(s => s.id !== id));
+      showToast(
+        '✅ Subject deleted',
+        'success',
+        5000,
+        () => restoreFromUndo(undoItem)
+      );
+    } catch (error) {
+      console.error('Delete subject error:', error);
+      showToast('❌ Failed to delete', 'error');
+    }
+  };
 
-        const subjectToDelete = subjects.find(s => s.id === id);
-        if (!subjectToDelete) return;
 
-        try {
-            await deleteDoc(doc(db, 'subjects', id));
-            setSubjects(subjects.filter(s => s.id !== id));
 
-            const undoEntry = {
-                type: 'subject',
-                data: subjectToDelete,
-                timestamp: Date.now()
-            };
-            undoStackRef.current.push(undoEntry);
-
-            const undoAction = async () => {
-                try {
-                    await setDoc(doc(db, 'subjects', subjectToDelete.id), {
-                        className: subjectToDelete.className,
-                        name: subjectToDelete.name,
-                        subjectType: subjectToDelete.subjectType,
-                        hoursPerWeek: subjectToDelete.hoursPerWeek,
-                        isContinuous: subjectToDelete.isContinuous || false,
-                        blockSize: subjectToDelete.blockSize || 2,
-                        teacher: subjectToDelete.teacher
-                    });
-
-                    setSubjects(prev => [...prev, subjectToDelete]);
-                    undoStackRef.current = undoStackRef.current.filter(
-                        entry => entry.timestamp !== undoEntry.timestamp
-                    );
-
-                    showToast("✅ Subject restored", "success");
-                } catch (error) {
-                    showToast("❌ Failed to restore", "error");
-                }
-            };
-
-            showToast("Subject deleted — Undo?", "success", undoAction, 5000);
-        } catch (error) {
-            showToast("❌ Failed to delete", "error");
-        }
-    };
-
-    // ==================== TIMETABLE GENERATION ==================== 
+    // ==================== TIMETABLE GENERATION ====================
     const generateTimetable = async () => {
         setLoading(true);
 
@@ -480,11 +506,9 @@ export default function AdminDashboard({ user, onLogout }) {
             const result = generator.generate();
 
             if (result.success) {
-                // Convert nested arrays to Firebase-friendly format
                 const serializableClassTimetables = {};
                 const serializableStaffTimetables = {};
 
-                // Flatten class timetables
                 Object.keys(result.classTimetables).forEach(className => {
                     serializableClassTimetables[className] = result.classTimetables[className].map((day, dayIndex) => {
                         return day.map((period, periodIndex) => ({
@@ -497,7 +521,6 @@ export default function AdminDashboard({ user, onLogout }) {
                     }).flat();
                 });
 
-                // Flatten staff timetables
                 Object.keys(result.staffTimetables).forEach(staffName => {
                     serializableStaffTimetables[staffName] = result.staffTimetables[staffName].map((day, dayIndex) => {
                         return day.map((period, periodIndex) => ({
@@ -516,7 +539,6 @@ export default function AdminDashboard({ user, onLogout }) {
                     generatedAt: new Date().toISOString()
                 };
 
-                // Save to Firebase
                 const ttRef = collection(db, 'timetable');
                 const existing = await getDocs(ttRef);
 
@@ -526,9 +548,8 @@ export default function AdminDashboard({ user, onLogout }) {
                     await addDoc(ttRef, timetableData);
                 }
 
-                // Save individual staff timetables
-                const teachersList = staff.filter(s => s.role === 'staff');
-                for (const teacher of teachersList) {
+                const teacherList = staff.filter(s => s.role === 'staff');
+                for (const teacher of teacherList) {
                     const staffTT = serializableStaffTimetables[teacher.name];
                     if (staffTT) {
                         await setDoc(doc(db, 'staffTimetables', teacher.id), {
@@ -539,7 +560,6 @@ export default function AdminDashboard({ user, onLogout }) {
                     }
                 }
 
-                // Convert back to nested arrays for display
                 const displayClassTimetables = {};
                 Object.keys(serializableClassTimetables).forEach(className => {
                     const days = [[], [], [], [], []];
@@ -640,34 +660,18 @@ export default function AdminDashboard({ user, onLogout }) {
             </div>
 
             <div className="content">
-
-                {/* ==================== IMPROVEMENT 1: MANAGE CLASSES SECTION ==================== */}
+                {/* ==================== DEPARTMENTS SECTION ==================== */}
                 <div className="section">
                     <div className="section-header">
-                        <span className="section-icon">📚</span>
-                        <h2 className="section-title">Manage Classes</h2>
+                        <span className="section-icon">🏢</span>
+                        <h2 className="section-title">Manage Departments</h2>
                     </div>
 
-                    {/* ✅ FIRST: Show existing classes */}
                     <div className="card">
-                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
-                            <h3>Existing Classes ({classes.length})</h3>
-                            <button 
-                                className="btn btn-primary btn-sm" 
-                                onClick={() => {
-                                    setShowClassForm(!showClassForm);
-                                    if (!showClassForm && newClass.id) {
-                                        setNewClass({ name: '', hallNumber: '' });
-                                    }
-                                }}
-                            >
-                                {showClassForm ? '❌ Cancel' : '➕ Add New Class'}
-                            </button>
-                        </div>
-
-                        {classes.length === 0 ? (
+                        <h3>Existing Departments ({departments.length})</h3>
+                        {departments.length === 0 ? (
                             <p style={{color: '#64748b', textAlign: 'center', padding: '20px'}}>
-                                No classes added yet. Click "Add New Class" to start.
+                                No departments added yet
                             </p>
                         ) : (
                             <>
@@ -676,45 +680,23 @@ export default function AdminDashboard({ user, onLogout }) {
                                         <thead>
                                             <tr>
                                                 <th>#</th>
-                                                <th>Class Name</th>
-                                                <th>Hall Number</th>
-                                                <th>Subjects</th>
-                                                <th>Hours</th>
+                                                <th>Department</th>
+                                                <th>Classes</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {classes.map((cls, idx) => {
-                                                const classSubjects = subjects.filter(s => s.className === cls.name);
-                                                const totalHours = classSubjects.reduce((sum, s) => sum + s.hoursPerWeek, 0);
-
+                                            {departments.map((d, idx) => {
+                                                const classCount = classes.filter(c => (c.department || '') === d.name).length;
                                                 return (
-                                                    <tr key={cls.id}>
+                                                    <tr key={d.id}>
                                                         <td>{idx + 1}</td>
-                                                        <td><strong>{cls.name}</strong></td>
-                                                        <td>{cls.hallNumber || '-'}</td>
-                                                        <td>{classSubjects.length}</td>
-                                                        <td>
-                                                            <span className={`badge ${totalHours === 30 ? 'badge-success' : 'badge-danger'}`}>
-                                                                {totalHours}/30h
-                                                            </span>
-                                                        </td>
+                                                        <td><strong>{d.name}</strong></td>
+                                                        <td>{classCount}</td>
                                                         <td>
                                                             <div className="action-buttons">
-                                                                <button 
-                                                                    className="btn-icon btn-icon-primary"
-                                                                    onClick={() => editClass(cls)}
-                                                                    title="Edit"
-                                                                >
-                                                                    ✏️
-                                                                </button>
-                                                                <button 
-                                                                    className="btn-icon btn-icon-danger"
-                                                                    onClick={() => deleteClass(cls.id)}
-                                                                    title="Delete"
-                                                                >
-                                                                    🗑️
-                                                                </button>
+                                                                <button className="btn-icon btn-icon-primary" onClick={() => { editDepartment(d); setShowAddDepartmentForm(true); }} title="Edit">✏️</button>
+                                                                <button className="btn-icon btn-icon-danger" onClick={() => deleteDepartment(d.id)} title="Delete">🗑️</button>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -725,37 +707,23 @@ export default function AdminDashboard({ user, onLogout }) {
                                 </div>
 
                                 <div className="mobile-cards">
-                                    {classes.map((cls, idx) => {
-                                        const classSubjects = subjects.filter(s => s.className === cls.name);
-                                        const totalHours = classSubjects.reduce((sum, s) => sum + s.hoursPerWeek, 0);
-
+                                    {departments.map((d, idx) => {
+                                        const classCount = classes.filter(c => (c.department || '') === d.name).length;
                                         return (
-                                            <div key={cls.id} className="mobile-card">
+                                            <div key={d.id} className="mobile-card">
                                                 <div className="mobile-card-header">
-                                                    <span className="mobile-card-title">{cls.name}</span>
+                                                    <span className="mobile-card-title">{d.name}</span>
                                                     <span className="mobile-card-badge">#{idx + 1}</span>
                                                 </div>
                                                 <div className="mobile-card-body">
                                                     <div className="mobile-card-row">
-                                                        <span className="mobile-card-label">Hall:</span>
-                                                        <span className="mobile-card-value">{cls.hallNumber || '-'}</span>
-                                                    </div>
-                                                    <div className="mobile-card-row">
-                                                        <span className="mobile-card-label">Subjects:</span>
-                                                        <span className="mobile-card-value">{classSubjects.length}</span>
-                                                    </div>
-                                                    <div className="mobile-card-row">
-                                                        <span className="mobile-card-label">Hours:</span>
-                                                        <span className="mobile-card-value">{totalHours}/30h</span>
+                                                        <span className="mobile-card-label">Classes:</span>
+                                                        <span className="mobile-card-value">{classCount}</span>
                                                     </div>
                                                 </div>
                                                 <div className="mobile-card-actions">
-                                                    <button className="btn btn-primary btn-sm" onClick={() => editClass(cls)}>
-                                                        ✏️ Edit
-                                                    </button>
-                                                    <button className="btn btn-danger btn-sm" onClick={() => deleteClass(cls.id)}>
-                                                        🗑️ Delete
-                                                    </button>
+                                                    <button className="btn btn-primary btn-sm" onClick={() => { editDepartment(d); setShowAddDepartmentForm(true); }}>✏️ Edit</button>
+                                                    <button className="btn btn-danger btn-sm" onClick={() => deleteDepartment(d.id)}>🗑️ Delete</button>
                                                 </div>
                                             </div>
                                         );
@@ -763,80 +731,244 @@ export default function AdminDashboard({ user, onLogout }) {
                                 </div>
                             </>
                         )}
+                        <button 
+                            className="btn btn-success btn-sm" 
+                            onClick={() => setShowAddDepartmentForm(true)}
+                            style={{marginTop: '15px'}}
+                        >
+                            ➕ Add Department
+                        </button>
                     </div>
 
-                    {/* ✅ SECOND: Collapsible Add/Edit Form */}
-                    {showClassForm && (
-                        <div className="card" ref={classFormRef} style={{
-                            animation: 'slideIn 0.3s ease-out',
-                            border: '2px solid #3b82f6'
-                        }}>
-                            <h3>{newClass.id ? '✏️ Edit Class' : '➕ Add New Class'}</h3>
+                    {showAddDepartmentForm && (
+                        <div className="card">
+                            <h3>{newDepartment.id ? '✏️ Edit Department' : '➕ Add New Department'}</h3>
                             <div className="grid-2">
                                 <div className="form-group">
-                                    <label>Class Name *</label>
-                                    <input
-                                        type="text"
-                                        value={newClass.name}
-                                        onChange={e => setNewClass({ ...newClass, name: e.target.value.toUpperCase() })}
-                                        placeholder="CS3A, EE2B"
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label>Hall Number (Optional)</label>
-                                    <input
-                                        type="text"
-                                        value={newClass.hallNumber}
-                                        onChange={e => setNewClass({ ...newClass, hallNumber: e.target.value })}
-                                        placeholder="Hall 101"
-                                    />
+                                    <label>Department Name *</label>
+                                    <input type="text" value={newDepartment.name} onChange={e => setNewDepartment({ ...newDepartment, name: e.target.value })} placeholder="Computer Science" />
                                 </div>
                             </div>
                             <div style={{display: 'flex', gap: '10px'}}>
-                                <button className="btn btn-primary" onClick={addClass}>
-                                    {newClass.id ? '💾 Update Class' : '➕ Add Class'}
-                                </button>
-                                <button 
-                                    className="btn btn-secondary" 
-                                    onClick={() => {
-                                        setNewClass({ name: '', hallNumber: '' });
-                                        setShowClassForm(false);
-                                    }}
-                                >
-                                    ❌ Cancel
-                                </button>
+                                <button className="btn btn-primary" onClick={addOrUpdateDepartment}>{newDepartment.id ? '💾 Save Changes' : '➕ Add Department'}</button>
+                                <button className="btn btn-secondary" onClick={() => { setNewDepartment({ id: null, name: '' }); setShowAddDepartmentForm(false); }}>❌ Cancel</button>
                             </div>
                         </div>
                     )}
                 </div>
 
-                {/* ==================== IMPROVEMENT 2: MANAGE STAFF SECTION ==================== */}
+                {/* ==================== CLASSES SECTION ==================== */}
+                <div className="section">
+                    <div className="section-header">
+                        <span className="section-icon">📚</span>
+                        <h2 className="section-title">Manage Classes</h2>
+                    </div>
+
+                    {/* EXISTING CLASSES - FIRST */}
+                    <div className="card">
+                        <h3>Existing Classes ({classes.length})</h3>
+                        {classes.length === 0 ? (
+                            <p style={{color: '#64748b', textAlign: 'center', padding: '20px'}}>
+                                No classes added yet
+                            </p>
+                        ) : (
+                            <>
+                                {(() => {
+                                    const sorted = [...classes].sort((a, b) => (a.department || 'Unassigned').localeCompare(b.department || 'Unassigned') || a.name.localeCompare(b.name));
+                                    const groups = {};
+                                    sorted.forEach(cls => {
+                                        const dept = cls.department || 'Unassigned';
+                                        if (!groups[dept]) groups[dept] = [];
+                                        groups[dept].push(cls);
+                                    });
+                                    return Object.keys(groups).filter(d => groups[d].length > 0).map(dept => (
+                                        <div key={`dept-classes-${dept}`} className="dept-group">
+                                            <div className="dept-chip">{dept}</div>
+                                            {groups[dept].map((cls, idx) => {
+                                                const classSubjects = subjects.filter(s => s.className === cls.name);
+                                                const totalHours = classSubjects.reduce((sum, s) => sum + s.hoursPerWeek, 0);
+                                                const progress = (totalHours / 30) * 100;
+                                                return (
+                                                    <div key={cls.id} className="class-box">
+                                                        <div style={{
+                                                            marginBottom: '8px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'space-between',
+                                                            gap: '10px',
+                                                            color: '#1e293b',
+                                                            flexWrap: 'wrap'
+                                                        }}>
+                                                            <h4 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                Class: <strong>{cls.name}</strong>
+                                                            </h4>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: '#64748b', fontWeight: 600 }}>
+                                                                <span>{totalHours}/30 hours</span>
+                                                                <span>{Math.max(30 - totalHours, 0)}h remaining</span>
+                                                            </div>
+                                                        </div>
+                                                        <div style={{
+                                                            width: '100%',
+                                                            height: '8px',
+                                                            backgroundColor: '#e2e8f0',
+                                                            borderRadius: '4px',
+                                                            overflow: 'hidden',
+                                                            marginBottom: '15px'
+                                                        }}>
+                                                            <div style={{
+                                                                height: '100%',
+                                                                width: `${Math.min(progress, 100)}%`,
+                                                                backgroundColor: totalHours === 30 ? '#10b981' : '#f59e0b',
+                                                                transition: 'width 0.3s ease'
+                                                            }}></div>
+                                                        </div>
+                                                        <div className="desktop-table">
+                                                            <table>
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th>Hall Number</th>
+                                                                        <th>Subjects</th>
+                                                                        <th>Hours</th>
+                                                                        <th>Actions</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    <tr>
+                                                                        <td>{cls.hallNumber || '-'}</td>
+                                                                        <td>{classSubjects.length}</td>
+                                                                        <td>
+                                                                            <span className={`badge ${totalHours === 30 ? 'badge-success' : 'badge-danger'}`}>{totalHours}/30h</span>
+                                                                        </td>
+                                                                        <td>
+                                                                            <div className="action-buttons">
+                                                                                <button className="btn-icon btn-icon-primary" onClick={() => { editClass(cls); setShowAddClassForm(true); }} title="Edit">✏️</button>
+                                                                                <button className="btn-icon btn-icon-danger" onClick={() => deleteClass(cls.id)} title="Delete">🗑️</button>
+                                                                            </div>
+                                                                        </td>
+                                                                    </tr>
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ));
+                                })()}
+
+                                <div className="mobile-cards">
+                                    {(() => {
+                                        const sorted = [...classes].sort((a, b) => (a.department || 'Unassigned').localeCompare(b.department || 'Unassigned') || a.name.localeCompare(b.name));
+                                        let currentDept = null;
+                                        const cards = [];
+                                        sorted.forEach((cls, idx) => {
+                                            const dept = cls.department || 'Unassigned';
+                                            const classSubjects = subjects.filter(s => s.className === cls.name);
+                                            const totalHours = classSubjects.reduce((sum, s) => sum + s.hoursPerWeek, 0);
+                                            if (dept !== currentDept) {
+                                                currentDept = dept;
+                                                cards.push(<div key={`dept-mobile-${dept}`} className="group-header" style={{ fontWeight: 700, margin: '10px 0' }}>{dept}</div>);
+                                            }
+                                            cards.push(
+                                                <div key={cls.id} className="mobile-card">
+                                                    <div className="mobile-card-header">
+                                                        <span className="mobile-card-title">{cls.name}</span>
+                                                        <span className="mobile-card-badge">#{idx + 1}</span>
+                                                    </div>
+                                                    <div className="mobile-card-body">
+                                                        
+                                                        <div className="mobile-card-row">
+                                                            <span className="mobile-card-label">Hall:</span>
+                                                            <span className="mobile-card-value">{cls.hallNumber || '-'}</span>
+                                                        </div>
+                                                        <div className="mobile-card-row">
+                                                            <span className="mobile-card-label">Subjects:</span>
+                                                            <span className="mobile-card-value">{classSubjects.length}</span>
+                                                        </div>
+                                                        <div className="mobile-card-row">
+                                                            <span className="mobile-card-label">Hours:</span>
+                                                            <span className="mobile-card-value">{totalHours}/30h</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="mobile-card-actions">
+                                                        <button className="btn btn-primary btn-sm" onClick={() => { editClass(cls); setShowAddClassForm(true); }}>✏️ Edit</button>
+                                                        <button className="btn btn-danger btn-sm" onClick={() => deleteClass(cls.id)}>🗑️ Delete</button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        });
+                                        return cards;
+                                    })()}
+                                </div>
+                            </>
+                        )}
+                        <button 
+                            className="btn btn-success btn-sm" 
+                            onClick={() => { setShowAddClassForm(true); setNewClass({ id: null, name: '', hallNumber: '', department: '' }); }}
+                            style={{marginTop: '15px'}}
+                        >
+                            ➕ Add Class
+                        </button>
+                    </div>
+
+                    {/* ADD/EDIT CLASS - SECOND (COLLAPSIBLE) */}
+                    {showAddClassForm && (
+                    <div className="card">
+                        <h3>{newClass.id ? '✏️ Edit Class' : '➕ Add New Class'}</h3>
+                        <div className="grid-2">
+                            <div className="form-group">
+                                <label>Class Name *</label>
+                                <input
+                                    type="text"
+                                    value={newClass.name}
+                                    onChange={e => setNewClass({ ...newClass, name: e.target.value.toUpperCase() })}
+                                    placeholder="CS3A, EE2B"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Hall Number (Optional)</label>
+                                <input
+                                    type="text"
+                                    value={newClass.hallNumber}
+                                    onChange={e => setNewClass({ ...newClass, hallNumber: e.target.value })}
+                                    placeholder="Hall 101"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Department</label>
+                                <select value={newClass.department} onChange={e => setNewClass({ ...newClass, department: e.target.value })}>
+                                    <option value="">Unassigned</option>
+                                    {departments.map(d => (
+                                        <option key={d.id} value={d.name}>{d.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        <div style={{display: 'flex', gap: '10px'}}>
+                            <button className="btn btn-primary" onClick={addClass}>
+                                {newClass.id ? '💾 Update Class' : '➕ Add Class'}
+                            </button>
+                            <button className="btn btn-secondary" onClick={() => { setNewClass({ name: '', hallNumber: '', department: '' }); setShowAddClassForm(false); }}>
+                                ❌ Cancel
+                            </button>
+                        </div>
+                    </div>
+                    )}
+                </div>
+
+                {/* ==================== STAFF SECTION ==================== */}
                 <div className="section">
                     <div className="section-header">
                         <span className="section-icon">👥</span>
                         <h2 className="section-title">Manage Staff</h2>
                     </div>
 
-                    {/* ✅ FIRST: Show existing staff */}
+                    {/* EXISTING STAFF - FIRST */}
                     <div className="card">
-                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
-                            <h3>Existing Staff ({teachers.length})</h3>
-                            <button 
-                                className="btn btn-primary btn-sm" 
-                                onClick={() => {
-                                    setShowStaffForm(!showStaffForm);
-                                    if (!showStaffForm && newStaff.id) {
-                                        resetStaffForm();
-                                    }
-                                }}
-                            >
-                                {showStaffForm ? '❌ Cancel' : '➕ Add Staff'}
-                            </button>
-                        </div>
-
+                        <h3>Existing Staff ({teachers.length})</h3>
                         {teachers.length === 0 ? (
                             <p style={{color: '#64748b', textAlign: 'center', padding: '20px'}}>
-                                No staff added yet. Click "Add Staff" to start.
+                                No staff added yet
                             </p>
                         ) : (
                             <>
@@ -847,7 +979,7 @@ export default function AdminDashboard({ user, onLogout }) {
                                                 <th>S.No</th>
                                                 <th>Name</th>
                                                 <th>Username</th>
-                                                <th>Mode</th>
+                                                <th>Free Periods</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
@@ -859,7 +991,7 @@ export default function AdminDashboard({ user, onLogout }) {
                                                     <td>{s.username}</td>
                                                     <td>
                                                         {s.freePeriodMode === 'manual' 
-                                                            ? `Manual (${s.manualFreePeriods})` 
+                                                            ? `Manual (${s.manualFreePeriods} free periods)` 
                                                             : 'Auto'}
                                                     </td>
                                                     <td>
@@ -899,10 +1031,10 @@ export default function AdminDashboard({ user, onLogout }) {
                                                     <span className="mobile-card-value">{s.username}</span>
                                                 </div>
                                                 <div className="mobile-card-row">
-                                                    <span className="mobile-card-label">Mode:</span>
+                                                    <span className="mobile-card-label">Free Periods:</span>
                                                     <span className="mobile-card-value">
                                                         {s.freePeriodMode === 'manual' 
-                                                            ? `Manual (${s.manualFreePeriods})` 
+                                                            ? `Manual (${s.manualFreePeriods} free periods)` 
                                                             : 'Auto'}
                                                     </span>
                                                 </div>
@@ -920,14 +1052,18 @@ export default function AdminDashboard({ user, onLogout }) {
                                 </div>
                             </>
                         )}
+                        <button 
+                            className="btn btn-success btn-sm" 
+                            onClick={() => {setShowAddStaffForm(true); resetStaffForm()}}
+                            style={{marginTop: '15px'}}
+                        >
+                            ➕ Add Staff
+                        </button>
                     </div>
 
-                    {/* ✅ SECOND: Collapsible Add/Edit Form */}
-                    {showStaffForm && (
-                        <div className="card" ref={staffFormRef} style={{
-                            animation: 'slideIn 0.3s ease-out',
-                            border: '2px solid #3b82f6'
-                        }}>
+                    {/* ADD/EDIT STAFF - SECOND (COLLAPSIBLE) */}
+                    {showAddStaffForm && (
+                        <div className="card" ref={staffFormRef}>
                             <h3>{newStaff.id ? '✏️ Edit Staff' : '➕ Add New Staff'}</h3>
                             <div className="grid-2">
                                 <div className="form-group">
@@ -944,23 +1080,24 @@ export default function AdminDashboard({ user, onLogout }) {
                                     <input
                                         type="text"
                                         placeholder="john"
-                                        disabled={!!newStaff.id}
                                         value={newStaff.username}
                                         onChange={e => setNewStaff({ ...newStaff, username: e.target.value })}
-                                        style={newStaff.id ? {background: '#f1f5f9', cursor: 'not-allowed'} : {}}
                                     />
                                 </div>
-                                {!newStaff.id && (
-                                    <div className="form-group">
-                                        <label>Password *</label>
-                                        <input
-                                            type="password"
-                                            placeholder="Password"
-                                            value={newStaff.password}
-                                            onChange={e => setNewStaff({ ...newStaff, password: e.target.value })}
-                                        />
-                                    </div>
-                                )}
+                                <div className="form-group">
+                                    <label>{newStaff.id ? 'New Password (Optional)' : 'Password'} *</label>
+                                    <input
+                                        type="password"
+                                        placeholder={newStaff.id ? "Leave blank to keep current" : "Enter password"}
+                                        value={newStaff.password}
+                                        onChange={e => setNewStaff({ ...newStaff, password: e.target.value })}
+                                    />
+                                    {newStaff.id && (
+                                        <small style={{color: '#64748b', display: 'block', marginTop: '4px'}}>
+                                            ✓ Staff can use new password immediately on next login
+                                        </small>
+                                    )}
+                                </div>
                                 <div className="form-group">
                                     <label>Free Period Mode</label>
                                     <select
@@ -993,13 +1130,7 @@ export default function AdminDashboard({ user, onLogout }) {
                                 <button className="btn btn-primary" onClick={addOrUpdateStaff}>
                                     {newStaff.id ? '💾 Save Changes' : '➕ Add Staff'}
                                 </button>
-                                <button 
-                                    className="btn btn-secondary" 
-                                    onClick={() => {
-                                        resetStaffForm();
-                                        setShowStaffForm(false);
-                                    }}
-                                >
+                                <button className="btn btn-secondary" onClick={() => {resetStaffForm(); setShowAddStaffForm(false);}}>
                                     ❌ Cancel
                                 </button>
                             </div>
@@ -1007,33 +1138,19 @@ export default function AdminDashboard({ user, onLogout }) {
                     )}
                 </div>
 
-                {/* ==================== IMPROVEMENT 3: MANAGE SUBJECTS SECTION ==================== */}
+                {/* ==================== SUBJECTS SECTION ==================== */}
                 <div className="section" id="subject-section">
                     <div className="section-header">
                         <span className="section-icon">📖</span>
                         <h2 className="section-title">Manage Subjects</h2>
                     </div>
 
-                    {/* ✅ FIRST: Show existing subjects grouped by class with hours tracker */}
+                    {/* EXISTING SUBJECTS - FIRST */}
                     <div className="card">
-                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
-                            <h3>Existing Subjects ({subjects.length})</h3>
-                            <button 
-                                className="btn btn-primary btn-sm" 
-                                onClick={() => {
-                                    setShowSubjectForm(!showSubjectForm);
-                                    if (!showSubjectForm && newSubject.id) {
-                                        resetSubjectForm();
-                                    }
-                                }}
-                            >
-                                {showSubjectForm ? '❌ Cancel' : '➕ Add Subject'}
-                            </button>
-                        </div>
-
+                        <h3>Existing Subjects ({subjects.length})</h3>
                         {subjects.length === 0 ? (
                             <p style={{color: '#64748b', textAlign: 'center', padding: '20px'}}>
-                                No subjects added yet. Click "Add Subject" to start.
+                                No subjects added yet
                             </p>
                         ) : (
                             <>
@@ -1042,76 +1159,52 @@ export default function AdminDashboard({ user, onLogout }) {
                                     if (classSubjects.length === 0) return null;
 
                                     const totalHours = classSubjects.reduce((sum, s) => sum + s.hoursPerWeek, 0);
-                                    const remainingHours = 30 - totalHours;
-                                    const progressPercent = (totalHours / 30) * 100;
+                                    const progress = (totalHours / 30) * 100;
 
                                     return (
-                                        <div key={cls.id} style={{
-                                            marginBottom: '30px',
-                                            padding: '20px',
-                                            background: '#f8fafc',
-                                            borderRadius: '12px',
-                                            border: '1px solid #e2e8f0'
-                                        }}>
-                                            {/* ✅ Class header with hours progress */}
+                                        <div key={cls.id} style={{marginBottom: '30px'}}>
                                             <div style={{
+                                                marginBottom: '8px',
                                                 display: 'flex',
-                                                justifyContent: 'space-between',
                                                 alignItems: 'center',
-                                                marginBottom: '15px',
-                                                flexWrap: 'wrap',
-                                                gap: '10px'
+                                                justifyContent: 'space-between',
+                                                gap: '10px',
+                                                color: '#1e293b',
+                                                flexWrap: 'wrap'
                                             }}>
-                                                <h4 style={{
-                                                    margin: 0,
-                                                    color: '#1e293b',
-                                                    fontSize: '18px',
-                                                    fontWeight: '600'
-                                                }}>
-                                                    📚 Class: {cls.name}
+                                                <h4 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    Class: <strong>{cls.name}</strong>
                                                 </h4>
-                                                <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
-                                                    <span className={`badge ${totalHours === 30 ? 'badge-success' : totalHours > 30 ? 'badge-danger' : 'badge-warning'}`}>
-                                                        {totalHours}/30 hours
-                                                    </span>
-                                                    {remainingHours > 0 && (
-                                                        <span className="badge badge-info">
-                                                            {remainingHours}h remaining
-                                                        </span>
-                                                    )}
-                                                    {totalHours > 30 && (
-                                                        <span className="badge badge-danger">
-                                                            ⚠️ {totalHours - 30}h overflow!
-                                                        </span>
-                                                    )}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: '#64748b', fontWeight: 600 }}>
+                                                    <span>{totalHours}/30 hours</span>
+                                                    <span>{Math.max(30 - totalHours, 0)}h remaining</span>
                                                 </div>
                                             </div>
 
-                                            {/* ✅ Visual progress bar */}
+                                            {/* Progress Bar */}
                                             <div style={{
                                                 width: '100%',
-                                                height: '12px',
-                                                background: '#e2e8f0',
-                                                borderRadius: '6px',
+                                                height: '8px',
+                                                backgroundColor: '#e2e8f0',
+                                                borderRadius: '4px',
                                                 overflow: 'hidden',
                                                 marginBottom: '15px'
                                             }}>
                                                 <div style={{
-                                                    width: `${Math.min(progressPercent, 100)}%`,
                                                     height: '100%',
-                                                    background: totalHours === 30 ? '#10b981' : totalHours > 30 ? '#ef4444' : '#f59e0b',
+                                                    width: `${Math.min(progress, 100)}%`,
+                                                    backgroundColor: totalHours === 30 ? '#10b981' : '#f59e0b',
                                                     transition: 'width 0.3s ease'
-                                                }} />
+                                                }}></div>
                                             </div>
 
-                                            {/* ✅ Subjects table */}
                                             <div className="desktop-table">
                                                 <table>
                                                     <thead>
                                                         <tr>
                                                             <th>Subject</th>
                                                             <th>Type</th>
-                                                            <th>Hours/Week</th>
+                                                            <th>Hours</th>
                                                             <th>Teacher</th>
                                                             <th>Continuous</th>
                                                             <th>Actions</th>
@@ -1121,28 +1214,11 @@ export default function AdminDashboard({ user, onLogout }) {
                                                         {classSubjects.map(sub => (
                                                             <tr key={sub.id}>
                                                                 <td><strong>{sub.name}</strong></td>
-                                                                <td>
-                                                                    <span className={`badge badge-${
-                                                                        sub.subjectType === 'Lab' ? 'info' :
-                                                                        sub.subjectType === 'Core' ? 'primary' : 'secondary'
-                                                                    }`}>
-                                                                        {sub.subjectType}
-                                                                    </span>
-                                                                </td>
-                                                                <td>
-                                                                    <span style={{fontWeight: '600', color: '#3b82f6'}}>
-                                                                        {sub.hoursPerWeek}h
-                                                                    </span>
-                                                                </td>
+                                                                <td>{sub.subjectType}</td>
+                                                                <td>{sub.hoursPerWeek}h</td>
                                                                 <td>{sub.teacher}</td>
                                                                 <td>
-                                                                    {sub.isContinuous ? (
-                                                                        <span className="badge badge-success">
-                                                                            ✓ {sub.blockSize}p blocks
-                                                                        </span>
-                                                                    ) : (
-                                                                        <span style={{color: '#64748b'}}>No</span>
-                                                                    )}
+                                                                    {sub.isContinuous ? `Yes (${sub.blockSize}p)` : 'No'}
                                                                 </td>
                                                                 <td>
                                                                     <div className="action-buttons">
@@ -1168,7 +1244,6 @@ export default function AdminDashboard({ user, onLogout }) {
                                                 </table>
                                             </div>
 
-                                            {/* Mobile cards for subjects */}
                                             <div className="mobile-cards">
                                                 {classSubjects.map(sub => (
                                                     <div key={sub.id} className="mobile-card">
@@ -1208,17 +1283,20 @@ export default function AdminDashboard({ user, onLogout }) {
                                 })}
                             </>
                         )}
+                        <button 
+                            className="btn btn-success btn-sm" 
+                            onClick={() => {setShowAddSubjectForm(true); resetSubjectForm()}}
+                            style={{marginTop: '15px'}}
+                        >
+                            ➕ Add Subject
+                        </button>
                     </div>
 
-                    {/* ✅ SECOND: Collapsible Add/Edit Form */}
-                    {showSubjectForm && (
-                        <div className="card" ref={subjectFormRef} style={{
-                            animation: 'slideIn 0.3s ease-out',
-                            border: '2px solid #3b82f6'
-                        }}>
+                    {/* ADD/EDIT SUBJECT - SECOND (COLLAPSIBLE) */}
+                    {showAddSubjectForm && (
+                        <div className="card" ref={subjectFormRef}>
                             <h3>{newSubject.id ? '✏️ Edit Subject' : '➕ Add New Subject'}</h3>
-
-                            {/* ✅ Show hours tracker when class is selected */}
+                            
                             {newSubject.className && (
                                 <HoursTracker className={newSubject.className} subjects={subjects} />
                             )}
@@ -1316,13 +1394,7 @@ export default function AdminDashboard({ user, onLogout }) {
                                 <button className="btn btn-primary" onClick={addOrUpdateSubject}>
                                     {newSubject.id ? '💾 Save Changes' : '➕ Add Subject'}
                                 </button>
-                                <button 
-                                    className="btn btn-secondary" 
-                                    onClick={() => {
-                                        resetSubjectForm();
-                                        setShowSubjectForm(false);
-                                    }}
-                                >
+                                <button className="btn btn-secondary" onClick={() => {resetSubjectForm(); setShowAddSubjectForm(false);}}>
                                     ❌ Cancel
                                 </button>
                             </div>
@@ -1339,19 +1411,6 @@ export default function AdminDashboard({ user, onLogout }) {
 
                     <div className="card">
                         <h3>Ready to Generate</h3>
-                        <div className="info-box">
-                            <p style={{marginBottom: '15px', fontSize: '15px', lineHeight: '1.6'}}>
-                                The smart algorithm will create an optimized timetable:
-                            </p>
-                            <ul style={{marginLeft: '25px', lineHeight: '1.8'}}>
-                                <li>✅ No free periods (all 30 filled)</li>
-                                <li>✅ High-hour subjects (≥5h) appear daily</li>
-                                <li>✅ Labs in continuous blocks</li>
-                                <li>✅ No teacher conflicts</li>
-                                <li>✅ Balanced workload</li>
-                            </ul>
-                        </div>
-
                         <div className="stats-grid">
                             <div className="stat-card stat-primary">
                                 <div className="stat-label">Classes</div>
@@ -1377,7 +1436,7 @@ export default function AdminDashboard({ user, onLogout }) {
                     </div>
                 </div>
 
-                {/* ==================== IMPROVEMENT 4: VIEW TIMETABLES WITH FIXED PDF EXPORT ==================== */}
+                {/* ==================== VIEW TIMETABLES ==================== */}
                 {timetable && (
                     <div className="section" id="view-timetables">
                         <div className="section-header">
@@ -1385,128 +1444,49 @@ export default function AdminDashboard({ user, onLogout }) {
                             <h2 className="section-title">Generated Timetables</h2>
                         </div>
 
-                        {/* Class-wise Timetables */}
                         <div className="card">
-                            <h3>Class-wise Timetables</h3>
-                            {classes.map(cls => (
-                                <div key={cls.id} className="timetable-container" style={{marginBottom: '40px'}}>
-                                    <h4 className="timetable-title">
-                                        Class: {cls.name} {cls.hallNumber && `(${cls.hallNumber})`}
-                                    </h4>
-
-                                    {/* ✅ FIXED: Wrapper for PDF export with unique ID */}
-                                    <div 
-                                        id={`timetable-${cls.name}`} 
-                                        className="timetable-export-wrapper"
-                                        style={{
-                                            width: '100%',
-                                            overflow: 'visible',
-                                            background: 'white',
-                                            padding: '20px',
-                                            marginBottom: '15px'
-                                        }}
-                                    >
-                                        <TimetableGrid 
-                                            timetable={timetable.classTimetables} 
-                                            className={cls.name} 
-                                        />
-                                    </div>
-
-                                    <div className="timetable-actions no-print">
-                                        <button 
-                                            className="btn btn-primary btn-sm"
-                                            onClick={() => {
-                                                // ✅ IMPROVED: Export specific timetable by ID
-                                                const element = document.getElementById(`timetable-${cls.name}`);
-                                                if (element) {
-                                                    exportToPDF(
-                                                        `timetable-${cls.name}`, 
-                                                        `${cls.name}_Timetable.pdf`,
-                                                        {
-                                                            filename: `${cls.name}_Timetable.pdf`,
-                                                            html2canvas: { 
-                                                                scale: 2,
-                                                                useCORS: true,
-                                                                logging: false,
-                                                                width: element.scrollWidth,
-                                                                height: element.scrollHeight
-                                                            },
-                                                            jsPDF: { 
-                                                                unit: 'mm', 
-                                                                format: 'a4', 
-                                                                orientation: 'landscape' 
-                                                            }
-                                                        }
-                                                    );
-                                                }
-                                            }}
-                                        >
-                                            📄 Download PDF
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
+                            <h3>Time Tables</h3>
+                            {(() => {
+                                const sorted = [...classes].sort((a, b) => (a.department || 'Unassigned').localeCompare(b.department || 'Unassigned') || a.name.localeCompare(b.name));
+                                const groups = {};
+                                sorted.forEach(cls => {
+                                    const dept = cls.department || 'Unassigned';
+                                    if (!groups[dept]) groups[dept] = [];
+                                    groups[dept].push(
+                                        <div key={cls.id} className="timetable-container" id={`timetable-export-${cls.id}`}>
+                                            <h4 className="timetable-title">{cls.name}</h4>
+                                            <div className="timetable-scroll">
+                                                <TimetableGrid timetable={timetable.classTimetables} className={cls.name} />
+                                            </div>
+                                            <div className="timetable-actions no-print no-export">
+                                                <button className="btn btn-primary btn-sm" onClick={() => exportToPDF(`timetable-export-${cls.id}`, `${cls.name}_Timetable.pdf`, { title: cls.name })}>📄 Download PDF</button>
+                                            </div>
+                                        </div>
+                                    );
+                                });
+                                return Object.keys(groups)
+                                    .filter(dept => groups[dept].length > 0)
+                                    .map(dept => (
+                                        <div key={`dept-block-${dept}`} className="dept-group">
+                                            <div className="dept-chip">{dept}</div>
+                                            {groups[dept].map(node => (
+                                                <div key={node.key} className="class-box">{node}</div>
+                                            ))}
+                                        </div>
+                                    ));
+                            })()}
                         </div>
 
-                        {/* Staff-wise Timetables */}
                         <div className="card">
                             <h3>Staff-wise Timetables</h3>
-                            {teachers.map(teacher => (
-                                <div key={teacher.id} className="timetable-container" style={{marginBottom: '40px'}}>
-                                    <h4 className="timetable-title">
-                                        Teacher: {teacher.name}
-                                    </h4>
-
-                                    {/* ✅ FIXED: Wrapper for PDF export with unique ID */}
-                                    <div 
-                                        id={`staff-timetable-${teacher.name.replace(/\s+/g, '-')}`}
-                                        className="timetable-export-wrapper"
-                                        style={{
-                                            width: '100%',
-                                            overflow: 'visible',
-                                            background: 'white',
-                                            padding: '20px',
-                                            marginBottom: '15px'
-                                        }}
-                                    >
-                                        <StaffTimetableGrid 
-                                            timetable={timetable.staffTimetables} 
-                                            staffName={teacher.name} 
-                                        />
+                            {[...teachers].sort((a, b) => a.name.localeCompare(b.name)).map(teacher => (
+                                <div key={teacher.id} className="timetable-container" id={`staff-timetable-export-${teacher.id}`}>
+                                    <h4 className="timetable-title">Teacher: {teacher.name}</h4>
+                                    <div className="timetable-scroll">
+                                        <StaffTimetableGrid timetable={timetable.staffTimetables} staffName={teacher.name} />
                                     </div>
-
-                                    <div className="timetable-actions no-print">
-                                        <button 
-                                            className="btn btn-primary btn-sm"
-                                            onClick={() => {
-                                                // ✅ IMPROVED: Export specific staff timetable by ID
-                                                const safeName = teacher.name.replace(/\s+/g, '-');
-                                                const element = document.getElementById(`staff-timetable-${safeName}`);
-                                                if (element) {
-                                                    exportToPDF(
-                                                        `staff-timetable-${safeName}`, 
-                                                        `${teacher.name}_Timetable.pdf`,
-                                                        {
-                                                            filename: `${teacher.name}_Timetable.pdf`,
-                                                            html2canvas: { 
-                                                                scale: 2,
-                                                                useCORS: true,
-                                                                logging: false,
-                                                                width: element.scrollWidth,
-                                                                height: element.scrollHeight
-                                                            },
-                                                            jsPDF: { 
-                                                                unit: 'mm', 
-                                                                format: 'a4', 
-                                                                orientation: 'landscape' 
-                                                            }
-                                                        }
-                                                    );
-                                                }
-                                            }}
-                                        >
-                                            📄 Download PDF
-                                        </button>
+                                    <div className="timetable-actions no-print no-export">
+                                        <button className="btn btn-primary btn-sm" onClick={() => exportToPDF(`staff-timetable-export-${teacher.id}`, `${teacher.name}_Timetable.pdf`, { title: `Staff Timetable — ${teacher.name}` })}>📄 Download PDF</button>
                                     </div>
                                 </div>
                             ))}
@@ -1516,7 +1496,9 @@ export default function AdminDashboard({ user, onLogout }) {
 
             </div>
 
-            <ToastContainer toasts={toasts} onRemove={removeToast} />
+          <ToastContainer toasts={toasts} onRemove={removeToast} />
+
+
         </>
     );
 }

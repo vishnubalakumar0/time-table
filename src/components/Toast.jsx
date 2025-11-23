@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 export const Toast = ({ id, message, type, onRemove, undoAction }) => {
   return (
     <div
@@ -53,9 +53,11 @@ export const Toast = ({ id, message, type, onRemove, undoAction }) => {
             color: 'white',
             cursor: 'pointer',
             fontSize: '18px',
-            padding: '0 4px'
+            padding: '0 4px',
+            lineHeight: '1'
           }}
-          >
+          title="Close"
+        >
           ×
         </button>
       </div>

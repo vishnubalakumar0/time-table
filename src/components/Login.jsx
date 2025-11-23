@@ -86,14 +86,18 @@ export default function Login({ onLogin }) {
             <div className="header-particle"></div>
             
             <div className="logo-circle">
-              <span className="logo-icon">📅</span>
+              <img
+                className="logo-img"
+                src="https://img.icons8.com/fluency/96/calendar.png"
+                alt="Calendar"
+              />
             </div>
             <h1 className="login-main-title">Timetable Generator</h1>
             <p className="login-tagline">Smart Scheduling Made Simple</p>
           </div>
 
           {/* Login Form */}
-          <form onSubmit={handleLogin} className="login-form-enhanced">
+          <form onSubmit={handleLogin} className="login-form-enhanced" noValidate>
             <div className="form-header">
               <h2 className="form-title">Welcome Back</h2>
               <p className="form-subtitle">Sign in to continue</p>
@@ -117,7 +121,7 @@ export default function Login({ onLogin }) {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="input-field"
-                required
+                autoComplete="username"
                 disabled={loading}
               />
               <label className={`floating-label ${username ? 'active' : ''}`}>
@@ -136,7 +140,7 @@ export default function Login({ onLogin }) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="input-field"
-                required
+                autoComplete="current-password"
                 disabled={loading}
               />
               <label className={`floating-label ${password ? 'active' : ''}`}>
