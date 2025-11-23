@@ -19,6 +19,7 @@ import {
     setDoc,
 } from 'firebase/firestore';
 
+
 export default function AdminDashboard({ user, onLogout }) {
     const [classes, setClasses] = useState([]);
     const [departments, setDepartments] = useState([]);
@@ -644,11 +645,14 @@ const deleteStaff = async (id) => {
         );
     }
 
-    return (
-        <>
-            <AnimatedBackground />
+return (
+  <>
+    <AnimatedBackground />
 
-            <div className="header">
+    {/* Global wrapper - DO NOT close this early */}
+    <div className="min-h-screen relative z-10 text-white">
+
+      {/* HEADER */}
                 <div className="header-content">
                     <h1>🏫 Admin Dashboard</h1>
                     <div className="header-actions">
@@ -1498,7 +1502,7 @@ const deleteStaff = async (id) => {
 
           <ToastContainer toasts={toasts} onRemove={removeToast} />
 
-
+          
         </>
     );
 }
