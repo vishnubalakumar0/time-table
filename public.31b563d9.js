@@ -25205,9 +25205,10 @@ function Login({ onLogin }) {
                                 }, this),
                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                     className: "logo-circle",
-                                    children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                        className: "logo-icon",
-                                        children: "\uD83D\uDCC5"
+                                    children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("img", {
+                                        className: "logo-img",
+                                        src: "https://img.icons8.com/fluency/96/calendar.png",
+                                        alt: "Calendar"
                                     }, void 0, false, {
                                         fileName: "src/components/Login.jsx",
                                         lineNumber: 89,
@@ -25223,7 +25224,7 @@ function Login({ onLogin }) {
                                     children: "Timetable Generator"
                                 }, void 0, false, {
                                     fileName: "src/components/Login.jsx",
-                                    lineNumber: 91,
+                                    lineNumber: 95,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
@@ -25231,7 +25232,7 @@ function Login({ onLogin }) {
                                     children: "Smart Scheduling Made Simple"
                                 }, void 0, false, {
                                     fileName: "src/components/Login.jsx",
-                                    lineNumber: 92,
+                                    lineNumber: 96,
                                     columnNumber: 13
                                 }, this)
                             ]
@@ -25243,6 +25244,7 @@ function Login({ onLogin }) {
                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("form", {
                             onSubmit: handleLogin,
                             className: "login-form-enhanced",
+                            noValidate: true,
                             children: [
                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                     className: "form-header",
@@ -25252,7 +25254,7 @@ function Login({ onLogin }) {
                                             children: "Welcome Back"
                                         }, void 0, false, {
                                             fileName: "src/components/Login.jsx",
-                                            lineNumber: 98,
+                                            lineNumber: 102,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
@@ -25260,13 +25262,13 @@ function Login({ onLogin }) {
                                             children: "Sign in to continue"
                                         }, void 0, false, {
                                             fileName: "src/components/Login.jsx",
-                                            lineNumber: 99,
+                                            lineNumber: 103,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "src/components/Login.jsx",
-                                    lineNumber: 97,
+                                    lineNumber: 101,
                                     columnNumber: 13
                                 }, this),
                                 error && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -25277,7 +25279,7 @@ function Login({ onLogin }) {
                                             children: "\u26A0\uFE0F"
                                         }, void 0, false, {
                                             fileName: "src/components/Login.jsx",
-                                            lineNumber: 105,
+                                            lineNumber: 109,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
@@ -25285,13 +25287,13 @@ function Login({ onLogin }) {
                                             children: error
                                         }, void 0, false, {
                                             fileName: "src/components/Login.jsx",
-                                            lineNumber: 106,
+                                            lineNumber: 110,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "src/components/Login.jsx",
-                                    lineNumber: 104,
+                                    lineNumber: 108,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -25304,12 +25306,12 @@ function Login({ onLogin }) {
                                                 children: "\uD83D\uDC64"
                                             }, void 0, false, {
                                                 fileName: "src/components/Login.jsx",
-                                                lineNumber: 113,
+                                                lineNumber: 117,
                                                 columnNumber: 17
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "src/components/Login.jsx",
-                                            lineNumber: 112,
+                                            lineNumber: 116,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("input", {
@@ -25317,11 +25319,11 @@ function Login({ onLogin }) {
                                             value: username,
                                             onChange: (e)=>setUsername(e.target.value),
                                             className: "input-field",
-                                            required: true,
+                                            autoComplete: "username",
                                             disabled: loading
                                         }, void 0, false, {
                                             fileName: "src/components/Login.jsx",
-                                            lineNumber: 115,
+                                            lineNumber: 119,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("label", {
@@ -25329,20 +25331,20 @@ function Login({ onLogin }) {
                                             children: "Username"
                                         }, void 0, false, {
                                             fileName: "src/components/Login.jsx",
-                                            lineNumber: 123,
+                                            lineNumber: 127,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                             className: "input-underline"
                                         }, void 0, false, {
                                             fileName: "src/components/Login.jsx",
-                                            lineNumber: 126,
+                                            lineNumber: 130,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "src/components/Login.jsx",
-                                    lineNumber: 111,
+                                    lineNumber: 115,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -25355,12 +25357,12 @@ function Login({ onLogin }) {
                                                 children: "\uD83D\uDD12"
                                             }, void 0, false, {
                                                 fileName: "src/components/Login.jsx",
-                                                lineNumber: 132,
+                                                lineNumber: 136,
                                                 columnNumber: 17
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "src/components/Login.jsx",
-                                            lineNumber: 131,
+                                            lineNumber: 135,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("input", {
@@ -25368,11 +25370,11 @@ function Login({ onLogin }) {
                                             value: password,
                                             onChange: (e)=>setPassword(e.target.value),
                                             className: "input-field",
-                                            required: true,
+                                            autoComplete: "current-password",
                                             disabled: loading
                                         }, void 0, false, {
                                             fileName: "src/components/Login.jsx",
-                                            lineNumber: 134,
+                                            lineNumber: 138,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("label", {
@@ -25380,7 +25382,7 @@ function Login({ onLogin }) {
                                             children: "Password"
                                         }, void 0, false, {
                                             fileName: "src/components/Login.jsx",
-                                            lineNumber: 142,
+                                            lineNumber: 146,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
@@ -25391,20 +25393,20 @@ function Login({ onLogin }) {
                                             children: showPassword ? "\uD83D\uDC41\uFE0F" : "\uD83D\uDC41\uFE0F\u200D\uD83D\uDDE8\uFE0F"
                                         }, void 0, false, {
                                             fileName: "src/components/Login.jsx",
-                                            lineNumber: 145,
+                                            lineNumber: 149,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                             className: "input-underline"
                                         }, void 0, false, {
                                             fileName: "src/components/Login.jsx",
-                                            lineNumber: 153,
+                                            lineNumber: 157,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "src/components/Login.jsx",
-                                    lineNumber: 130,
+                                    lineNumber: 134,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
@@ -25417,14 +25419,14 @@ function Login({ onLogin }) {
                                                 className: "spinner-circle"
                                             }, void 0, false, {
                                                 fileName: "src/components/Login.jsx",
-                                                lineNumber: 165,
+                                                lineNumber: 169,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
                                                 children: "Signing in..."
                                             }, void 0, false, {
                                                 fileName: "src/components/Login.jsx",
-                                                lineNumber: 166,
+                                                lineNumber: 170,
                                                 columnNumber: 19
                                             }, this)
                                         ]
@@ -25434,7 +25436,7 @@ function Login({ onLogin }) {
                                                 children: "Sign In"
                                             }, void 0, false, {
                                                 fileName: "src/components/Login.jsx",
-                                                lineNumber: 170,
+                                                lineNumber: 174,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
@@ -25442,20 +25444,20 @@ function Login({ onLogin }) {
                                                 children: "\u2192"
                                             }, void 0, false, {
                                                 fileName: "src/components/Login.jsx",
-                                                lineNumber: 171,
+                                                lineNumber: 175,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true)
                                 }, void 0, false, {
                                     fileName: "src/components/Login.jsx",
-                                    lineNumber: 158,
+                                    lineNumber: 162,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "src/components/Login.jsx",
-                            lineNumber: 96,
+                            lineNumber: 100,
                             columnNumber: 11
                         }, this)
                     ]

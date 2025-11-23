@@ -729,7 +729,7 @@ var _react = require("react");
 var _reactDefault = parcelHelpers.interopDefault(_react);
 var _animatedBackground = require("./AnimatedBackground");
 var _animatedBackgroundDefault = parcelHelpers.interopDefault(_animatedBackground);
-var _timetableGrid = require("./TimetableGrid");
+var _timetableGrid = require("./timetableGrid");
 var _timetableGridDefault = parcelHelpers.interopDefault(_timetableGrid);
 var _storage = require("../utils/storage");
 var _pdfUtils = require("../utils/pdfUtils");
@@ -932,11 +932,13 @@ function StudentDashboard({ user, onLogout }) {
                                             display: 'flex',
                                             gap: '10px'
                                         },
-                                        className: "no-print",
+                                        className: "no-print no-export",
                                         children: [
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
                                                 className: "btn btn-primary btn-sm",
-                                                onClick: ()=>(0, _pdfUtils.exportToPDF)('timetable-export', `${selectedClass}_Timetable.pdf`),
+                                                onClick: ()=>(0, _pdfUtils.exportToPDF)('class-timetable-export', `${selectedClass}_Timetable.pdf`, {
+                                                        title: selectedClass
+                                                    }),
                                                 children: "\uD83D\uDCC4 Download PDF"
                                             }, void 0, false, {
                                                 fileName: "src/components/StudentDashboard.jsx",
@@ -949,7 +951,7 @@ function StudentDashboard({ user, onLogout }) {
                                                 children: "\uD83D\uDDA8\uFE0F Print"
                                             }, void 0, false, {
                                                 fileName: "src/components/StudentDashboard.jsx",
-                                                lineNumber: 83,
+                                                lineNumber: 84,
                                                 columnNumber: 37
                                             }, this)
                                         ]
@@ -989,12 +991,12 @@ $RefreshReg$(_c, "StudentDashboard");
   globalThis.$RefreshReg$ = prevRefreshReg;
   globalThis.$RefreshSig$ = prevRefreshSig;
 }
-},{"react/jsx-dev-runtime":"dVPUn","react":"jMk1U","./AnimatedBackground":"8BTPX","./TimetableGrid":"5VElg","../utils/storage":"2BjnI","../utils/pdfUtils":"jSko5","@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT","@parcel/transformer-react-refresh-wrap/lib/helpers/helpers.js":"7h6Pi"}],"5VElg":[function(require,module,exports,__globalThis) {
-var $parcel$ReactRefreshHelpers$583d = require("@parcel/transformer-react-refresh-wrap/lib/helpers/helpers.js");
-$parcel$ReactRefreshHelpers$583d.init();
+},{"react/jsx-dev-runtime":"dVPUn","react":"jMk1U","./AnimatedBackground":"8BTPX","../utils/storage":"2BjnI","../utils/pdfUtils":"jSko5","@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT","@parcel/transformer-react-refresh-wrap/lib/helpers/helpers.js":"7h6Pi","./timetableGrid":"90aaK"}],"90aaK":[function(require,module,exports,__globalThis) {
+var $parcel$ReactRefreshHelpers$9cd3 = require("@parcel/transformer-react-refresh-wrap/lib/helpers/helpers.js");
+$parcel$ReactRefreshHelpers$9cd3.init();
 var prevRefreshReg = globalThis.$RefreshReg$;
 var prevRefreshSig = globalThis.$RefreshSig$;
-$parcel$ReactRefreshHelpers$583d.prelude(module);
+$parcel$ReactRefreshHelpers$9cd3.prelude(module);
 
 try {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
@@ -1019,7 +1021,7 @@ function TimetableGrid({ timetable, className }) {
         },
         children: "No timetable available"
     }, void 0, false, {
-        fileName: "src/components/TimetableGrid.jsx",
+        fileName: "src/components/timetableGrid.jsx",
         lineNumber: 8,
         columnNumber: 13
     }, this);
@@ -1037,7 +1039,7 @@ function TimetableGrid({ timetable, className }) {
         },
         children: "Invalid timetable format"
     }, void 0, false, {
-        fileName: "src/components/TimetableGrid.jsx",
+        fileName: "src/components/timetableGrid.jsx",
         lineNumber: 24,
         columnNumber: 13
     }, this);
@@ -1049,7 +1051,7 @@ function TimetableGrid({ timetable, className }) {
                 className: "timetable-header",
                 children: "Day/Period"
             }, void 0, false, {
-                fileName: "src/components/TimetableGrid.jsx",
+                fileName: "src/components/timetableGrid.jsx",
                 lineNumber: 32,
                 columnNumber: 13
             }, this),
@@ -1062,7 +1064,7 @@ function TimetableGrid({ timetable, className }) {
                         i + 1
                     ]
                 }, i, true, {
-                    fileName: "src/components/TimetableGrid.jsx",
+                    fileName: "src/components/timetableGrid.jsx",
                     lineNumber: 34,
                     columnNumber: 17
                 }, this)),
@@ -1075,7 +1077,7 @@ function TimetableGrid({ timetable, className }) {
                             className: "timetable-day",
                             children: day
                         }, void 0, false, {
-                            fileName: "src/components/TimetableGrid.jsx",
+                            fileName: "src/components/timetableGrid.jsx",
                             lineNumber: 45,
                             columnNumber: 25
                         }, this),
@@ -1087,7 +1089,7 @@ function TimetableGrid({ timetable, className }) {
                                             className: "subject-name",
                                             children: slot.subject
                                         }, void 0, false, {
-                                            fileName: "src/components/TimetableGrid.jsx",
+                                            fileName: "src/components/timetableGrid.jsx",
                                             lineNumber: 53,
                                             columnNumber: 41
                                         }, this),
@@ -1095,7 +1097,7 @@ function TimetableGrid({ timetable, className }) {
                                             className: "teacher-name",
                                             children: slot.teacher
                                         }, void 0, false, {
-                                            fileName: "src/components/TimetableGrid.jsx",
+                                            fileName: "src/components/timetableGrid.jsx",
                                             lineNumber: 54,
                                             columnNumber: 41
                                         }, this)
@@ -1106,25 +1108,25 @@ function TimetableGrid({ timetable, className }) {
                                     },
                                     children: "FREE"
                                 }, void 0, false, {
-                                    fileName: "src/components/TimetableGrid.jsx",
+                                    fileName: "src/components/timetableGrid.jsx",
                                     lineNumber: 57,
                                     columnNumber: 37
                                 }, this)
                             }, periodIndex, false, {
-                                fileName: "src/components/TimetableGrid.jsx",
+                                fileName: "src/components/timetableGrid.jsx",
                                 lineNumber: 47,
                                 columnNumber: 29
                             }, this))
                     ]
                 }, day, true, {
-                    fileName: "src/components/TimetableGrid.jsx",
+                    fileName: "src/components/timetableGrid.jsx",
                     lineNumber: 44,
                     columnNumber: 21
                 }, this);
             })
         ]
     }, void 0, true, {
-        fileName: "src/components/TimetableGrid.jsx",
+        fileName: "src/components/timetableGrid.jsx",
         lineNumber: 31,
         columnNumber: 9
     }, this);
@@ -1133,7 +1135,7 @@ _c = TimetableGrid;
 var _c;
 $RefreshReg$(_c, "TimetableGrid");
 
-  $parcel$ReactRefreshHelpers$583d.postlude(module);
+  $parcel$ReactRefreshHelpers$9cd3.postlude(module);
 } finally {
   globalThis.$RefreshReg$ = prevRefreshReg;
   globalThis.$RefreshSig$ = prevRefreshSig;

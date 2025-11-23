@@ -721,80 +721,81 @@ var _html2Canvas = require("html2canvas");
 var _html2CanvasDefault = parcelHelpers.interopDefault(_html2Canvas);
 var _jspdf = require("jspdf");
 var _jspdfDefault = parcelHelpers.interopDefault(_jspdf);
-const exportToPDF = (elementId, filename)=>{
-    const element = document.getElementById(elementId);
-    if (!element) {
-        console.error('Element not found:', elementId);
-        return;
+const exportToPDF = (elementId, filename, options = {})=>{
+    const wrapper = document.getElementById(elementId);
+    if (!wrapper) return;
+    const source = wrapper.querySelector('.timetable-grid') || wrapper.querySelector('.timetable') || wrapper;
+    const clone = source.cloneNode(true);
+    const exportWidth = options.widthPx || 1500;
+    const padding = options.paddingPx || 40;
+    clone.style.width = `${exportWidth}px`;
+    clone.style.maxWidth = 'none';
+    clone.style.transform = 'none';
+    clone.style.position = 'static';
+    clone.style.padding = '0';
+    clone.style.margin = '0';
+    clone.style.boxShadow = 'none';
+    clone.style.border = 'none';
+    clone.classList.add('export-fixed');
+    const stage = document.createElement('div');
+    stage.style.width = `${exportWidth + padding * 2}px`;
+    stage.style.background = '#ffffff';
+    stage.style.padding = `${padding}px`;
+    stage.style.boxSizing = 'border-box';
+    stage.style.position = 'fixed';
+    stage.style.left = '-9999px';
+    stage.style.top = '0';
+    stage.style.zIndex = '-1';
+    stage.style.textAlign = 'center';
+    const title = options.title || '';
+    const subtitle = options.subtitle || '';
+    if (title) {
+        const h = document.createElement('div');
+        h.style.fontSize = '28px';
+        h.style.fontWeight = '800';
+        h.style.color = '#1e293b';
+        h.style.marginBottom = '10px';
+        h.textContent = title;
+        stage.appendChild(h);
     }
-    (0, _html2CanvasDefault.default)(element, {
-        scale: 2,
+    if (subtitle) {
+        const s = document.createElement('div');
+        s.style.fontSize = '14px';
+        s.style.fontWeight = '700';
+        s.style.color = '#64748b';
+        s.style.marginBottom = '18px';
+        s.textContent = subtitle;
+        stage.appendChild(s);
+    }
+    stage.appendChild(clone);
+    document.body.appendChild(stage);
+    const opts = {
+        scale: 3,
         logging: false,
         backgroundColor: '#ffffff',
-        useCORS: true,
-        allowTaint: true,
+        windowWidth: 1920,
+        windowHeight: 1080,
         scrollX: 0,
         scrollY: 0,
-        windowWidth: element.scrollWidth,
-        windowHeight: element.scrollHeight
-    }).then((canvas)=>{
+        ignoreElements: (el)=>{
+            const cls = el.classList;
+            return !!(cls && (cls.contains('no-print') || cls.contains('no-export')));
+        }
+    };
+    (0, _html2CanvasDefault.default)(stage, opts).then((canvas)=>{
         const imgData = canvas.toDataURL('image/png');
-        const imgWidth = canvas.width;
-        const imgHeight = canvas.height;
-        // Use A4 landscape dimensions in pixels (at 96 DPI)
-        const pdfWidth = 1123; // A4 landscape width
-        const pdfHeight = 794; // A4 landscape height
         const pdf = new (0, _jspdfDefault.default)({
             orientation: 'landscape',
             unit: 'px',
             format: [
-                pdfWidth,
-                pdfHeight
+                canvas.width,
+                canvas.height
             ]
         });
-        // Calculate scaling to fit content
-        const widthRatio = pdfWidth / imgWidth;
-        const heightRatio = pdfHeight / imgHeight;
-        const ratio = Math.min(widthRatio, heightRatio);
-        const scaledWidth = imgWidth * ratio;
-        const scaledHeight = imgHeight * ratio;
-        // Center the image
-        const xOffset = (pdfWidth - scaledWidth) / 2;
-        const yOffset = (pdfHeight - scaledHeight) / 2;
-        // If content fits on one page
-        if (scaledHeight <= pdfHeight) pdf.addImage(imgData, 'PNG', xOffset, yOffset, scaledWidth, scaledHeight);
-        else {
-            // Multi-page support - split image across pages
-            const pageHeight = pdfHeight;
-            const pageWidth = pdfWidth;
-            let heightLeft = scaledHeight;
-            let position = 0;
-            let pageNum = 1;
-            while(heightLeft > 0){
-                if (pageNum > 1) pdf.addPage();
-                // Calculate how much of the image to show on this page
-                const sourceY = position;
-                const sourceHeight = Math.min(pageHeight, heightLeft);
-                // Create a temporary canvas for this page slice
-                const pageCanvas = document.createElement('canvas');
-                pageCanvas.width = imgWidth;
-                pageCanvas.height = sourceHeight / ratio;
-                const pageCtx = pageCanvas.getContext('2d');
-                // Draw the portion of the image for this page
-                const sourceYOriginal = position / ratio;
-                const sourceHeightOriginal = sourceHeight / ratio;
-                pageCtx.drawImage(canvas, 0, sourceYOriginal, imgWidth, sourceHeightOriginal, 0, 0, imgWidth, sourceHeightOriginal);
-                const pageImgData = pageCanvas.toDataURL('image/png');
-                // Add to PDF
-                pdf.addImage(pageImgData, 'PNG', xOffset, 0, scaledWidth, sourceHeight);
-                heightLeft -= sourceHeight;
-                position += sourceHeight;
-                pageNum++;
-            }
-        }
+        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
         pdf.save(filename);
-    }).catch((error)=>{
-        console.error('Error generating PDF:', error);
+    }).finally(()=>{
+        document.body.removeChild(stage);
     });
 };
 

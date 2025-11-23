@@ -744,25 +744,24 @@ var _s = $RefreshSig$();
 function AdminDashboard({ user, onLogout }) {
     _s();
     const [classes, setClasses] = (0, _react.useState)([]);
+    const [departments, setDepartments] = (0, _react.useState)([]);
     const [staff, setStaff] = (0, _react.useState)([]);
     const [subjects, setSubjects] = (0, _react.useState)([]);
     const [timetable, setTimetable] = (0, _react.useState)(null);
     const [toasts, setToasts] = (0, _react.useState)([]);
     const [loading, setLoading] = (0, _react.useState)(true);
-    // ✅ NEW: Toggle states for collapsible forms
-    const [showClassForm, setShowClassForm] = (0, _react.useState)(false);
-    const [showStaffForm, setShowStaffForm] = (0, _react.useState)(false);
-    const [showSubjectForm, setShowSubjectForm] = (0, _react.useState)(false);
-    // Refs for scrolling and PDF export
+    const [showAddStaffForm, setShowAddStaffForm] = (0, _react.useState)(false);
+    const [showAddSubjectForm, setShowAddSubjectForm] = (0, _react.useState)(false);
+    const [showAddDepartmentForm, setShowAddDepartmentForm] = (0, _react.useState)(false);
+    const [showAddClassForm, setShowAddClassForm] = (0, _react.useState)(false);
+    // Refs for scrolling
     const staffFormRef = (0, _react.useRef)(null);
     const subjectFormRef = (0, _react.useRef)(null);
-    const classFormRef = (0, _react.useRef)(null);
-    // Undo stack for deleted items
-    const undoStackRef = (0, _react.useRef)([]);
     // Form Models
     const [newClass, setNewClass] = (0, _react.useState)({
         name: '',
-        hallNumber: ''
+        hallNumber: '',
+        department: ''
     });
     const [newStaff, setNewStaff] = (0, _react.useState)({
         id: null,
@@ -782,14 +781,17 @@ function AdminDashboard({ user, onLogout }) {
         blockSize: 2,
         teacher: ''
     });
+    const [newDepartment, setNewDepartment] = (0, _react.useState)({
+        id: null,
+        name: ''
+    });
     const teachers = staff.filter((s)=>s.role === "staff");
-    // Toast system with undo support
-    const showToast = (message, type, undoAction = null, duration = 3000)=>{
+    const showToast = (message, type, duration = 3000, undoAction = null)=>{
         const newToast = {
             message,
             type,
             id: Date.now(),
-            undoAction: undoAction || null
+            undoAction
         };
         setToasts((prev)=>[
                 ...prev,
@@ -800,23 +802,20 @@ function AdminDashboard({ user, onLogout }) {
     const removeToast = (id)=>{
         setToasts((prev)=>prev.filter((t)=>t.id !== id));
     };
-    // Helper function to convert Firebase flat format to nested arrays
     const convertFlatToNested = (flatTimetable)=>{
         if (!flatTimetable) return null;
         const nested = {};
         Object.keys(flatTimetable).forEach((key)=>{
             const slots = flatTimetable[key];
-            // Check if already nested (array of arrays)
             if (Array.isArray(slots) && slots.length > 0 && Array.isArray(slots[0])) nested[key] = slots;
             else if (Array.isArray(slots)) {
-                // Flat format - convert to nested
                 const days = [
                     [],
                     [],
                     [],
                     [],
                     []
-                ]; // 5 days
+                ];
                 slots.forEach((slot)=>{
                     if (slot && typeof slot.day === 'number' && typeof slot.period === 'number') {
                         if (!days[slot.day]) days[slot.day] = [];
@@ -828,7 +827,6 @@ function AdminDashboard({ user, onLogout }) {
                         };
                     }
                 });
-                // Fill empty periods
                 days.forEach((day, idx)=>{
                     if (!days[idx]) days[idx] = [];
                     for(let p = 0; p < 6; p++)if (!days[idx][p]) days[idx][p] = slots[0]?.class !== undefined ? {
@@ -842,148 +840,244 @@ function AdminDashboard({ user, onLogout }) {
         });
         return nested;
     };
-    // Optimized data fetching
-    (0, _react.useEffect)(()=>{
-        const fetchAll = async ()=>{
-            try {
-                const [cls, st, sb, tt] = await Promise.all([
-                    (0, _firestore.getDocs)((0, _firestore.collection)((0, _firebase.db), 'classes')),
-                    (0, _firestore.getDocs)((0, _firestore.collection)((0, _firebase.db), 'staff')),
-                    (0, _firestore.getDocs)((0, _firestore.collection)((0, _firebase.db), 'subjects')),
-                    (0, _firestore.getDocs)((0, _firestore.collection)((0, _firebase.db), 'timetable'))
-                ]);
-                setClasses(cls.docs.map((doc)=>({
-                        id: doc.id,
-                        ...doc.data()
-                    })));
-                setStaff(st.docs.map((doc)=>({
-                        id: doc.id,
-                        ...doc.data()
-                    })));
-                setSubjects(sb.docs.map((doc)=>({
-                        id: doc.id,
-                        ...doc.data()
-                    })));
-                if (!tt.empty) {
-                    const ttData = tt.docs[0].data();
-                    const convertedData = {
-                        classTimetables: convertFlatToNested(ttData.classTimetables),
-                        staffTimetables: convertFlatToNested(ttData.staffTimetables)
-                    };
-                    setTimetable(convertedData);
-                }
-            } catch (error) {
-                showToast("\u274C Error: " + error.message, 'error');
-            } finally{
-                setLoading(false);
+    const fetchData = async ()=>{
+        setLoading(true);
+        try {
+            const [cls, st, sb, tt, dp] = await Promise.all([
+                (0, _firestore.getDocs)((0, _firestore.collection)((0, _firebase.db), 'classes')),
+                (0, _firestore.getDocs)((0, _firestore.collection)((0, _firebase.db), 'staff')),
+                (0, _firestore.getDocs)((0, _firestore.collection)((0, _firebase.db), 'subjects')),
+                (0, _firestore.getDocs)((0, _firestore.collection)((0, _firebase.db), 'timetable')),
+                (0, _firestore.getDocs)((0, _firestore.collection)((0, _firebase.db), 'departments'))
+            ]);
+            setClasses(cls.docs.map((doc)=>({
+                    id: doc.id,
+                    ...doc.data()
+                })));
+            setStaff(st.docs.map((doc)=>({
+                    id: doc.id,
+                    ...doc.data()
+                })));
+            setSubjects(sb.docs.map((doc)=>({
+                    id: doc.id,
+                    ...doc.data()
+                })));
+            setDepartments(dp.docs.map((doc)=>({
+                    id: doc.id,
+                    ...doc.data()
+                })));
+            if (!tt.empty) {
+                const ttData = tt.docs[0].data();
+                const convertedData = {
+                    classTimetables: convertFlatToNested(ttData.classTimetables),
+                    staffTimetables: convertFlatToNested(ttData.staffTimetables)
+                };
+                setTimetable(convertedData);
             }
-        };
-        fetchAll();
+        } catch (error) {
+            showToast("\u274C Error loading data: " + error.message, 'error');
+            console.error(error);
+        }
+        setLoading(false);
+    };
+    (0, _react.useEffect)(()=>{
+        fetchData();
     }, []);
-    // ==================== CLASS CRUD ==================== 
+    // ==================== UNDO HANDLER ====================
+    // Undo handler: correctly restore by document id—no duplicates!
+    // ==================== UNDO HANDLER ====================
+    const restoreFromUndo = async (undoItem)=>{
+        try {
+            if (undoItem.type === 'class') {
+                const { id, ...classData } = undoItem.data;
+                await (0, _firestore.setDoc)((0, _firestore.doc)((0, _firebase.db), 'classes', id), classData);
+            } else if (undoItem.type === 'staff') {
+                const { id, ...staffData } = undoItem.data;
+                await (0, _firestore.setDoc)((0, _firestore.doc)((0, _firebase.db), 'staff', id), staffData);
+                if (undoItem.data.firebaseUid) await (0, _firestore.setDoc)((0, _firestore.doc)((0, _firebase.db), 'users', undoItem.data.firebaseUid), {
+                    name: undoItem.data.name,
+                    username: undoItem.data.username,
+                    role: 'staff'
+                });
+            } else if (undoItem.type === 'subject') {
+                const { id, ...subjectData } = undoItem.data;
+                await (0, _firestore.setDoc)((0, _firestore.doc)((0, _firebase.db), 'subjects', id), subjectData);
+            }
+            await fetchData(); // reload UI
+            showToast("\u2705 Data restored!", 'success');
+        } catch (error) {
+            console.error('Restore error:', error);
+            showToast("\u274C Restore failed: " + error.message, 'error');
+        }
+    };
+    // ==================== CLASS CRUD ====================
     const addClass = async ()=>{
         if (!newClass.name) return showToast("Enter class name", "error");
         if (classes.find((c)=>c.name === newClass.name && !newClass.id)) return showToast("Class already exists", "error");
         try {
             if (newClass.id) {
-                // Update existing
                 await (0, _firestore.updateDoc)((0, _firestore.doc)((0, _firebase.db), 'classes', newClass.id), {
                     name: newClass.name,
-                    hallNumber: newClass.hallNumber
+                    hallNumber: newClass.hallNumber,
+                    department: newClass.department || ''
                 });
                 setClasses(classes.map((c)=>c.id === newClass.id ? {
+                        id: newClass.id,
                         ...newClass
                     } : c));
                 showToast("\u2705 Class updated!", "success");
             } else {
-                // Add new
                 const docRef = await (0, _firestore.addDoc)((0, _firestore.collection)((0, _firebase.db), 'classes'), {
                     name: newClass.name,
-                    hallNumber: newClass.hallNumber || ''
+                    hallNumber: newClass.hallNumber || '',
+                    department: newClass.department || ''
                 });
                 setClasses([
                     ...classes,
                     {
                         id: docRef.id,
                         name: newClass.name,
-                        hallNumber: newClass.hallNumber || ''
+                        hallNumber: newClass.hallNumber || '',
+                        department: newClass.department || ''
                     }
                 ]);
                 showToast("\u2705 Class added!", "success");
             }
             setNewClass({
                 name: '',
-                hallNumber: ''
+                hallNumber: '',
+                department: ''
             });
-            setShowClassForm(false); // ✅ Collapse form after success
         } catch (error) {
             showToast("\u274C Operation failed", "error");
         }
     };
-    // ✅ IMPROVED: Edit scrolls and expands form
     const editClass = (cls)=>{
         setNewClass({
             id: cls.id,
             name: cls.name,
-            hallNumber: cls.hallNumber || ''
+            hallNumber: cls.hallNumber || '',
+            department: cls.department || ''
         });
-        setShowClassForm(true); // ✅ Expand form
-        setTimeout(()=>{
-            classFormRef.current?.scrollIntoView({
-                behavior: 'smooth',
-                block: 'center'
-            });
-        }, 100);
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
     };
-    const deleteClass = async (id)=>{
-        if (!window.confirm("Delete this class?")) return;
-        const classToDelete = classes.find((c)=>c.id === id);
-        if (!classToDelete) return;
+    const addOrUpdateDepartment = async ()=>{
+        if (!newDepartment.name.trim()) return showToast("Enter department name", "error");
         try {
-            await (0, _firestore.deleteDoc)((0, _firestore.doc)((0, _firebase.db), 'classes', id));
-            setClasses(classes.filter((c)=>c.id !== id));
-            const undoEntry = {
-                type: 'class',
-                data: classToDelete,
-                timestamp: Date.now()
-            };
-            undoStackRef.current.push(undoEntry);
-            const undoAction = async ()=>{
-                try {
-                    await (0, _firestore.setDoc)((0, _firestore.doc)((0, _firebase.db), 'classes', classToDelete.id), {
-                        name: classToDelete.name,
-                        hallNumber: classToDelete.hallNumber || ''
-                    });
-                    setClasses((prev)=>[
-                            ...prev,
-                            classToDelete
-                        ]);
-                    undoStackRef.current = undoStackRef.current.filter((entry)=>entry.timestamp !== undoEntry.timestamp);
-                    showToast("\u2705 Class restored", "success");
-                } catch (error) {
-                    showToast("\u274C Failed to restore", "error");
-                }
-            };
-            showToast("Class deleted \u2014 Undo?", "success", undoAction, 5000);
+            if (newDepartment.id) {
+                await (0, _firestore.updateDoc)((0, _firestore.doc)((0, _firebase.db), 'departments', newDepartment.id), {
+                    name: newDepartment.name
+                });
+                setDepartments(departments.map((d)=>d.id === newDepartment.id ? {
+                        ...d,
+                        name: newDepartment.name
+                    } : d));
+                showToast("\u2705 Department updated!", "success");
+            } else {
+                const ref = await (0, _firestore.addDoc)((0, _firestore.collection)((0, _firebase.db), 'departments'), {
+                    name: newDepartment.name
+                });
+                setDepartments([
+                    ...departments,
+                    {
+                        id: ref.id,
+                        name: newDepartment.name
+                    }
+                ]);
+                showToast("\u2705 Department added!", "success");
+            }
+            setNewDepartment({
+                id: null,
+                name: ''
+            });
+        } catch (error) {
+            showToast("\u274C Operation failed", "error");
+        }
+    };
+    const editDepartment = (dept)=>{
+        setNewDepartment({
+            id: dept.id,
+            name: dept.name
+        });
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    };
+    const deleteDepartment = async (id)=>{
+        if (!window.confirm("Delete this department?")) return;
+        try {
+            await (0, _firestore.deleteDoc)((0, _firestore.doc)((0, _firebase.db), 'departments', id));
+            setDepartments(departments.filter((d)=>d.id !== id));
+            showToast("\u2705 Department deleted", "success");
         } catch (error) {
             showToast("\u274C Failed to delete", "error");
         }
     };
-    // ==================== STAFF CRUD ==================== 
+    // ==================== CLASS CRUD ====================
+    const deleteClass = async (id)=>{
+        if (!window.confirm("Delete this class?")) return;
+        try {
+            const classToDelete = classes.find((c)=>c.id === id);
+            if (!classToDelete) return;
+            const undoItem = {
+                type: 'class',
+                data: {
+                    ...classToDelete
+                }
+            };
+            await (0, _firestore.deleteDoc)((0, _firestore.doc)((0, _firebase.db), 'classes', id));
+            setClasses(classes.filter((c)=>c.id !== id));
+            showToast(`\u{2705} Class deleted`, 'success', 5000, ()=>restoreFromUndo(undoItem));
+        } catch (error) {
+            console.error('Delete error:', error);
+            showToast("\u274C Failed to delete", "error");
+        }
+    };
+    // ==================== STAFF CRUD ====================
     const addOrUpdateStaff = async ()=>{
         if (!newStaff.name || !newStaff.username) return showToast("Fill all required fields", "error");
         try {
             if (newStaff.id) {
+                // Editing existing staff
+                const staffToUpdate = staff.find((s)=>s.id === newStaff.id);
                 const { password, ...updateData } = newStaff;
-                await (0, _firestore.updateDoc)((0, _firestore.doc)((0, _firebase.db), 'staff', newStaff.id), updateData);
+                // Update Firestore staff document with name, freePeriodMode, manualFreePeriods
+                const firestoreUpdateData = {
+                    name: updateData.name,
+                    freePeriodMode: updateData.freePeriodMode,
+                    manualFreePeriods: updateData.manualFreePeriods
+                };
+                // Include username if it changed
+                if (staffToUpdate.username !== updateData.username) firestoreUpdateData.username = updateData.username;
+                await (0, _firestore.updateDoc)((0, _firestore.doc)((0, _firebase.db), 'staff', newStaff.id), firestoreUpdateData);
+                // Update users collection with new data
+                if (staffToUpdate.firebaseUid) await (0, _firestore.updateDoc)((0, _firestore.doc)((0, _firebase.db), 'users', staffToUpdate.firebaseUid), {
+                    name: newStaff.name,
+                    username: newStaff.username,
+                    role: 'staff'
+                });
+                // Handle password change if provided
+                if (password && password.trim()) {
+                    await (0, _firestore.updateDoc)((0, _firestore.doc)((0, _firebase.db), 'staff', newStaff.id), {
+                        tempPassword: password,
+                        passwordLastChanged: new Date().toISOString(),
+                        needsPasswordChange: true
+                    });
+                    showToast("\u2705 Temporary password set. Share it with staff.", "success");
+                } else showToast("\u2705 Staff updated!", "success");
                 setStaff(staff.map((s)=>s.id === newStaff.id ? {
                         ...s,
-                        ...updateData
+                        ...firestoreUpdateData
                     } : s));
                 resetStaffForm();
-                setShowStaffForm(false); // ✅ Collapse after success
-                return showToast("\u2705 Staff updated!", "success");
+                setShowAddStaffForm(false);
+                return;
             }
+            // Adding new staff
             if (!newStaff.password) return showToast("Password required", "error");
             const email = `${newStaff.username}@timetable.com`;
             const userCredential = await (0, _auth.createUserWithEmailAndPassword)((0, _firebase.auth), email, newStaff.password);
@@ -1010,19 +1104,19 @@ function AdminDashboard({ user, onLogout }) {
                 }
             ]);
             resetStaffForm();
-            setShowStaffForm(false); // ✅ Collapse after success
+            setShowAddStaffForm(false);
             showToast("\u2705 Staff added!", "success");
         } catch (error) {
             showToast("\u274C Operation failed: " + error.message, "error");
+            console.error(error);
         }
     };
-    // ✅ IMPROVED: Edit opens form automatically
     const editStaff = (staffMember)=>{
         setNewStaff({
             ...staffMember,
             password: ''
         });
-        setShowStaffForm(true); // ✅ Expand form
+        setShowAddStaffForm(true);
         setTimeout(()=>{
             staffFormRef.current?.scrollIntoView({
                 behavior: 'smooth',
@@ -1042,43 +1136,25 @@ function AdminDashboard({ user, onLogout }) {
     };
     const deleteStaff = async (id)=>{
         if (!window.confirm("Delete this staff member?")) return;
-        const staffToDelete = staff.find((x)=>x.id === id);
-        if (!staffToDelete) return;
         try {
-            await (0, _firestore.deleteDoc)((0, _firestore.doc)((0, _firebase.db), 'staff', id));
-            setStaff(staff.filter((x)=>x.id !== id));
-            const undoEntry = {
+            const staffToDelete = staff.find((s)=>s.id === id);
+            if (!staffToDelete) return;
+            const undoItem = {
                 type: 'staff',
-                data: staffToDelete,
-                timestamp: Date.now()
-            };
-            undoStackRef.current.push(undoEntry);
-            const undoAction = async ()=>{
-                try {
-                    await (0, _firestore.setDoc)((0, _firestore.doc)((0, _firebase.db), 'staff', staffToDelete.id), {
-                        name: staffToDelete.name,
-                        username: staffToDelete.username,
-                        freePeriodMode: staffToDelete.freePeriodMode,
-                        manualFreePeriods: staffToDelete.manualFreePeriods || 0,
-                        role: staffToDelete.role || 'staff',
-                        firebaseUid: staffToDelete.firebaseUid || null
-                    });
-                    setStaff((prev)=>[
-                            ...prev,
-                            staffToDelete
-                        ]);
-                    undoStackRef.current = undoStackRef.current.filter((entry)=>entry.timestamp !== undoEntry.timestamp);
-                    showToast("\u2705 Staff restored", "success");
-                } catch (error) {
-                    showToast("\u274C Failed to restore", "error");
+                data: {
+                    ...staffToDelete
                 }
             };
-            showToast("Staff deleted \u2014 Undo?", "success", undoAction, 5000);
+            await (0, _firestore.deleteDoc)((0, _firestore.doc)((0, _firebase.db), 'staff', id));
+            if (staffToDelete.firebaseUid) await (0, _firestore.deleteDoc)((0, _firestore.doc)((0, _firebase.db), 'users', staffToDelete.firebaseUid));
+            setStaff(staff.filter((x)=>x.id !== id));
+            showToast("\u2705 Staff deleted", 'success', 5000, ()=>restoreFromUndo(undoItem));
         } catch (error) {
-            showToast("\u274C Failed to delete", "error");
+            console.error('Delete staff error:', error);
+            showToast("\u274C Failed to delete", 'error');
         }
     };
-    // ==================== SUBJECT CRUD ==================== 
+    // ==================== SUBJECT CRUD ====================
     const addOrUpdateSubject = async ()=>{
         if (!newSubject.className || !newSubject.name || !newSubject.teacher) return showToast("Fill all required fields", "error");
         try {
@@ -1110,13 +1186,12 @@ function AdminDashboard({ user, onLogout }) {
                 showToast("\u2705 Subject added!", "success");
             }
             resetSubjectForm();
-            setShowSubjectForm(false); // ✅ Collapse after success
+            setShowAddSubjectForm(false);
         } catch (error) {
             showToast("\u274C Operation failed", "error");
             console.error(error);
         }
     };
-    // ✅ IMPROVED: Edit opens form automatically
     const editSubject = (subject)=>{
         setNewSubject({
             id: subject.id,
@@ -1128,7 +1203,7 @@ function AdminDashboard({ user, onLogout }) {
             blockSize: subject.blockSize || 2,
             teacher: subject.teacher
         });
-        setShowSubjectForm(true); // ✅ Expand form
+        setShowAddSubjectForm(true);
         setTimeout(()=>{
             subjectFormRef.current?.scrollIntoView({
                 behavior: 'smooth',
@@ -1150,44 +1225,24 @@ function AdminDashboard({ user, onLogout }) {
     };
     const deleteSubject = async (id)=>{
         if (!window.confirm("Delete this subject?")) return;
-        const subjectToDelete = subjects.find((s)=>s.id === id);
-        if (!subjectToDelete) return;
         try {
-            await (0, _firestore.deleteDoc)((0, _firestore.doc)((0, _firebase.db), 'subjects', id));
-            setSubjects(subjects.filter((s)=>s.id !== id));
-            const undoEntry = {
+            const subjectToDelete = subjects.find((s)=>s.id === id);
+            if (!subjectToDelete) return;
+            const undoItem = {
                 type: 'subject',
-                data: subjectToDelete,
-                timestamp: Date.now()
-            };
-            undoStackRef.current.push(undoEntry);
-            const undoAction = async ()=>{
-                try {
-                    await (0, _firestore.setDoc)((0, _firestore.doc)((0, _firebase.db), 'subjects', subjectToDelete.id), {
-                        className: subjectToDelete.className,
-                        name: subjectToDelete.name,
-                        subjectType: subjectToDelete.subjectType,
-                        hoursPerWeek: subjectToDelete.hoursPerWeek,
-                        isContinuous: subjectToDelete.isContinuous || false,
-                        blockSize: subjectToDelete.blockSize || 2,
-                        teacher: subjectToDelete.teacher
-                    });
-                    setSubjects((prev)=>[
-                            ...prev,
-                            subjectToDelete
-                        ]);
-                    undoStackRef.current = undoStackRef.current.filter((entry)=>entry.timestamp !== undoEntry.timestamp);
-                    showToast("\u2705 Subject restored", "success");
-                } catch (error) {
-                    showToast("\u274C Failed to restore", "error");
+                data: {
+                    ...subjectToDelete
                 }
             };
-            showToast("Subject deleted \u2014 Undo?", "success", undoAction, 5000);
+            await (0, _firestore.deleteDoc)((0, _firestore.doc)((0, _firebase.db), 'subjects', id));
+            setSubjects(subjects.filter((s)=>s.id !== id));
+            showToast("\u2705 Subject deleted", 'success', 5000, ()=>restoreFromUndo(undoItem));
         } catch (error) {
-            showToast("\u274C Failed to delete", "error");
+            console.error('Delete subject error:', error);
+            showToast("\u274C Failed to delete", 'error');
         }
     };
-    // ==================== TIMETABLE GENERATION ==================== 
+    // ==================== TIMETABLE GENERATION ====================
     const generateTimetable = async ()=>{
         setLoading(true);
         try {
@@ -1200,10 +1255,8 @@ function AdminDashboard({ user, onLogout }) {
             }
             const result = generator.generate();
             if (result.success) {
-                // Convert nested arrays to Firebase-friendly format
                 const serializableClassTimetables = {};
                 const serializableStaffTimetables = {};
-                // Flatten class timetables
                 Object.keys(result.classTimetables).forEach((className)=>{
                     serializableClassTimetables[className] = result.classTimetables[className].map((day, dayIndex)=>{
                         return day.map((period, periodIndex)=>({
@@ -1215,7 +1268,6 @@ function AdminDashboard({ user, onLogout }) {
                             }));
                     }).flat();
                 });
-                // Flatten staff timetables
                 Object.keys(result.staffTimetables).forEach((staffName)=>{
                     serializableStaffTimetables[staffName] = result.staffTimetables[staffName].map((day, dayIndex)=>{
                         return day.map((period, periodIndex)=>({
@@ -1232,14 +1284,12 @@ function AdminDashboard({ user, onLogout }) {
                     staffTimetables: serializableStaffTimetables,
                     generatedAt: new Date().toISOString()
                 };
-                // Save to Firebase
                 const ttRef = (0, _firestore.collection)((0, _firebase.db), 'timetable');
                 const existing = await (0, _firestore.getDocs)(ttRef);
                 if (!existing.empty) await (0, _firestore.updateDoc)((0, _firestore.doc)((0, _firebase.db), 'timetable', existing.docs[0].id), timetableData);
                 else await (0, _firestore.addDoc)(ttRef, timetableData);
-                // Save individual staff timetables
-                const teachersList = staff.filter((s)=>s.role === 'staff');
-                for (const teacher of teachersList){
+                const teacherList = staff.filter((s)=>s.role === 'staff');
+                for (const teacher of teacherList){
                     const staffTT = serializableStaffTimetables[teacher.name];
                     if (staffTT) await (0, _firestore.setDoc)((0, _firestore.doc)((0, _firebase.db), 'staffTimetables', teacher.id), {
                         staffName: teacher.name,
@@ -1247,7 +1297,6 @@ function AdminDashboard({ user, onLogout }) {
                         generatedAt: new Date().toISOString()
                     });
                 }
-                // Convert back to nested arrays for display
                 const displayClassTimetables = {};
                 Object.keys(serializableClassTimetables).forEach((className)=>{
                     const days = [
@@ -1319,7 +1368,7 @@ function AdminDashboard({ user, onLogout }) {
         children: [
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _animatedBackgroundDefault.default), {}, void 0, false, {
                 fileName: "src/components/AdminDashboard.jsx",
-                lineNumber: 609,
+                lineNumber: 629,
                 columnNumber: 17
             }, this),
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -1338,20 +1387,20 @@ function AdminDashboard({ user, onLogout }) {
                         className: "spinner"
                     }, void 0, false, {
                         fileName: "src/components/AdminDashboard.jsx",
-                        lineNumber: 620,
+                        lineNumber: 640,
                         columnNumber: 21
                     }, this),
                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                         children: "Loading..."
                     }, void 0, false, {
                         fileName: "src/components/AdminDashboard.jsx",
-                        lineNumber: 621,
+                        lineNumber: 641,
                         columnNumber: 21
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "src/components/AdminDashboard.jsx",
-                lineNumber: 610,
+                lineNumber: 630,
                 columnNumber: 17
             }, this)
         ]
@@ -1360,7 +1409,7 @@ function AdminDashboard({ user, onLogout }) {
         children: [
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _animatedBackgroundDefault.default), {}, void 0, false, {
                 fileName: "src/components/AdminDashboard.jsx",
-                lineNumber: 629,
+                lineNumber: 649,
                 columnNumber: 13
             }, this),
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -1372,7 +1421,7 @@ function AdminDashboard({ user, onLogout }) {
                             children: "\uD83C\uDFEB Admin Dashboard"
                         }, void 0, false, {
                             fileName: "src/components/AdminDashboard.jsx",
-                            lineNumber: 633,
+                            lineNumber: 653,
                             columnNumber: 21
                         }, this),
                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -1383,23 +1432,23 @@ function AdminDashboard({ user, onLogout }) {
                                 children: "Logout"
                             }, void 0, false, {
                                 fileName: "src/components/AdminDashboard.jsx",
-                                lineNumber: 635,
+                                lineNumber: 655,
                                 columnNumber: 25
                             }, this)
                         }, void 0, false, {
                             fileName: "src/components/AdminDashboard.jsx",
-                            lineNumber: 634,
+                            lineNumber: 654,
                             columnNumber: 21
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "src/components/AdminDashboard.jsx",
-                    lineNumber: 632,
+                    lineNumber: 652,
                     columnNumber: 17
                 }, this)
             }, void 0, false, {
                 fileName: "src/components/AdminDashboard.jsx",
-                lineNumber: 631,
+                lineNumber: 651,
                 columnNumber: 13
             }, this),
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -1413,79 +1462,50 @@ function AdminDashboard({ user, onLogout }) {
                                 children: [
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
                                         className: "section-icon",
-                                        children: "\uD83D\uDCDA"
+                                        children: "\uD83C\uDFE2"
                                     }, void 0, false, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 647,
+                                        lineNumber: 666,
                                         columnNumber: 25
                                     }, this),
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h2", {
                                         className: "section-title",
-                                        children: "Manage Classes"
+                                        children: "Manage Departments"
                                     }, void 0, false, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 648,
+                                        lineNumber: 667,
                                         columnNumber: 25
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "src/components/AdminDashboard.jsx",
-                                lineNumber: 646,
+                                lineNumber: 665,
                                 columnNumber: 21
                             }, this),
                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                 className: "card",
                                 children: [
-                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                        style: {
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                            marginBottom: '20px'
-                                        },
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h3", {
                                         children: [
-                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h3", {
-                                                children: [
-                                                    "Existing Classes (",
-                                                    classes.length,
-                                                    ")"
-                                                ]
-                                            }, void 0, true, {
-                                                fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 654,
-                                                columnNumber: 29
-                                            }, this),
-                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
-                                                className: "btn btn-primary btn-sm",
-                                                onClick: ()=>{
-                                                    setShowClassForm(!showClassForm);
-                                                    if (!showClassForm && newClass.id) setNewClass({
-                                                        name: '',
-                                                        hallNumber: ''
-                                                    });
-                                                },
-                                                children: showClassForm ? "\u274C Cancel" : "\u2795 Add New Class"
-                                            }, void 0, false, {
-                                                fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 655,
-                                                columnNumber: 29
-                                            }, this)
+                                            "Existing Departments (",
+                                            departments.length,
+                                            ")"
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 653,
+                                        lineNumber: 671,
                                         columnNumber: 25
                                     }, this),
-                                    classes.length === 0 ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
+                                    departments.length === 0 ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
                                         style: {
                                             color: '#64748b',
                                             textAlign: 'center',
                                             padding: '20px'
                                         },
-                                        children: 'No classes added yet. Click "Add New Class" to start.'
+                                        children: "No departments added yet"
                                     }, void 0, false, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 669,
+                                        lineNumber: 673,
                                         columnNumber: 29
                                     }, this) : /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _jsxDevRuntime.Fragment), {
                                         children: [
@@ -1500,59 +1520,44 @@ function AdminDashboard({ user, onLogout }) {
                                                                         children: "#"
                                                                     }, void 0, false, {
                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 678,
-                                                                        columnNumber: 49
-                                                                    }, this),
-                                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("th", {
-                                                                        children: "Class Name"
-                                                                    }, void 0, false, {
-                                                                        fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 679,
-                                                                        columnNumber: 49
-                                                                    }, this),
-                                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("th", {
-                                                                        children: "Hall Number"
-                                                                    }, void 0, false, {
-                                                                        fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 680,
-                                                                        columnNumber: 49
-                                                                    }, this),
-                                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("th", {
-                                                                        children: "Subjects"
-                                                                    }, void 0, false, {
-                                                                        fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 681,
-                                                                        columnNumber: 49
-                                                                    }, this),
-                                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("th", {
-                                                                        children: "Hours"
-                                                                    }, void 0, false, {
-                                                                        fileName: "src/components/AdminDashboard.jsx",
                                                                         lineNumber: 682,
+                                                                        columnNumber: 49
+                                                                    }, this),
+                                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("th", {
+                                                                        children: "Department"
+                                                                    }, void 0, false, {
+                                                                        fileName: "src/components/AdminDashboard.jsx",
+                                                                        lineNumber: 683,
+                                                                        columnNumber: 49
+                                                                    }, this),
+                                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("th", {
+                                                                        children: "Classes"
+                                                                    }, void 0, false, {
+                                                                        fileName: "src/components/AdminDashboard.jsx",
+                                                                        lineNumber: 684,
                                                                         columnNumber: 49
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("th", {
                                                                         children: "Actions"
                                                                     }, void 0, false, {
                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 683,
+                                                                        lineNumber: 685,
                                                                         columnNumber: 49
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                lineNumber: 677,
+                                                                lineNumber: 681,
                                                                 columnNumber: 45
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "src/components/AdminDashboard.jsx",
-                                                            lineNumber: 676,
+                                                            lineNumber: 680,
                                                             columnNumber: 41
                                                         }, this),
                                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("tbody", {
-                                                            children: classes.map((cls, idx)=>{
-                                                                const classSubjects = subjects.filter((s)=>s.className === cls.name);
-                                                                const totalHours = classSubjects.reduce((sum, s)=>sum + s.hoursPerWeek, 0);
+                                                            children: departments.map((d, idx)=>{
+                                                                const classCount = classes.filter((c)=>(c.department || '') === d.name).length;
                                                                 return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("tr", {
                                                                     children: [
                                                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
@@ -1564,7 +1569,7 @@ function AdminDashboard({ user, onLogout }) {
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
                                                                             children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("strong", {
-                                                                                children: cls.name
+                                                                                children: d.name
                                                                             }, void 0, false, {
                                                                                 fileName: "src/components/AdminDashboard.jsx",
                                                                                 lineNumber: 694,
@@ -1576,34 +1581,10 @@ function AdminDashboard({ user, onLogout }) {
                                                                             columnNumber: 57
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
-                                                                            children: cls.hallNumber || '-'
+                                                                            children: classCount
                                                                         }, void 0, false, {
                                                                             fileName: "src/components/AdminDashboard.jsx",
                                                                             lineNumber: 695,
-                                                                            columnNumber: 57
-                                                                        }, this),
-                                                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
-                                                                            children: classSubjects.length
-                                                                        }, void 0, false, {
-                                                                            fileName: "src/components/AdminDashboard.jsx",
-                                                                            lineNumber: 696,
-                                                                            columnNumber: 57
-                                                                        }, this),
-                                                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
-                                                                            children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                                                                className: `badge ${totalHours === 30 ? 'badge-success' : 'badge-danger'}`,
-                                                                                children: [
-                                                                                    totalHours,
-                                                                                    "/30h"
-                                                                                ]
-                                                                            }, void 0, true, {
-                                                                                fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 698,
-                                                                                columnNumber: 61
-                                                                            }, this)
-                                                                        }, void 0, false, {
-                                                                            fileName: "src/components/AdminDashboard.jsx",
-                                                                            lineNumber: 697,
                                                                             columnNumber: 57
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
@@ -1612,37 +1593,40 @@ function AdminDashboard({ user, onLogout }) {
                                                                                 children: [
                                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
                                                                                         className: "btn-icon btn-icon-primary",
-                                                                                        onClick: ()=>editClass(cls),
+                                                                                        onClick: ()=>{
+                                                                                            editDepartment(d);
+                                                                                            setShowAddDepartmentForm(true);
+                                                                                        },
                                                                                         title: "Edit",
                                                                                         children: "\u270F\uFE0F"
                                                                                     }, void 0, false, {
                                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                                        lineNumber: 704,
+                                                                                        lineNumber: 698,
                                                                                         columnNumber: 65
                                                                                     }, this),
                                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
                                                                                         className: "btn-icon btn-icon-danger",
-                                                                                        onClick: ()=>deleteClass(cls.id),
+                                                                                        onClick: ()=>deleteDepartment(d.id),
                                                                                         title: "Delete",
                                                                                         children: "\uD83D\uDDD1\uFE0F"
                                                                                     }, void 0, false, {
                                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                                        lineNumber: 711,
+                                                                                        lineNumber: 699,
                                                                                         columnNumber: 65
                                                                                     }, this)
                                                                                 ]
                                                                             }, void 0, true, {
                                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 703,
+                                                                                lineNumber: 697,
                                                                                 columnNumber: 61
                                                                             }, this)
                                                                         }, void 0, false, {
                                                                             fileName: "src/components/AdminDashboard.jsx",
-                                                                            lineNumber: 702,
+                                                                            lineNumber: 696,
                                                                             columnNumber: 57
                                                                         }, this)
                                                                     ]
-                                                                }, cls.id, true, {
+                                                                }, d.id, true, {
                                                                     fileName: "src/components/AdminDashboard.jsx",
                                                                     lineNumber: 692,
                                                                     columnNumber: 53
@@ -1650,25 +1634,24 @@ function AdminDashboard({ user, onLogout }) {
                                                             })
                                                         }, void 0, false, {
                                                             fileName: "src/components/AdminDashboard.jsx",
-                                                            lineNumber: 686,
+                                                            lineNumber: 688,
                                                             columnNumber: 41
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "src/components/AdminDashboard.jsx",
-                                                    lineNumber: 675,
+                                                    lineNumber: 679,
                                                     columnNumber: 37
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 674,
+                                                lineNumber: 678,
                                                 columnNumber: 33
                                             }, this),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                                 className: "mobile-cards",
-                                                children: classes.map((cls, idx)=>{
-                                                    const classSubjects = subjects.filter((s)=>s.className === cls.name);
-                                                    const totalHours = classSubjects.reduce((sum, s)=>sum + s.hoursPerWeek, 0);
+                                                children: departments.map((d, idx)=>{
+                                                    const classCount = classes.filter((c)=>(c.department || '') === d.name).length;
                                                     return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                                         className: "mobile-card",
                                                         children: [
@@ -1677,10 +1660,10 @@ function AdminDashboard({ user, onLogout }) {
                                                                 children: [
                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
                                                                         className: "mobile-card-title",
-                                                                        children: cls.name
+                                                                        children: d.name
                                                                     }, void 0, false, {
                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 735,
+                                                                        lineNumber: 715,
                                                                         columnNumber: 53
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
@@ -1691,100 +1674,45 @@ function AdminDashboard({ user, onLogout }) {
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 736,
+                                                                        lineNumber: 716,
                                                                         columnNumber: 53
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                lineNumber: 734,
+                                                                lineNumber: 714,
                                                                 columnNumber: 49
                                                             }, this),
                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                                                 className: "mobile-card-body",
-                                                                children: [
-                                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                                                        className: "mobile-card-row",
-                                                                        children: [
-                                                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                                                                className: "mobile-card-label",
-                                                                                children: "Hall:"
-                                                                            }, void 0, false, {
-                                                                                fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 740,
-                                                                                columnNumber: 57
-                                                                            }, this),
-                                                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                                                                className: "mobile-card-value",
-                                                                                children: cls.hallNumber || '-'
-                                                                            }, void 0, false, {
-                                                                                fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 741,
-                                                                                columnNumber: 57
-                                                                            }, this)
-                                                                        ]
-                                                                    }, void 0, true, {
-                                                                        fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 739,
-                                                                        columnNumber: 53
-                                                                    }, this),
-                                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                                                        className: "mobile-card-row",
-                                                                        children: [
-                                                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                                                                className: "mobile-card-label",
-                                                                                children: "Subjects:"
-                                                                            }, void 0, false, {
-                                                                                fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 744,
-                                                                                columnNumber: 57
-                                                                            }, this),
-                                                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                                                                className: "mobile-card-value",
-                                                                                children: classSubjects.length
-                                                                            }, void 0, false, {
-                                                                                fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 745,
-                                                                                columnNumber: 57
-                                                                            }, this)
-                                                                        ]
-                                                                    }, void 0, true, {
-                                                                        fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 743,
-                                                                        columnNumber: 53
-                                                                    }, this),
-                                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                                                        className: "mobile-card-row",
-                                                                        children: [
-                                                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                                                                className: "mobile-card-label",
-                                                                                children: "Hours:"
-                                                                            }, void 0, false, {
-                                                                                fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 748,
-                                                                                columnNumber: 57
-                                                                            }, this),
-                                                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                                                                className: "mobile-card-value",
-                                                                                children: [
-                                                                                    totalHours,
-                                                                                    "/30h"
-                                                                                ]
-                                                                            }, void 0, true, {
-                                                                                fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 749,
-                                                                                columnNumber: 57
-                                                                            }, this)
-                                                                        ]
-                                                                    }, void 0, true, {
-                                                                        fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 747,
-                                                                        columnNumber: 53
-                                                                    }, this)
-                                                                ]
-                                                            }, void 0, true, {
+                                                                children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                                    className: "mobile-card-row",
+                                                                    children: [
+                                                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                                                            className: "mobile-card-label",
+                                                                            children: "Classes:"
+                                                                        }, void 0, false, {
+                                                                            fileName: "src/components/AdminDashboard.jsx",
+                                                                            lineNumber: 720,
+                                                                            columnNumber: 57
+                                                                        }, this),
+                                                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                                                            className: "mobile-card-value",
+                                                                            children: classCount
+                                                                        }, void 0, false, {
+                                                                            fileName: "src/components/AdminDashboard.jsx",
+                                                                            lineNumber: 721,
+                                                                            columnNumber: 57
+                                                                        }, this)
+                                                                    ]
+                                                                }, void 0, true, {
+                                                                    fileName: "src/components/AdminDashboard.jsx",
+                                                                    lineNumber: 719,
+                                                                    columnNumber: 53
+                                                                }, this)
+                                                            }, void 0, false, {
                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                lineNumber: 738,
+                                                                lineNumber: 718,
                                                                 columnNumber: 49
                                                             }, this),
                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -1792,62 +1720,720 @@ function AdminDashboard({ user, onLogout }) {
                                                                 children: [
                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
                                                                         className: "btn btn-primary btn-sm",
-                                                                        onClick: ()=>editClass(cls),
+                                                                        onClick: ()=>{
+                                                                            editDepartment(d);
+                                                                            setShowAddDepartmentForm(true);
+                                                                        },
                                                                         children: "\u270F\uFE0F Edit"
                                                                     }, void 0, false, {
                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 753,
+                                                                        lineNumber: 725,
                                                                         columnNumber: 53
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
                                                                         className: "btn btn-danger btn-sm",
-                                                                        onClick: ()=>deleteClass(cls.id),
+                                                                        onClick: ()=>deleteDepartment(d.id),
                                                                         children: "\uD83D\uDDD1\uFE0F Delete"
                                                                     }, void 0, false, {
                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 756,
+                                                                        lineNumber: 726,
                                                                         columnNumber: 53
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                lineNumber: 752,
+                                                                lineNumber: 724,
                                                                 columnNumber: 49
                                                             }, this)
                                                         ]
-                                                    }, cls.id, true, {
+                                                    }, d.id, true, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 733,
+                                                        lineNumber: 713,
                                                         columnNumber: 45
                                                     }, this);
                                                 })
                                             }, void 0, false, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 727,
+                                                lineNumber: 709,
                                                 columnNumber: 33
                                             }, this)
                                         ]
-                                    }, void 0, true)
+                                    }, void 0, true),
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
+                                        className: "btn btn-success btn-sm",
+                                        onClick: ()=>setShowAddDepartmentForm(true),
+                                        style: {
+                                            marginTop: '15px'
+                                        },
+                                        children: "\u2795 Add Department"
+                                    }, void 0, false, {
+                                        fileName: "src/components/AdminDashboard.jsx",
+                                        lineNumber: 734,
+                                        columnNumber: 25
+                                    }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "src/components/AdminDashboard.jsx",
-                                lineNumber: 652,
+                                lineNumber: 670,
                                 columnNumber: 21
                             }, this),
-                            showClassForm && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                            showAddDepartmentForm && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                 className: "card",
-                                ref: classFormRef,
-                                style: {
-                                    animation: 'slideIn 0.3s ease-out',
-                                    border: '2px solid #3b82f6'
-                                },
+                                children: [
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h3", {
+                                        children: newDepartment.id ? "\u270F\uFE0F Edit Department" : "\u2795 Add New Department"
+                                    }, void 0, false, {
+                                        fileName: "src/components/AdminDashboard.jsx",
+                                        lineNumber: 745,
+                                        columnNumber: 29
+                                    }, this),
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                        className: "grid-2",
+                                        children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                            className: "form-group",
+                                            children: [
+                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("label", {
+                                                    children: "Department Name *"
+                                                }, void 0, false, {
+                                                    fileName: "src/components/AdminDashboard.jsx",
+                                                    lineNumber: 748,
+                                                    columnNumber: 37
+                                                }, this),
+                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("input", {
+                                                    type: "text",
+                                                    value: newDepartment.name,
+                                                    onChange: (e)=>setNewDepartment({
+                                                            ...newDepartment,
+                                                            name: e.target.value
+                                                        }),
+                                                    placeholder: "Computer Science"
+                                                }, void 0, false, {
+                                                    fileName: "src/components/AdminDashboard.jsx",
+                                                    lineNumber: 749,
+                                                    columnNumber: 37
+                                                }, this)
+                                            ]
+                                        }, void 0, true, {
+                                            fileName: "src/components/AdminDashboard.jsx",
+                                            lineNumber: 747,
+                                            columnNumber: 33
+                                        }, this)
+                                    }, void 0, false, {
+                                        fileName: "src/components/AdminDashboard.jsx",
+                                        lineNumber: 746,
+                                        columnNumber: 29
+                                    }, this),
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                        style: {
+                                            display: 'flex',
+                                            gap: '10px'
+                                        },
+                                        children: [
+                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
+                                                className: "btn btn-primary",
+                                                onClick: addOrUpdateDepartment,
+                                                children: newDepartment.id ? "\uD83D\uDCBE Save Changes" : "\u2795 Add Department"
+                                            }, void 0, false, {
+                                                fileName: "src/components/AdminDashboard.jsx",
+                                                lineNumber: 753,
+                                                columnNumber: 33
+                                            }, this),
+                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
+                                                className: "btn btn-secondary",
+                                                onClick: ()=>{
+                                                    setNewDepartment({
+                                                        id: null,
+                                                        name: ''
+                                                    });
+                                                    setShowAddDepartmentForm(false);
+                                                },
+                                                children: "\u274C Cancel"
+                                            }, void 0, false, {
+                                                fileName: "src/components/AdminDashboard.jsx",
+                                                lineNumber: 754,
+                                                columnNumber: 33
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "src/components/AdminDashboard.jsx",
+                                        lineNumber: 752,
+                                        columnNumber: 29
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "src/components/AdminDashboard.jsx",
+                                lineNumber: 744,
+                                columnNumber: 25
+                            }, this)
+                        ]
+                    }, void 0, true, {
+                        fileName: "src/components/AdminDashboard.jsx",
+                        lineNumber: 664,
+                        columnNumber: 17
+                    }, this),
+                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                        className: "section",
+                        children: [
+                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                className: "section-header",
+                                children: [
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                        className: "section-icon",
+                                        children: "\uD83D\uDCDA"
+                                    }, void 0, false, {
+                                        fileName: "src/components/AdminDashboard.jsx",
+                                        lineNumber: 763,
+                                        columnNumber: 25
+                                    }, this),
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h2", {
+                                        className: "section-title",
+                                        children: "Manage Classes"
+                                    }, void 0, false, {
+                                        fileName: "src/components/AdminDashboard.jsx",
+                                        lineNumber: 764,
+                                        columnNumber: 25
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "src/components/AdminDashboard.jsx",
+                                lineNumber: 762,
+                                columnNumber: 21
+                            }, this),
+                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                className: "card",
+                                children: [
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h3", {
+                                        children: [
+                                            "Existing Classes (",
+                                            classes.length,
+                                            ")"
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "src/components/AdminDashboard.jsx",
+                                        lineNumber: 769,
+                                        columnNumber: 25
+                                    }, this),
+                                    classes.length === 0 ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
+                                        style: {
+                                            color: '#64748b',
+                                            textAlign: 'center',
+                                            padding: '20px'
+                                        },
+                                        children: "No classes added yet"
+                                    }, void 0, false, {
+                                        fileName: "src/components/AdminDashboard.jsx",
+                                        lineNumber: 771,
+                                        columnNumber: 29
+                                    }, this) : /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _jsxDevRuntime.Fragment), {
+                                        children: [
+                                            (()=>{
+                                                const sorted = [
+                                                    ...classes
+                                                ].sort((a, b)=>(a.department || 'Unassigned').localeCompare(b.department || 'Unassigned') || a.name.localeCompare(b.name));
+                                                const groups = {};
+                                                sorted.forEach((cls)=>{
+                                                    const dept = cls.department || 'Unassigned';
+                                                    if (!groups[dept]) groups[dept] = [];
+                                                    groups[dept].push(cls);
+                                                });
+                                                return Object.keys(groups).filter((d)=>groups[d].length > 0).map((dept)=>/*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                        className: "dept-group",
+                                                        children: [
+                                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                                className: "dept-chip",
+                                                                children: dept
+                                                            }, void 0, false, {
+                                                                fileName: "src/components/AdminDashboard.jsx",
+                                                                lineNumber: 786,
+                                                                columnNumber: 45
+                                                            }, this),
+                                                            groups[dept].map((cls, idx)=>{
+                                                                const classSubjects = subjects.filter((s)=>s.className === cls.name);
+                                                                const totalHours = classSubjects.reduce((sum, s)=>sum + s.hoursPerWeek, 0);
+                                                                const progress = totalHours / 30 * 100;
+                                                                return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                                    className: "class-box",
+                                                                    children: [
+                                                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                                            style: {
+                                                                                marginBottom: '8px',
+                                                                                display: 'flex',
+                                                                                alignItems: 'center',
+                                                                                justifyContent: 'space-between',
+                                                                                gap: '10px',
+                                                                                color: '#1e293b',
+                                                                                flexWrap: 'wrap'
+                                                                            },
+                                                                            children: [
+                                                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h4", {
+                                                                                    style: {
+                                                                                        margin: 0,
+                                                                                        display: 'flex',
+                                                                                        alignItems: 'center',
+                                                                                        gap: '8px'
+                                                                                    },
+                                                                                    children: [
+                                                                                        "Class: ",
+                                                                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("strong", {
+                                                                                            children: cls.name
+                                                                                        }, void 0, false, {
+                                                                                            fileName: "src/components/AdminDashboard.jsx",
+                                                                                            lineNumber: 803,
+                                                                                            columnNumber: 72
+                                                                                        }, this)
+                                                                                    ]
+                                                                                }, void 0, true, {
+                                                                                    fileName: "src/components/AdminDashboard.jsx",
+                                                                                    lineNumber: 802,
+                                                                                    columnNumber: 61
+                                                                                }, this),
+                                                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                                                    style: {
+                                                                                        display: 'flex',
+                                                                                        alignItems: 'center',
+                                                                                        gap: '16px',
+                                                                                        color: '#64748b',
+                                                                                        fontWeight: 600
+                                                                                    },
+                                                                                    children: [
+                                                                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                                                                            children: [
+                                                                                                totalHours,
+                                                                                                "/30 hours"
+                                                                                            ]
+                                                                                        }, void 0, true, {
+                                                                                            fileName: "src/components/AdminDashboard.jsx",
+                                                                                            lineNumber: 806,
+                                                                                            columnNumber: 65
+                                                                                        }, this),
+                                                                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                                                                            children: [
+                                                                                                Math.max(30 - totalHours, 0),
+                                                                                                "h remaining"
+                                                                                            ]
+                                                                                        }, void 0, true, {
+                                                                                            fileName: "src/components/AdminDashboard.jsx",
+                                                                                            lineNumber: 807,
+                                                                                            columnNumber: 65
+                                                                                        }, this)
+                                                                                    ]
+                                                                                }, void 0, true, {
+                                                                                    fileName: "src/components/AdminDashboard.jsx",
+                                                                                    lineNumber: 805,
+                                                                                    columnNumber: 61
+                                                                                }, this)
+                                                                            ]
+                                                                        }, void 0, true, {
+                                                                            fileName: "src/components/AdminDashboard.jsx",
+                                                                            lineNumber: 793,
+                                                                            columnNumber: 57
+                                                                        }, this),
+                                                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                                            style: {
+                                                                                width: '100%',
+                                                                                height: '8px',
+                                                                                backgroundColor: '#e2e8f0',
+                                                                                borderRadius: '4px',
+                                                                                overflow: 'hidden',
+                                                                                marginBottom: '15px'
+                                                                            },
+                                                                            children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                                                style: {
+                                                                                    height: '100%',
+                                                                                    width: `${Math.min(progress, 100)}%`,
+                                                                                    backgroundColor: totalHours === 30 ? '#10b981' : '#f59e0b',
+                                                                                    transition: 'width 0.3s ease'
+                                                                                }
+                                                                            }, void 0, false, {
+                                                                                fileName: "src/components/AdminDashboard.jsx",
+                                                                                lineNumber: 818,
+                                                                                columnNumber: 61
+                                                                            }, this)
+                                                                        }, void 0, false, {
+                                                                            fileName: "src/components/AdminDashboard.jsx",
+                                                                            lineNumber: 810,
+                                                                            columnNumber: 57
+                                                                        }, this),
+                                                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                                            className: "desktop-table",
+                                                                            children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("table", {
+                                                                                children: [
+                                                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("thead", {
+                                                                                        children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("tr", {
+                                                                                            children: [
+                                                                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("th", {
+                                                                                                    children: "Hall Number"
+                                                                                                }, void 0, false, {
+                                                                                                    fileName: "src/components/AdminDashboard.jsx",
+                                                                                                    lineNumber: 829,
+                                                                                                    columnNumber: 73
+                                                                                                }, this),
+                                                                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("th", {
+                                                                                                    children: "Subjects"
+                                                                                                }, void 0, false, {
+                                                                                                    fileName: "src/components/AdminDashboard.jsx",
+                                                                                                    lineNumber: 830,
+                                                                                                    columnNumber: 73
+                                                                                                }, this),
+                                                                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("th", {
+                                                                                                    children: "Hours"
+                                                                                                }, void 0, false, {
+                                                                                                    fileName: "src/components/AdminDashboard.jsx",
+                                                                                                    lineNumber: 831,
+                                                                                                    columnNumber: 73
+                                                                                                }, this),
+                                                                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("th", {
+                                                                                                    children: "Actions"
+                                                                                                }, void 0, false, {
+                                                                                                    fileName: "src/components/AdminDashboard.jsx",
+                                                                                                    lineNumber: 832,
+                                                                                                    columnNumber: 73
+                                                                                                }, this)
+                                                                                            ]
+                                                                                        }, void 0, true, {
+                                                                                            fileName: "src/components/AdminDashboard.jsx",
+                                                                                            lineNumber: 828,
+                                                                                            columnNumber: 69
+                                                                                        }, this)
+                                                                                    }, void 0, false, {
+                                                                                        fileName: "src/components/AdminDashboard.jsx",
+                                                                                        lineNumber: 827,
+                                                                                        columnNumber: 65
+                                                                                    }, this),
+                                                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("tbody", {
+                                                                                        children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("tr", {
+                                                                                            children: [
+                                                                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
+                                                                                                    children: cls.hallNumber || '-'
+                                                                                                }, void 0, false, {
+                                                                                                    fileName: "src/components/AdminDashboard.jsx",
+                                                                                                    lineNumber: 837,
+                                                                                                    columnNumber: 73
+                                                                                                }, this),
+                                                                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
+                                                                                                    children: classSubjects.length
+                                                                                                }, void 0, false, {
+                                                                                                    fileName: "src/components/AdminDashboard.jsx",
+                                                                                                    lineNumber: 838,
+                                                                                                    columnNumber: 73
+                                                                                                }, this),
+                                                                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
+                                                                                                    children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                                                                                        className: `badge ${totalHours === 30 ? 'badge-success' : 'badge-danger'}`,
+                                                                                                        children: [
+                                                                                                            totalHours,
+                                                                                                            "/30h"
+                                                                                                        ]
+                                                                                                    }, void 0, true, {
+                                                                                                        fileName: "src/components/AdminDashboard.jsx",
+                                                                                                        lineNumber: 840,
+                                                                                                        columnNumber: 77
+                                                                                                    }, this)
+                                                                                                }, void 0, false, {
+                                                                                                    fileName: "src/components/AdminDashboard.jsx",
+                                                                                                    lineNumber: 839,
+                                                                                                    columnNumber: 73
+                                                                                                }, this),
+                                                                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
+                                                                                                    children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                                                                        className: "action-buttons",
+                                                                                                        children: [
+                                                                                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
+                                                                                                                className: "btn-icon btn-icon-primary",
+                                                                                                                onClick: ()=>{
+                                                                                                                    editClass(cls);
+                                                                                                                    setShowAddClassForm(true);
+                                                                                                                },
+                                                                                                                title: "Edit",
+                                                                                                                children: "\u270F\uFE0F"
+                                                                                                            }, void 0, false, {
+                                                                                                                fileName: "src/components/AdminDashboard.jsx",
+                                                                                                                lineNumber: 844,
+                                                                                                                columnNumber: 81
+                                                                                                            }, this),
+                                                                                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
+                                                                                                                className: "btn-icon btn-icon-danger",
+                                                                                                                onClick: ()=>deleteClass(cls.id),
+                                                                                                                title: "Delete",
+                                                                                                                children: "\uD83D\uDDD1\uFE0F"
+                                                                                                            }, void 0, false, {
+                                                                                                                fileName: "src/components/AdminDashboard.jsx",
+                                                                                                                lineNumber: 845,
+                                                                                                                columnNumber: 81
+                                                                                                            }, this)
+                                                                                                        ]
+                                                                                                    }, void 0, true, {
+                                                                                                        fileName: "src/components/AdminDashboard.jsx",
+                                                                                                        lineNumber: 843,
+                                                                                                        columnNumber: 77
+                                                                                                    }, this)
+                                                                                                }, void 0, false, {
+                                                                                                    fileName: "src/components/AdminDashboard.jsx",
+                                                                                                    lineNumber: 842,
+                                                                                                    columnNumber: 73
+                                                                                                }, this)
+                                                                                            ]
+                                                                                        }, void 0, true, {
+                                                                                            fileName: "src/components/AdminDashboard.jsx",
+                                                                                            lineNumber: 836,
+                                                                                            columnNumber: 69
+                                                                                        }, this)
+                                                                                    }, void 0, false, {
+                                                                                        fileName: "src/components/AdminDashboard.jsx",
+                                                                                        lineNumber: 835,
+                                                                                        columnNumber: 65
+                                                                                    }, this)
+                                                                                ]
+                                                                            }, void 0, true, {
+                                                                                fileName: "src/components/AdminDashboard.jsx",
+                                                                                lineNumber: 826,
+                                                                                columnNumber: 61
+                                                                            }, this)
+                                                                        }, void 0, false, {
+                                                                            fileName: "src/components/AdminDashboard.jsx",
+                                                                            lineNumber: 825,
+                                                                            columnNumber: 57
+                                                                        }, this)
+                                                                    ]
+                                                                }, cls.id, true, {
+                                                                    fileName: "src/components/AdminDashboard.jsx",
+                                                                    lineNumber: 792,
+                                                                    columnNumber: 53
+                                                                }, this);
+                                                            })
+                                                        ]
+                                                    }, `dept-classes-${dept}`, true, {
+                                                        fileName: "src/components/AdminDashboard.jsx",
+                                                        lineNumber: 785,
+                                                        columnNumber: 41
+                                                    }, this));
+                                            })(),
+                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                className: "mobile-cards",
+                                                children: (()=>{
+                                                    const sorted = [
+                                                        ...classes
+                                                    ].sort((a, b)=>(a.department || 'Unassigned').localeCompare(b.department || 'Unassigned') || a.name.localeCompare(b.name));
+                                                    let currentDept = null;
+                                                    const cards = [];
+                                                    sorted.forEach((cls, idx)=>{
+                                                        const dept = cls.department || 'Unassigned';
+                                                        const classSubjects = subjects.filter((s)=>s.className === cls.name);
+                                                        const totalHours = classSubjects.reduce((sum, s)=>sum + s.hoursPerWeek, 0);
+                                                        if (dept !== currentDept) {
+                                                            currentDept = dept;
+                                                            cards.push(/*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                                className: "group-header",
+                                                                style: {
+                                                                    fontWeight: 700,
+                                                                    margin: '10px 0'
+                                                                },
+                                                                children: dept
+                                                            }, `dept-mobile-${dept}`, false, {
+                                                                fileName: "src/components/AdminDashboard.jsx",
+                                                                lineNumber: 870,
+                                                                columnNumber: 60
+                                                            }, this));
+                                                        }
+                                                        cards.push(/*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                            className: "mobile-card",
+                                                            children: [
+                                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                                    className: "mobile-card-header",
+                                                                    children: [
+                                                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                                                            className: "mobile-card-title",
+                                                                            children: cls.name
+                                                                        }, void 0, false, {
+                                                                            fileName: "src/components/AdminDashboard.jsx",
+                                                                            lineNumber: 875,
+                                                                            columnNumber: 57
+                                                                        }, this),
+                                                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                                                            className: "mobile-card-badge",
+                                                                            children: [
+                                                                                "#",
+                                                                                idx + 1
+                                                                            ]
+                                                                        }, void 0, true, {
+                                                                            fileName: "src/components/AdminDashboard.jsx",
+                                                                            lineNumber: 876,
+                                                                            columnNumber: 57
+                                                                        }, this)
+                                                                    ]
+                                                                }, void 0, true, {
+                                                                    fileName: "src/components/AdminDashboard.jsx",
+                                                                    lineNumber: 874,
+                                                                    columnNumber: 53
+                                                                }, this),
+                                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                                    className: "mobile-card-body",
+                                                                    children: [
+                                                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                                            className: "mobile-card-row",
+                                                                            children: [
+                                                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                                                                    className: "mobile-card-label",
+                                                                                    children: "Hall:"
+                                                                                }, void 0, false, {
+                                                                                    fileName: "src/components/AdminDashboard.jsx",
+                                                                                    lineNumber: 881,
+                                                                                    columnNumber: 61
+                                                                                }, this),
+                                                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                                                                    className: "mobile-card-value",
+                                                                                    children: cls.hallNumber || '-'
+                                                                                }, void 0, false, {
+                                                                                    fileName: "src/components/AdminDashboard.jsx",
+                                                                                    lineNumber: 882,
+                                                                                    columnNumber: 61
+                                                                                }, this)
+                                                                            ]
+                                                                        }, void 0, true, {
+                                                                            fileName: "src/components/AdminDashboard.jsx",
+                                                                            lineNumber: 880,
+                                                                            columnNumber: 57
+                                                                        }, this),
+                                                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                                            className: "mobile-card-row",
+                                                                            children: [
+                                                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                                                                    className: "mobile-card-label",
+                                                                                    children: "Subjects:"
+                                                                                }, void 0, false, {
+                                                                                    fileName: "src/components/AdminDashboard.jsx",
+                                                                                    lineNumber: 885,
+                                                                                    columnNumber: 61
+                                                                                }, this),
+                                                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                                                                    className: "mobile-card-value",
+                                                                                    children: classSubjects.length
+                                                                                }, void 0, false, {
+                                                                                    fileName: "src/components/AdminDashboard.jsx",
+                                                                                    lineNumber: 886,
+                                                                                    columnNumber: 61
+                                                                                }, this)
+                                                                            ]
+                                                                        }, void 0, true, {
+                                                                            fileName: "src/components/AdminDashboard.jsx",
+                                                                            lineNumber: 884,
+                                                                            columnNumber: 57
+                                                                        }, this),
+                                                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                                            className: "mobile-card-row",
+                                                                            children: [
+                                                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                                                                    className: "mobile-card-label",
+                                                                                    children: "Hours:"
+                                                                                }, void 0, false, {
+                                                                                    fileName: "src/components/AdminDashboard.jsx",
+                                                                                    lineNumber: 889,
+                                                                                    columnNumber: 61
+                                                                                }, this),
+                                                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                                                                    className: "mobile-card-value",
+                                                                                    children: [
+                                                                                        totalHours,
+                                                                                        "/30h"
+                                                                                    ]
+                                                                                }, void 0, true, {
+                                                                                    fileName: "src/components/AdminDashboard.jsx",
+                                                                                    lineNumber: 890,
+                                                                                    columnNumber: 61
+                                                                                }, this)
+                                                                            ]
+                                                                        }, void 0, true, {
+                                                                            fileName: "src/components/AdminDashboard.jsx",
+                                                                            lineNumber: 888,
+                                                                            columnNumber: 57
+                                                                        }, this)
+                                                                    ]
+                                                                }, void 0, true, {
+                                                                    fileName: "src/components/AdminDashboard.jsx",
+                                                                    lineNumber: 878,
+                                                                    columnNumber: 53
+                                                                }, this),
+                                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                                    className: "mobile-card-actions",
+                                                                    children: [
+                                                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
+                                                                            className: "btn btn-primary btn-sm",
+                                                                            onClick: ()=>{
+                                                                                editClass(cls);
+                                                                                setShowAddClassForm(true);
+                                                                            },
+                                                                            children: "\u270F\uFE0F Edit"
+                                                                        }, void 0, false, {
+                                                                            fileName: "src/components/AdminDashboard.jsx",
+                                                                            lineNumber: 894,
+                                                                            columnNumber: 57
+                                                                        }, this),
+                                                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
+                                                                            className: "btn btn-danger btn-sm",
+                                                                            onClick: ()=>deleteClass(cls.id),
+                                                                            children: "\uD83D\uDDD1\uFE0F Delete"
+                                                                        }, void 0, false, {
+                                                                            fileName: "src/components/AdminDashboard.jsx",
+                                                                            lineNumber: 895,
+                                                                            columnNumber: 57
+                                                                        }, this)
+                                                                    ]
+                                                                }, void 0, true, {
+                                                                    fileName: "src/components/AdminDashboard.jsx",
+                                                                    lineNumber: 893,
+                                                                    columnNumber: 53
+                                                                }, this)
+                                                            ]
+                                                        }, cls.id, true, {
+                                                            fileName: "src/components/AdminDashboard.jsx",
+                                                            lineNumber: 873,
+                                                            columnNumber: 49
+                                                        }, this));
+                                                    });
+                                                    return cards;
+                                                })()
+                                            }, void 0, false, {
+                                                fileName: "src/components/AdminDashboard.jsx",
+                                                lineNumber: 859,
+                                                columnNumber: 33
+                                            }, this)
+                                        ]
+                                    }, void 0, true),
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
+                                        className: "btn btn-success btn-sm",
+                                        onClick: ()=>{
+                                            setShowAddClassForm(true);
+                                            setNewClass({
+                                                id: null,
+                                                name: '',
+                                                hallNumber: '',
+                                                department: ''
+                                            });
+                                        },
+                                        style: {
+                                            marginTop: '15px'
+                                        },
+                                        children: "\u2795 Add Class"
+                                    }, void 0, false, {
+                                        fileName: "src/components/AdminDashboard.jsx",
+                                        lineNumber: 905,
+                                        columnNumber: 25
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "src/components/AdminDashboard.jsx",
+                                lineNumber: 768,
+                                columnNumber: 21
+                            }, this),
+                            showAddClassForm && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                className: "card",
                                 children: [
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h3", {
                                         children: newClass.id ? "\u270F\uFE0F Edit Class" : "\u2795 Add New Class"
                                     }, void 0, false, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 774,
-                                        columnNumber: 29
+                                        lineNumber: 917,
+                                        columnNumber: 25
                                     }, this),
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                         className: "grid-2",
@@ -1859,8 +2445,8 @@ function AdminDashboard({ user, onLogout }) {
                                                         children: "Class Name *"
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 777,
-                                                        columnNumber: 37
+                                                        lineNumber: 920,
+                                                        columnNumber: 33
                                                     }, this),
                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("input", {
                                                         type: "text",
@@ -1872,14 +2458,14 @@ function AdminDashboard({ user, onLogout }) {
                                                         placeholder: "CS3A, EE2B"
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 778,
-                                                        columnNumber: 37
+                                                        lineNumber: 921,
+                                                        columnNumber: 33
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 776,
-                                                columnNumber: 33
+                                                lineNumber: 919,
+                                                columnNumber: 29
                                             }, this),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                                 className: "form-group",
@@ -1888,8 +2474,8 @@ function AdminDashboard({ user, onLogout }) {
                                                         children: "Hall Number (Optional)"
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 786,
-                                                        columnNumber: 37
+                                                        lineNumber: 929,
+                                                        columnNumber: 33
                                                     }, this),
                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("input", {
                                                         type: "text",
@@ -1901,20 +2487,65 @@ function AdminDashboard({ user, onLogout }) {
                                                         placeholder: "Hall 101"
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 787,
-                                                        columnNumber: 37
+                                                        lineNumber: 930,
+                                                        columnNumber: 33
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 785,
-                                                columnNumber: 33
+                                                lineNumber: 928,
+                                                columnNumber: 29
+                                            }, this),
+                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                className: "form-group",
+                                                children: [
+                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("label", {
+                                                        children: "Department"
+                                                    }, void 0, false, {
+                                                        fileName: "src/components/AdminDashboard.jsx",
+                                                        lineNumber: 938,
+                                                        columnNumber: 33
+                                                    }, this),
+                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("select", {
+                                                        value: newClass.department,
+                                                        onChange: (e)=>setNewClass({
+                                                                ...newClass,
+                                                                department: e.target.value
+                                                            }),
+                                                        children: [
+                                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("option", {
+                                                                value: "",
+                                                                children: "Unassigned"
+                                                            }, void 0, false, {
+                                                                fileName: "src/components/AdminDashboard.jsx",
+                                                                lineNumber: 940,
+                                                                columnNumber: 37
+                                                            }, this),
+                                                            departments.map((d)=>/*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("option", {
+                                                                    value: d.name,
+                                                                    children: d.name
+                                                                }, d.id, false, {
+                                                                    fileName: "src/components/AdminDashboard.jsx",
+                                                                    lineNumber: 942,
+                                                                    columnNumber: 41
+                                                                }, this))
+                                                        ]
+                                                    }, void 0, true, {
+                                                        fileName: "src/components/AdminDashboard.jsx",
+                                                        lineNumber: 939,
+                                                        columnNumber: 33
+                                                    }, this)
+                                                ]
+                                            }, void 0, true, {
+                                                fileName: "src/components/AdminDashboard.jsx",
+                                                lineNumber: 937,
+                                                columnNumber: 29
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 775,
-                                        columnNumber: 29
+                                        lineNumber: 918,
+                                        columnNumber: 25
                                     }, this),
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                         style: {
@@ -1928,40 +2559,41 @@ function AdminDashboard({ user, onLogout }) {
                                                 children: newClass.id ? "\uD83D\uDCBE Update Class" : "\u2795 Add Class"
                                             }, void 0, false, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 796,
-                                                columnNumber: 33
+                                                lineNumber: 948,
+                                                columnNumber: 29
                                             }, this),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
                                                 className: "btn btn-secondary",
                                                 onClick: ()=>{
                                                     setNewClass({
                                                         name: '',
-                                                        hallNumber: ''
+                                                        hallNumber: '',
+                                                        department: ''
                                                     });
-                                                    setShowClassForm(false);
+                                                    setShowAddClassForm(false);
                                                 },
                                                 children: "\u274C Cancel"
                                             }, void 0, false, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 799,
-                                                columnNumber: 33
+                                                lineNumber: 951,
+                                                columnNumber: 29
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 795,
-                                        columnNumber: 29
+                                        lineNumber: 947,
+                                        columnNumber: 25
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "src/components/AdminDashboard.jsx",
-                                lineNumber: 770,
-                                columnNumber: 25
+                                lineNumber: 916,
+                                columnNumber: 21
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "src/components/AdminDashboard.jsx",
-                        lineNumber: 645,
+                        lineNumber: 761,
                         columnNumber: 17
                     }, this),
                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -1975,7 +2607,7 @@ function AdminDashboard({ user, onLogout }) {
                                         children: "\uD83D\uDC65"
                                     }, void 0, false, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 816,
+                                        lineNumber: 962,
                                         columnNumber: 25
                                     }, this),
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h2", {
@@ -1983,53 +2615,27 @@ function AdminDashboard({ user, onLogout }) {
                                         children: "Manage Staff"
                                     }, void 0, false, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 817,
+                                        lineNumber: 963,
                                         columnNumber: 25
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "src/components/AdminDashboard.jsx",
-                                lineNumber: 815,
+                                lineNumber: 961,
                                 columnNumber: 21
                             }, this),
                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                 className: "card",
                                 children: [
-                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                        style: {
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                            marginBottom: '20px'
-                                        },
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h3", {
                                         children: [
-                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h3", {
-                                                children: [
-                                                    "Existing Staff (",
-                                                    teachers.length,
-                                                    ")"
-                                                ]
-                                            }, void 0, true, {
-                                                fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 823,
-                                                columnNumber: 29
-                                            }, this),
-                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
-                                                className: "btn btn-primary btn-sm",
-                                                onClick: ()=>{
-                                                    setShowStaffForm(!showStaffForm);
-                                                    if (!showStaffForm && newStaff.id) resetStaffForm();
-                                                },
-                                                children: showStaffForm ? "\u274C Cancel" : "\u2795 Add Staff"
-                                            }, void 0, false, {
-                                                fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 824,
-                                                columnNumber: 29
-                                            }, this)
+                                            "Existing Staff (",
+                                            teachers.length,
+                                            ")"
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 822,
+                                        lineNumber: 968,
                                         columnNumber: 25
                                     }, this),
                                     teachers.length === 0 ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
@@ -2038,10 +2644,10 @@ function AdminDashboard({ user, onLogout }) {
                                             textAlign: 'center',
                                             padding: '20px'
                                         },
-                                        children: 'No staff added yet. Click "Add Staff" to start.'
+                                        children: "No staff added yet"
                                     }, void 0, false, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 838,
+                                        lineNumber: 970,
                                         columnNumber: 29
                                     }, this) : /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _jsxDevRuntime.Fragment), {
                                         children: [
@@ -2056,46 +2662,46 @@ function AdminDashboard({ user, onLogout }) {
                                                                         children: "S.No"
                                                                     }, void 0, false, {
                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 847,
+                                                                        lineNumber: 979,
                                                                         columnNumber: 49
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("th", {
                                                                         children: "Name"
                                                                     }, void 0, false, {
                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 848,
+                                                                        lineNumber: 980,
                                                                         columnNumber: 49
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("th", {
                                                                         children: "Username"
                                                                     }, void 0, false, {
                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 849,
+                                                                        lineNumber: 981,
                                                                         columnNumber: 49
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("th", {
-                                                                        children: "Mode"
+                                                                        children: "Free Periods"
                                                                     }, void 0, false, {
                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 850,
+                                                                        lineNumber: 982,
                                                                         columnNumber: 49
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("th", {
                                                                         children: "Actions"
                                                                     }, void 0, false, {
                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 851,
+                                                                        lineNumber: 983,
                                                                         columnNumber: 49
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                lineNumber: 846,
+                                                                lineNumber: 978,
                                                                 columnNumber: 45
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "src/components/AdminDashboard.jsx",
-                                                            lineNumber: 845,
+                                                            lineNumber: 977,
                                                             columnNumber: 41
                                                         }, this),
                                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("tbody", {
@@ -2110,12 +2716,12 @@ function AdminDashboard({ user, onLogout }) {
                                                                                 ]
                                                                             }, void 0, true, {
                                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 857,
+                                                                                lineNumber: 989,
                                                                                 columnNumber: 57
                                                                             }, this)
                                                                         }, void 0, false, {
                                                                             fileName: "src/components/AdminDashboard.jsx",
-                                                                            lineNumber: 857,
+                                                                            lineNumber: 989,
                                                                             columnNumber: 53
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
@@ -2123,26 +2729,26 @@ function AdminDashboard({ user, onLogout }) {
                                                                                 children: s.name
                                                                             }, void 0, false, {
                                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 858,
+                                                                                lineNumber: 990,
                                                                                 columnNumber: 57
                                                                             }, this)
                                                                         }, void 0, false, {
                                                                             fileName: "src/components/AdminDashboard.jsx",
-                                                                            lineNumber: 858,
+                                                                            lineNumber: 990,
                                                                             columnNumber: 53
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
                                                                             children: s.username
                                                                         }, void 0, false, {
                                                                             fileName: "src/components/AdminDashboard.jsx",
-                                                                            lineNumber: 859,
+                                                                            lineNumber: 991,
                                                                             columnNumber: 53
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
-                                                                            children: s.freePeriodMode === 'manual' ? `Manual (${s.manualFreePeriods})` : 'Auto'
+                                                                            children: s.freePeriodMode === 'manual' ? `Manual (${s.manualFreePeriods} free periods)` : 'Auto'
                                                                         }, void 0, false, {
                                                                             fileName: "src/components/AdminDashboard.jsx",
-                                                                            lineNumber: 860,
+                                                                            lineNumber: 992,
                                                                             columnNumber: 53
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
@@ -2156,7 +2762,7 @@ function AdminDashboard({ user, onLogout }) {
                                                                                         children: "\u270F\uFE0F"
                                                                                     }, void 0, false, {
                                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                                        lineNumber: 867,
+                                                                                        lineNumber: 999,
                                                                                         columnNumber: 61
                                                                                     }, this),
                                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
@@ -2166,40 +2772,40 @@ function AdminDashboard({ user, onLogout }) {
                                                                                         children: "\uD83D\uDDD1\uFE0F"
                                                                                     }, void 0, false, {
                                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                                        lineNumber: 874,
+                                                                                        lineNumber: 1006,
                                                                                         columnNumber: 61
                                                                                     }, this)
                                                                                 ]
                                                                             }, void 0, true, {
                                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 866,
+                                                                                lineNumber: 998,
                                                                                 columnNumber: 57
                                                                             }, this)
                                                                         }, void 0, false, {
                                                                             fileName: "src/components/AdminDashboard.jsx",
-                                                                            lineNumber: 865,
+                                                                            lineNumber: 997,
                                                                             columnNumber: 53
                                                                         }, this)
                                                                     ]
                                                                 }, s.id, true, {
                                                                     fileName: "src/components/AdminDashboard.jsx",
-                                                                    lineNumber: 856,
+                                                                    lineNumber: 988,
                                                                     columnNumber: 49
                                                                 }, this))
                                                         }, void 0, false, {
                                                             fileName: "src/components/AdminDashboard.jsx",
-                                                            lineNumber: 854,
+                                                            lineNumber: 986,
                                                             columnNumber: 41
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "src/components/AdminDashboard.jsx",
-                                                    lineNumber: 844,
+                                                    lineNumber: 976,
                                                     columnNumber: 37
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 843,
+                                                lineNumber: 975,
                                                 columnNumber: 33
                                             }, this),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -2215,7 +2821,7 @@ function AdminDashboard({ user, onLogout }) {
                                                                         children: s.name
                                                                     }, void 0, false, {
                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 893,
+                                                                        lineNumber: 1025,
                                                                         columnNumber: 49
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
@@ -2226,13 +2832,13 @@ function AdminDashboard({ user, onLogout }) {
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 894,
+                                                                        lineNumber: 1026,
                                                                         columnNumber: 49
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                lineNumber: 892,
+                                                                lineNumber: 1024,
                                                                 columnNumber: 45
                                                             }, this),
                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -2246,7 +2852,7 @@ function AdminDashboard({ user, onLogout }) {
                                                                                 children: "Username:"
                                                                             }, void 0, false, {
                                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 898,
+                                                                                lineNumber: 1030,
                                                                                 columnNumber: 53
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
@@ -2254,13 +2860,13 @@ function AdminDashboard({ user, onLogout }) {
                                                                                 children: s.username
                                                                             }, void 0, false, {
                                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 899,
+                                                                                lineNumber: 1031,
                                                                                 columnNumber: 53
                                                                             }, this)
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 897,
+                                                                        lineNumber: 1029,
                                                                         columnNumber: 49
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -2268,30 +2874,30 @@ function AdminDashboard({ user, onLogout }) {
                                                                         children: [
                                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
                                                                                 className: "mobile-card-label",
-                                                                                children: "Mode:"
+                                                                                children: "Free Periods:"
                                                                             }, void 0, false, {
                                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 902,
+                                                                                lineNumber: 1034,
                                                                                 columnNumber: 53
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
                                                                                 className: "mobile-card-value",
-                                                                                children: s.freePeriodMode === 'manual' ? `Manual (${s.manualFreePeriods})` : 'Auto'
+                                                                                children: s.freePeriodMode === 'manual' ? `Manual (${s.manualFreePeriods} free periods)` : 'Auto'
                                                                             }, void 0, false, {
                                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 903,
+                                                                                lineNumber: 1035,
                                                                                 columnNumber: 53
                                                                             }, this)
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 901,
+                                                                        lineNumber: 1033,
                                                                         columnNumber: 49
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                lineNumber: 896,
+                                                                lineNumber: 1028,
                                                                 columnNumber: 45
                                                             }, this),
                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -2303,7 +2909,7 @@ function AdminDashboard({ user, onLogout }) {
                                                                         children: "\u270F\uFE0F Edit"
                                                                     }, void 0, false, {
                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 911,
+                                                                        lineNumber: 1043,
                                                                         columnNumber: 49
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
@@ -2312,47 +2918,58 @@ function AdminDashboard({ user, onLogout }) {
                                                                         children: "\uD83D\uDDD1\uFE0F Delete"
                                                                     }, void 0, false, {
                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 914,
+                                                                        lineNumber: 1046,
                                                                         columnNumber: 49
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                lineNumber: 910,
+                                                                lineNumber: 1042,
                                                                 columnNumber: 45
                                                             }, this)
                                                         ]
                                                     }, s.id, true, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 891,
+                                                        lineNumber: 1023,
                                                         columnNumber: 41
                                                     }, this))
                                             }, void 0, false, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 889,
+                                                lineNumber: 1021,
                                                 columnNumber: 33
                                             }, this)
                                         ]
-                                    }, void 0, true)
+                                    }, void 0, true),
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
+                                        className: "btn btn-success btn-sm",
+                                        onClick: ()=>{
+                                            setShowAddStaffForm(true);
+                                            resetStaffForm();
+                                        },
+                                        style: {
+                                            marginTop: '15px'
+                                        },
+                                        children: "\u2795 Add Staff"
+                                    }, void 0, false, {
+                                        fileName: "src/components/AdminDashboard.jsx",
+                                        lineNumber: 1055,
+                                        columnNumber: 25
+                                    }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "src/components/AdminDashboard.jsx",
-                                lineNumber: 821,
+                                lineNumber: 967,
                                 columnNumber: 21
                             }, this),
-                            showStaffForm && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                            showAddStaffForm && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                 className: "card",
                                 ref: staffFormRef,
-                                style: {
-                                    animation: 'slideIn 0.3s ease-out',
-                                    border: '2px solid #3b82f6'
-                                },
                                 children: [
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h3", {
                                         children: newStaff.id ? "\u270F\uFE0F Edit Staff" : "\u2795 Add New Staff"
                                     }, void 0, false, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 931,
+                                        lineNumber: 1067,
                                         columnNumber: 29
                                     }, this),
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -2365,7 +2982,7 @@ function AdminDashboard({ user, onLogout }) {
                                                         children: "Full Name *"
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 934,
+                                                        lineNumber: 1070,
                                                         columnNumber: 37
                                                     }, this),
                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("input", {
@@ -2378,13 +2995,13 @@ function AdminDashboard({ user, onLogout }) {
                                                             })
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 935,
+                                                        lineNumber: 1071,
                                                         columnNumber: 37
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 933,
+                                                lineNumber: 1069,
                                                 columnNumber: 33
                                             }, this),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -2394,46 +3011,44 @@ function AdminDashboard({ user, onLogout }) {
                                                         children: "Username *"
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 943,
+                                                        lineNumber: 1079,
                                                         columnNumber: 37
                                                     }, this),
                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("input", {
                                                         type: "text",
                                                         placeholder: "john",
-                                                        disabled: !!newStaff.id,
                                                         value: newStaff.username,
                                                         onChange: (e)=>setNewStaff({
                                                                 ...newStaff,
                                                                 username: e.target.value
-                                                            }),
-                                                        style: newStaff.id ? {
-                                                            background: '#f1f5f9',
-                                                            cursor: 'not-allowed'
-                                                        } : {}
+                                                            })
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 944,
+                                                        lineNumber: 1080,
                                                         columnNumber: 37
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 942,
+                                                lineNumber: 1078,
                                                 columnNumber: 33
                                             }, this),
-                                            !newStaff.id && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                                 className: "form-group",
                                                 children: [
                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("label", {
-                                                        children: "Password *"
-                                                    }, void 0, false, {
+                                                        children: [
+                                                            newStaff.id ? 'New Password (Optional)' : 'Password',
+                                                            " *"
+                                                        ]
+                                                    }, void 0, true, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 955,
-                                                        columnNumber: 41
+                                                        lineNumber: 1088,
+                                                        columnNumber: 37
                                                     }, this),
                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("input", {
                                                         type: "password",
-                                                        placeholder: "Password",
+                                                        placeholder: newStaff.id ? "Leave blank to keep current" : "Enter password",
                                                         value: newStaff.password,
                                                         onChange: (e)=>setNewStaff({
                                                                 ...newStaff,
@@ -2441,14 +3056,26 @@ function AdminDashboard({ user, onLogout }) {
                                                             })
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 956,
+                                                        lineNumber: 1089,
+                                                        columnNumber: 37
+                                                    }, this),
+                                                    newStaff.id && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("small", {
+                                                        style: {
+                                                            color: '#64748b',
+                                                            display: 'block',
+                                                            marginTop: '4px'
+                                                        },
+                                                        children: "\u2713 Staff can use new password immediately on next login"
+                                                    }, void 0, false, {
+                                                        fileName: "src/components/AdminDashboard.jsx",
+                                                        lineNumber: 1096,
                                                         columnNumber: 41
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 954,
-                                                columnNumber: 37
+                                                lineNumber: 1087,
+                                                columnNumber: 33
                                             }, this),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                                 className: "form-group",
@@ -2457,7 +3084,7 @@ function AdminDashboard({ user, onLogout }) {
                                                         children: "Free Period Mode"
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 965,
+                                                        lineNumber: 1102,
                                                         columnNumber: 37
                                                     }, this),
                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("select", {
@@ -2472,7 +3099,7 @@ function AdminDashboard({ user, onLogout }) {
                                                                 children: "Auto"
                                                             }, void 0, false, {
                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                lineNumber: 970,
+                                                                lineNumber: 1107,
                                                                 columnNumber: 41
                                                             }, this),
                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("option", {
@@ -2480,25 +3107,25 @@ function AdminDashboard({ user, onLogout }) {
                                                                 children: "Manual"
                                                             }, void 0, false, {
                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                lineNumber: 971,
+                                                                lineNumber: 1108,
                                                                 columnNumber: 41
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 966,
+                                                        lineNumber: 1103,
                                                         columnNumber: 37
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 964,
+                                                lineNumber: 1101,
                                                 columnNumber: 33
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 932,
+                                        lineNumber: 1068,
                                         columnNumber: 29
                                     }, this),
                                     newStaff.freePeriodMode === 'manual' && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -2508,7 +3135,7 @@ function AdminDashboard({ user, onLogout }) {
                                                 children: "Free Periods per Week"
                                             }, void 0, false, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 978,
+                                                lineNumber: 1115,
                                                 columnNumber: 37
                                             }, this),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("input", {
@@ -2522,13 +3149,13 @@ function AdminDashboard({ user, onLogout }) {
                                                     })
                                             }, void 0, false, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 979,
+                                                lineNumber: 1116,
                                                 columnNumber: 37
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 977,
+                                        lineNumber: 1114,
                                         columnNumber: 33
                                     }, this),
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -2540,37 +3167,37 @@ function AdminDashboard({ user, onLogout }) {
                                                 children: newStaff.id ? "\uD83D\uDCBE Save Changes" : "\u2795 Add Staff"
                                             }, void 0, false, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 993,
+                                                lineNumber: 1130,
                                                 columnNumber: 33
                                             }, this),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
                                                 className: "btn btn-secondary",
                                                 onClick: ()=>{
                                                     resetStaffForm();
-                                                    setShowStaffForm(false);
+                                                    setShowAddStaffForm(false);
                                                 },
                                                 children: "\u274C Cancel"
                                             }, void 0, false, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 996,
+                                                lineNumber: 1133,
                                                 columnNumber: 33
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 992,
+                                        lineNumber: 1129,
                                         columnNumber: 29
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "src/components/AdminDashboard.jsx",
-                                lineNumber: 927,
+                                lineNumber: 1066,
                                 columnNumber: 25
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "src/components/AdminDashboard.jsx",
-                        lineNumber: 814,
+                        lineNumber: 960,
                         columnNumber: 17
                     }, this),
                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -2585,7 +3212,7 @@ function AdminDashboard({ user, onLogout }) {
                                         children: "\uD83D\uDCD6"
                                     }, void 0, false, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 1013,
+                                        lineNumber: 1144,
                                         columnNumber: 25
                                     }, this),
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h2", {
@@ -2593,53 +3220,27 @@ function AdminDashboard({ user, onLogout }) {
                                         children: "Manage Subjects"
                                     }, void 0, false, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 1014,
+                                        lineNumber: 1145,
                                         columnNumber: 25
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "src/components/AdminDashboard.jsx",
-                                lineNumber: 1012,
+                                lineNumber: 1143,
                                 columnNumber: 21
                             }, this),
                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                 className: "card",
                                 children: [
-                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                        style: {
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                            marginBottom: '20px'
-                                        },
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h3", {
                                         children: [
-                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h3", {
-                                                children: [
-                                                    "Existing Subjects (",
-                                                    subjects.length,
-                                                    ")"
-                                                ]
-                                            }, void 0, true, {
-                                                fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 1020,
-                                                columnNumber: 29
-                                            }, this),
-                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
-                                                className: "btn btn-primary btn-sm",
-                                                onClick: ()=>{
-                                                    setShowSubjectForm(!showSubjectForm);
-                                                    if (!showSubjectForm && newSubject.id) resetSubjectForm();
-                                                },
-                                                children: showSubjectForm ? "\u274C Cancel" : "\u2795 Add Subject"
-                                            }, void 0, false, {
-                                                fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 1021,
-                                                columnNumber: 29
-                                            }, this)
+                                            "Existing Subjects (",
+                                            subjects.length,
+                                            ")"
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 1019,
+                                        lineNumber: 1150,
                                         columnNumber: 25
                                     }, this),
                                     subjects.length === 0 ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
@@ -2648,130 +3249,120 @@ function AdminDashboard({ user, onLogout }) {
                                             textAlign: 'center',
                                             padding: '20px'
                                         },
-                                        children: 'No subjects added yet. Click "Add Subject" to start.'
+                                        children: "No subjects added yet"
                                     }, void 0, false, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 1035,
+                                        lineNumber: 1152,
                                         columnNumber: 29
                                     }, this) : /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _jsxDevRuntime.Fragment), {
                                         children: classes.map((cls)=>{
                                             const classSubjects = subjects.filter((s)=>s.className === cls.name);
                                             if (classSubjects.length === 0) return null;
                                             const totalHours = classSubjects.reduce((sum, s)=>sum + s.hoursPerWeek, 0);
-                                            const remainingHours = 30 - totalHours;
-                                            const progressPercent = totalHours / 30 * 100;
+                                            const progress = totalHours / 30 * 100;
                                             return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                                 style: {
-                                                    marginBottom: '30px',
-                                                    padding: '20px',
-                                                    background: '#f8fafc',
-                                                    borderRadius: '12px',
-                                                    border: '1px solid #e2e8f0'
+                                                    marginBottom: '30px'
                                                 },
                                                 children: [
                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                                         style: {
+                                                            marginBottom: '8px',
                                                             display: 'flex',
-                                                            justifyContent: 'space-between',
                                                             alignItems: 'center',
-                                                            marginBottom: '15px',
-                                                            flexWrap: 'wrap',
-                                                            gap: '10px'
+                                                            justifyContent: 'space-between',
+                                                            gap: '10px',
+                                                            color: '#1e293b',
+                                                            flexWrap: 'wrap'
                                                         },
                                                         children: [
                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h4", {
                                                                 style: {
                                                                     margin: 0,
-                                                                    color: '#1e293b',
-                                                                    fontSize: '18px',
-                                                                    fontWeight: '600'
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '8px'
                                                                 },
                                                                 children: [
-                                                                    "\uD83D\uDCDA Class: ",
-                                                                    cls.name
+                                                                    "Class: ",
+                                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("strong", {
+                                                                        children: cls.name
+                                                                    }, void 0, false, {
+                                                                        fileName: "src/components/AdminDashboard.jsx",
+                                                                        lineNumber: 1176,
+                                                                        columnNumber: 60
+                                                                    }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                lineNumber: 1065,
+                                                                lineNumber: 1175,
                                                                 columnNumber: 49
                                                             }, this),
                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                                                 style: {
                                                                     display: 'flex',
                                                                     alignItems: 'center',
-                                                                    gap: '10px'
+                                                                    gap: '16px',
+                                                                    color: '#64748b',
+                                                                    fontWeight: 600
                                                                 },
                                                                 children: [
                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                                                        className: `badge ${totalHours === 30 ? 'badge-success' : totalHours > 30 ? 'badge-danger' : 'badge-warning'}`,
                                                                         children: [
                                                                             totalHours,
                                                                             "/30 hours"
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 1074,
+                                                                        lineNumber: 1179,
                                                                         columnNumber: 53
                                                                     }, this),
-                                                                    remainingHours > 0 && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                                                        className: "badge badge-info",
+                                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
                                                                         children: [
-                                                                            remainingHours,
+                                                                            Math.max(30 - totalHours, 0),
                                                                             "h remaining"
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 1078,
-                                                                        columnNumber: 57
-                                                                    }, this),
-                                                                    totalHours > 30 && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                                                        className: "badge badge-danger",
-                                                                        children: [
-                                                                            "\u26A0\uFE0F ",
-                                                                            totalHours - 30,
-                                                                            "h overflow!"
-                                                                        ]
-                                                                    }, void 0, true, {
-                                                                        fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 1083,
-                                                                        columnNumber: 57
+                                                                        lineNumber: 1180,
+                                                                        columnNumber: 53
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                lineNumber: 1073,
+                                                                lineNumber: 1178,
                                                                 columnNumber: 49
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1057,
+                                                        lineNumber: 1166,
                                                         columnNumber: 45
                                                     }, this),
                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                                         style: {
                                                             width: '100%',
-                                                            height: '12px',
-                                                            background: '#e2e8f0',
-                                                            borderRadius: '6px',
+                                                            height: '8px',
+                                                            backgroundColor: '#e2e8f0',
+                                                            borderRadius: '4px',
                                                             overflow: 'hidden',
                                                             marginBottom: '15px'
                                                         },
                                                         children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                                             style: {
-                                                                width: `${Math.min(progressPercent, 100)}%`,
                                                                 height: '100%',
-                                                                background: totalHours === 30 ? '#10b981' : totalHours > 30 ? '#ef4444' : '#f59e0b',
+                                                                width: `${Math.min(progress, 100)}%`,
+                                                                backgroundColor: totalHours === 30 ? '#10b981' : '#f59e0b',
                                                                 transition: 'width 0.3s ease'
                                                             }
                                                         }, void 0, false, {
                                                             fileName: "src/components/AdminDashboard.jsx",
-                                                            lineNumber: 1099,
+                                                            lineNumber: 1193,
                                                             columnNumber: 49
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1091,
+                                                        lineNumber: 1185,
                                                         columnNumber: 45
                                                     }, this),
                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -2785,53 +3376,53 @@ function AdminDashboard({ user, onLogout }) {
                                                                                 children: "Subject"
                                                                             }, void 0, false, {
                                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 1112,
+                                                                                lineNumber: 1205,
                                                                                 columnNumber: 61
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("th", {
                                                                                 children: "Type"
                                                                             }, void 0, false, {
                                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 1113,
+                                                                                lineNumber: 1206,
                                                                                 columnNumber: 61
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("th", {
-                                                                                children: "Hours/Week"
+                                                                                children: "Hours"
                                                                             }, void 0, false, {
                                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 1114,
+                                                                                lineNumber: 1207,
                                                                                 columnNumber: 61
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("th", {
                                                                                 children: "Teacher"
                                                                             }, void 0, false, {
                                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 1115,
+                                                                                lineNumber: 1208,
                                                                                 columnNumber: 61
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("th", {
                                                                                 children: "Continuous"
                                                                             }, void 0, false, {
                                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 1116,
+                                                                                lineNumber: 1209,
                                                                                 columnNumber: 61
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("th", {
                                                                                 children: "Actions"
                                                                             }, void 0, false, {
                                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 1117,
+                                                                                lineNumber: 1210,
                                                                                 columnNumber: 61
                                                                             }, this)
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 1111,
+                                                                        lineNumber: 1204,
                                                                         columnNumber: 57
                                                                     }, this)
                                                                 }, void 0, false, {
                                                                     fileName: "src/components/AdminDashboard.jsx",
-                                                                    lineNumber: 1110,
+                                                                    lineNumber: 1203,
                                                                     columnNumber: 53
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("tbody", {
@@ -2842,80 +3433,43 @@ function AdminDashboard({ user, onLogout }) {
                                                                                         children: sub.name
                                                                                     }, void 0, false, {
                                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                                        lineNumber: 1123,
+                                                                                        lineNumber: 1216,
                                                                                         columnNumber: 69
                                                                                     }, this)
                                                                                 }, void 0, false, {
                                                                                     fileName: "src/components/AdminDashboard.jsx",
-                                                                                    lineNumber: 1123,
+                                                                                    lineNumber: 1216,
                                                                                     columnNumber: 65
                                                                                 }, this),
                                                                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
-                                                                                    children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                                                                        className: `badge badge-${sub.subjectType === 'Lab' ? 'info' : sub.subjectType === 'Core' ? 'primary' : 'secondary'}`,
-                                                                                        children: sub.subjectType
-                                                                                    }, void 0, false, {
-                                                                                        fileName: "src/components/AdminDashboard.jsx",
-                                                                                        lineNumber: 1125,
-                                                                                        columnNumber: 69
-                                                                                    }, this)
+                                                                                    children: sub.subjectType
                                                                                 }, void 0, false, {
                                                                                     fileName: "src/components/AdminDashboard.jsx",
-                                                                                    lineNumber: 1124,
+                                                                                    lineNumber: 1217,
                                                                                     columnNumber: 65
                                                                                 }, this),
                                                                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
-                                                                                    children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                                                                        style: {
-                                                                                            fontWeight: '600',
-                                                                                            color: '#3b82f6'
-                                                                                        },
-                                                                                        children: [
-                                                                                            sub.hoursPerWeek,
-                                                                                            "h"
-                                                                                        ]
-                                                                                    }, void 0, true, {
-                                                                                        fileName: "src/components/AdminDashboard.jsx",
-                                                                                        lineNumber: 1133,
-                                                                                        columnNumber: 69
-                                                                                    }, this)
-                                                                                }, void 0, false, {
+                                                                                    children: [
+                                                                                        sub.hoursPerWeek,
+                                                                                        "h"
+                                                                                    ]
+                                                                                }, void 0, true, {
                                                                                     fileName: "src/components/AdminDashboard.jsx",
-                                                                                    lineNumber: 1132,
+                                                                                    lineNumber: 1218,
                                                                                     columnNumber: 65
                                                                                 }, this),
                                                                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
                                                                                     children: sub.teacher
                                                                                 }, void 0, false, {
                                                                                     fileName: "src/components/AdminDashboard.jsx",
-                                                                                    lineNumber: 1137,
+                                                                                    lineNumber: 1219,
                                                                                     columnNumber: 65
                                                                                 }, this),
                                                                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
-                                                                                    children: sub.isContinuous ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                                                                        className: "badge badge-success",
-                                                                                        children: [
-                                                                                            "\u2713 ",
-                                                                                            sub.blockSize,
-                                                                                            "p blocks"
-                                                                                        ]
-                                                                                    }, void 0, true, {
-                                                                                        fileName: "src/components/AdminDashboard.jsx",
-                                                                                        lineNumber: 1140,
-                                                                                        columnNumber: 73
-                                                                                    }, this) : /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                                                                        style: {
-                                                                                            color: '#64748b'
-                                                                                        },
-                                                                                        children: "No"
-                                                                                    }, void 0, false, {
-                                                                                        fileName: "src/components/AdminDashboard.jsx",
-                                                                                        lineNumber: 1144,
-                                                                                        columnNumber: 73
-                                                                                    }, this)
+                                                                                    children: sub.isContinuous ? `Yes (${sub.blockSize}p)` : 'No'
                                                                                 }, void 0, false, {
                                                                                     fileName: "src/components/AdminDashboard.jsx",
-                                                                                    lineNumber: 1138,
+                                                                                    lineNumber: 1220,
                                                                                     columnNumber: 65
                                                                                 }, this),
                                                                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("td", {
@@ -2929,7 +3483,7 @@ function AdminDashboard({ user, onLogout }) {
                                                                                                 children: "\u270F\uFE0F"
                                                                                             }, void 0, false, {
                                                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                                                lineNumber: 1149,
+                                                                                                lineNumber: 1225,
                                                                                                 columnNumber: 73
                                                                                             }, this),
                                                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
@@ -2939,40 +3493,40 @@ function AdminDashboard({ user, onLogout }) {
                                                                                                 children: "\uD83D\uDDD1\uFE0F"
                                                                                             }, void 0, false, {
                                                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                                                lineNumber: 1156,
+                                                                                                lineNumber: 1232,
                                                                                                 columnNumber: 73
                                                                                             }, this)
                                                                                         ]
                                                                                     }, void 0, true, {
                                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                                        lineNumber: 1148,
+                                                                                        lineNumber: 1224,
                                                                                         columnNumber: 69
                                                                                     }, this)
                                                                                 }, void 0, false, {
                                                                                     fileName: "src/components/AdminDashboard.jsx",
-                                                                                    lineNumber: 1147,
+                                                                                    lineNumber: 1223,
                                                                                     columnNumber: 65
                                                                                 }, this)
                                                                             ]
                                                                         }, sub.id, true, {
                                                                             fileName: "src/components/AdminDashboard.jsx",
-                                                                            lineNumber: 1122,
+                                                                            lineNumber: 1215,
                                                                             columnNumber: 61
                                                                         }, this))
                                                                 }, void 0, false, {
                                                                     fileName: "src/components/AdminDashboard.jsx",
-                                                                    lineNumber: 1120,
+                                                                    lineNumber: 1213,
                                                                     columnNumber: 53
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "src/components/AdminDashboard.jsx",
-                                                            lineNumber: 1109,
+                                                            lineNumber: 1202,
                                                             columnNumber: 49
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1108,
+                                                        lineNumber: 1201,
                                                         columnNumber: 45
                                                     }, this),
                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -2988,7 +3542,7 @@ function AdminDashboard({ user, onLogout }) {
                                                                                 children: sub.name
                                                                             }, void 0, false, {
                                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 1176,
+                                                                                lineNumber: 1251,
                                                                                 columnNumber: 61
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
@@ -2996,13 +3550,13 @@ function AdminDashboard({ user, onLogout }) {
                                                                                 children: sub.subjectType
                                                                             }, void 0, false, {
                                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 1177,
+                                                                                lineNumber: 1252,
                                                                                 columnNumber: 61
                                                                             }, this)
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 1175,
+                                                                        lineNumber: 1250,
                                                                         columnNumber: 57
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -3016,7 +3570,7 @@ function AdminDashboard({ user, onLogout }) {
                                                                                         children: "Hours:"
                                                                                     }, void 0, false, {
                                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                                        lineNumber: 1181,
+                                                                                        lineNumber: 1256,
                                                                                         columnNumber: 65
                                                                                     }, this),
                                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
@@ -3027,13 +3581,13 @@ function AdminDashboard({ user, onLogout }) {
                                                                                         ]
                                                                                     }, void 0, true, {
                                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                                        lineNumber: 1182,
+                                                                                        lineNumber: 1257,
                                                                                         columnNumber: 65
                                                                                     }, this)
                                                                                 ]
                                                                             }, void 0, true, {
                                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 1180,
+                                                                                lineNumber: 1255,
                                                                                 columnNumber: 61
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -3044,7 +3598,7 @@ function AdminDashboard({ user, onLogout }) {
                                                                                         children: "Teacher:"
                                                                                     }, void 0, false, {
                                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                                        lineNumber: 1185,
+                                                                                        lineNumber: 1260,
                                                                                         columnNumber: 65
                                                                                     }, this),
                                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
@@ -3052,13 +3606,13 @@ function AdminDashboard({ user, onLogout }) {
                                                                                         children: sub.teacher
                                                                                     }, void 0, false, {
                                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                                        lineNumber: 1186,
+                                                                                        lineNumber: 1261,
                                                                                         columnNumber: 65
                                                                                     }, this)
                                                                                 ]
                                                                             }, void 0, true, {
                                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 1184,
+                                                                                lineNumber: 1259,
                                                                                 columnNumber: 61
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -3069,7 +3623,7 @@ function AdminDashboard({ user, onLogout }) {
                                                                                         children: "Continuous:"
                                                                                     }, void 0, false, {
                                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                                        lineNumber: 1189,
+                                                                                        lineNumber: 1264,
                                                                                         columnNumber: 65
                                                                                     }, this),
                                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
@@ -3077,19 +3631,19 @@ function AdminDashboard({ user, onLogout }) {
                                                                                         children: sub.isContinuous ? `Yes (${sub.blockSize}p)` : 'No'
                                                                                     }, void 0, false, {
                                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                                        lineNumber: 1190,
+                                                                                        lineNumber: 1265,
                                                                                         columnNumber: 65
                                                                                     }, this)
                                                                                 ]
                                                                             }, void 0, true, {
                                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 1188,
+                                                                                lineNumber: 1263,
                                                                                 columnNumber: 61
                                                                             }, this)
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 1179,
+                                                                        lineNumber: 1254,
                                                                         columnNumber: 57
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -3101,7 +3655,7 @@ function AdminDashboard({ user, onLogout }) {
                                                                                 children: "\u270F\uFE0F Edit"
                                                                             }, void 0, false, {
                                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 1196,
+                                                                                lineNumber: 1271,
                                                                                 columnNumber: 61
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
@@ -3110,53 +3664,64 @@ function AdminDashboard({ user, onLogout }) {
                                                                                 children: "\uD83D\uDDD1\uFE0F Delete"
                                                                             }, void 0, false, {
                                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                                lineNumber: 1199,
+                                                                                lineNumber: 1274,
                                                                                 columnNumber: 61
                                                                             }, this)
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                                        lineNumber: 1195,
+                                                                        lineNumber: 1270,
                                                                         columnNumber: 57
                                                                     }, this)
                                                                 ]
                                                             }, sub.id, true, {
                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                lineNumber: 1174,
+                                                                lineNumber: 1249,
                                                                 columnNumber: 53
                                                             }, this))
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1172,
+                                                        lineNumber: 1247,
                                                         columnNumber: 45
                                                     }, this)
                                                 ]
                                             }, cls.id, true, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 1049,
+                                                lineNumber: 1165,
                                                 columnNumber: 41
                                             }, this);
                                         })
-                                    }, void 0, false)
+                                    }, void 0, false),
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
+                                        className: "btn btn-success btn-sm",
+                                        onClick: ()=>{
+                                            setShowAddSubjectForm(true);
+                                            resetSubjectForm();
+                                        },
+                                        style: {
+                                            marginTop: '15px'
+                                        },
+                                        children: "\u2795 Add Subject"
+                                    }, void 0, false, {
+                                        fileName: "src/components/AdminDashboard.jsx",
+                                        lineNumber: 1286,
+                                        columnNumber: 25
+                                    }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "src/components/AdminDashboard.jsx",
-                                lineNumber: 1018,
+                                lineNumber: 1149,
                                 columnNumber: 21
                             }, this),
-                            showSubjectForm && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                            showAddSubjectForm && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                 className: "card",
                                 ref: subjectFormRef,
-                                style: {
-                                    animation: 'slideIn 0.3s ease-out',
-                                    border: '2px solid #3b82f6'
-                                },
                                 children: [
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h3", {
                                         children: newSubject.id ? "\u270F\uFE0F Edit Subject" : "\u2795 Add New Subject"
                                     }, void 0, false, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 1219,
+                                        lineNumber: 1298,
                                         columnNumber: 29
                                     }, this),
                                     newSubject.className && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _hoursTrackerDefault.default), {
@@ -3164,7 +3729,7 @@ function AdminDashboard({ user, onLogout }) {
                                         subjects: subjects
                                     }, void 0, false, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 1223,
+                                        lineNumber: 1301,
                                         columnNumber: 33
                                     }, this),
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -3177,7 +3742,7 @@ function AdminDashboard({ user, onLogout }) {
                                                         children: "Select Class *"
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1228,
+                                                        lineNumber: 1306,
                                                         columnNumber: 37
                                                     }, this),
                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("select", {
@@ -3192,7 +3757,7 @@ function AdminDashboard({ user, onLogout }) {
                                                                 children: "-- Select Class --"
                                                             }, void 0, false, {
                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                lineNumber: 1233,
+                                                                lineNumber: 1311,
                                                                 columnNumber: 41
                                                             }, this),
                                                             classes.map((cls)=>/*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("option", {
@@ -3200,19 +3765,19 @@ function AdminDashboard({ user, onLogout }) {
                                                                     children: cls.name
                                                                 }, cls.id, false, {
                                                                     fileName: "src/components/AdminDashboard.jsx",
-                                                                    lineNumber: 1235,
+                                                                    lineNumber: 1313,
                                                                     columnNumber: 45
                                                                 }, this))
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1229,
+                                                        lineNumber: 1307,
                                                         columnNumber: 37
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 1227,
+                                                lineNumber: 1305,
                                                 columnNumber: 33
                                             }, this),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -3222,7 +3787,7 @@ function AdminDashboard({ user, onLogout }) {
                                                         children: "Subject Name *"
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1240,
+                                                        lineNumber: 1318,
                                                         columnNumber: 37
                                                     }, this),
                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("input", {
@@ -3235,13 +3800,13 @@ function AdminDashboard({ user, onLogout }) {
                                                         placeholder: "DBMS, AI Lab, etc."
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1241,
+                                                        lineNumber: 1319,
                                                         columnNumber: 37
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 1239,
+                                                lineNumber: 1317,
                                                 columnNumber: 33
                                             }, this),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -3251,7 +3816,7 @@ function AdminDashboard({ user, onLogout }) {
                                                         children: "Subject Type *"
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1249,
+                                                        lineNumber: 1327,
                                                         columnNumber: 37
                                                     }, this),
                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("select", {
@@ -3266,7 +3831,7 @@ function AdminDashboard({ user, onLogout }) {
                                                                 children: "Core"
                                                             }, void 0, false, {
                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                lineNumber: 1254,
+                                                                lineNumber: 1332,
                                                                 columnNumber: 41
                                                             }, this),
                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("option", {
@@ -3274,7 +3839,7 @@ function AdminDashboard({ user, onLogout }) {
                                                                 children: "Elective"
                                                             }, void 0, false, {
                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                lineNumber: 1255,
+                                                                lineNumber: 1333,
                                                                 columnNumber: 41
                                                             }, this),
                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("option", {
@@ -3282,7 +3847,7 @@ function AdminDashboard({ user, onLogout }) {
                                                                 children: "Lab"
                                                             }, void 0, false, {
                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                lineNumber: 1256,
+                                                                lineNumber: 1334,
                                                                 columnNumber: 41
                                                             }, this),
                                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("option", {
@@ -3290,19 +3855,19 @@ function AdminDashboard({ user, onLogout }) {
                                                                 children: "Other"
                                                             }, void 0, false, {
                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                lineNumber: 1257,
+                                                                lineNumber: 1335,
                                                                 columnNumber: 41
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1250,
+                                                        lineNumber: 1328,
                                                         columnNumber: 37
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 1248,
+                                                lineNumber: 1326,
                                                 columnNumber: 33
                                             }, this),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -3312,7 +3877,7 @@ function AdminDashboard({ user, onLogout }) {
                                                         children: "Hours per Week *"
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1261,
+                                                        lineNumber: 1339,
                                                         columnNumber: 37
                                                     }, this),
                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("input", {
@@ -3326,13 +3891,13 @@ function AdminDashboard({ user, onLogout }) {
                                                             })
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1262,
+                                                        lineNumber: 1340,
                                                         columnNumber: 37
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 1260,
+                                                lineNumber: 1338,
                                                 columnNumber: 33
                                             }, this),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -3342,7 +3907,7 @@ function AdminDashboard({ user, onLogout }) {
                                                         children: "Teacher *"
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1274,
+                                                        lineNumber: 1352,
                                                         columnNumber: 37
                                                     }, this),
                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("select", {
@@ -3357,7 +3922,7 @@ function AdminDashboard({ user, onLogout }) {
                                                                 children: "-- Select Teacher --"
                                                             }, void 0, false, {
                                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                                lineNumber: 1279,
+                                                                lineNumber: 1357,
                                                                 columnNumber: 41
                                                             }, this),
                                                             teachers.map((t)=>/*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("option", {
@@ -3365,25 +3930,25 @@ function AdminDashboard({ user, onLogout }) {
                                                                     children: t.name
                                                                 }, t.id, false, {
                                                                     fileName: "src/components/AdminDashboard.jsx",
-                                                                    lineNumber: 1281,
+                                                                    lineNumber: 1359,
                                                                     columnNumber: 45
                                                                 }, this))
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1275,
+                                                        lineNumber: 1353,
                                                         columnNumber: 37
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 1273,
+                                                lineNumber: 1351,
                                                 columnNumber: 33
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 1226,
+                                        lineNumber: 1304,
                                         columnNumber: 29
                                     }, this),
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -3399,7 +3964,7 @@ function AdminDashboard({ user, onLogout }) {
                                                     })
                                             }, void 0, false, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 1288,
+                                                lineNumber: 1366,
                                                 columnNumber: 33
                                             }, this),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("label", {
@@ -3410,13 +3975,13 @@ function AdminDashboard({ user, onLogout }) {
                                                 children: "Continuous Period (Lab)"
                                             }, void 0, false, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 1294,
+                                                lineNumber: 1372,
                                                 columnNumber: 33
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 1287,
+                                        lineNumber: 1365,
                                         columnNumber: 29
                                     }, this),
                                     newSubject.isContinuous && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -3426,7 +3991,7 @@ function AdminDashboard({ user, onLogout }) {
                                                 children: "Block Size"
                                             }, void 0, false, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 1301,
+                                                lineNumber: 1379,
                                                 columnNumber: 37
                                             }, this),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("select", {
@@ -3441,7 +4006,7 @@ function AdminDashboard({ user, onLogout }) {
                                                         children: "2 Periods"
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1309,
+                                                        lineNumber: 1387,
                                                         columnNumber: 41
                                                     }, this),
                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("option", {
@@ -3449,19 +4014,19 @@ function AdminDashboard({ user, onLogout }) {
                                                         children: "3 Periods"
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1310,
+                                                        lineNumber: 1388,
                                                         columnNumber: 41
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 1302,
+                                                lineNumber: 1380,
                                                 columnNumber: 37
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 1300,
+                                        lineNumber: 1378,
                                         columnNumber: 33
                                     }, this),
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -3473,37 +4038,37 @@ function AdminDashboard({ user, onLogout }) {
                                                 children: newSubject.id ? "\uD83D\uDCBE Save Changes" : "\u2795 Add Subject"
                                             }, void 0, false, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 1316,
+                                                lineNumber: 1394,
                                                 columnNumber: 33
                                             }, this),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
                                                 className: "btn btn-secondary",
                                                 onClick: ()=>{
                                                     resetSubjectForm();
-                                                    setShowSubjectForm(false);
+                                                    setShowAddSubjectForm(false);
                                                 },
                                                 children: "\u274C Cancel"
                                             }, void 0, false, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 1319,
+                                                lineNumber: 1397,
                                                 columnNumber: 33
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 1315,
+                                        lineNumber: 1393,
                                         columnNumber: 29
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "src/components/AdminDashboard.jsx",
-                                lineNumber: 1215,
+                                lineNumber: 1297,
                                 columnNumber: 25
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "src/components/AdminDashboard.jsx",
-                        lineNumber: 1011,
+                        lineNumber: 1142,
                         columnNumber: 17
                     }, this),
                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -3517,7 +4082,7 @@ function AdminDashboard({ user, onLogout }) {
                                         children: "\u26A1"
                                     }, void 0, false, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 1336,
+                                        lineNumber: 1408,
                                         columnNumber: 25
                                     }, this),
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h2", {
@@ -3525,13 +4090,13 @@ function AdminDashboard({ user, onLogout }) {
                                         children: "Generate Timetable"
                                     }, void 0, false, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 1337,
+                                        lineNumber: 1409,
                                         columnNumber: 25
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "src/components/AdminDashboard.jsx",
-                                lineNumber: 1335,
+                                lineNumber: 1407,
                                 columnNumber: 21
                             }, this),
                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -3541,75 +4106,7 @@ function AdminDashboard({ user, onLogout }) {
                                         children: "Ready to Generate"
                                     }, void 0, false, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 1341,
-                                        columnNumber: 25
-                                    }, this),
-                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                        className: "info-box",
-                                        children: [
-                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
-                                                style: {
-                                                    marginBottom: '15px',
-                                                    fontSize: '15px',
-                                                    lineHeight: '1.6'
-                                                },
-                                                children: "The smart algorithm will create an optimized timetable:"
-                                            }, void 0, false, {
-                                                fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 1343,
-                                                columnNumber: 29
-                                            }, this),
-                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("ul", {
-                                                style: {
-                                                    marginLeft: '25px',
-                                                    lineHeight: '1.8'
-                                                },
-                                                children: [
-                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("li", {
-                                                        children: "\u2705 No free periods (all 30 filled)"
-                                                    }, void 0, false, {
-                                                        fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1347,
-                                                        columnNumber: 33
-                                                    }, this),
-                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("li", {
-                                                        children: "\u2705 High-hour subjects (\u22655h) appear daily"
-                                                    }, void 0, false, {
-                                                        fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1348,
-                                                        columnNumber: 33
-                                                    }, this),
-                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("li", {
-                                                        children: "\u2705 Labs in continuous blocks"
-                                                    }, void 0, false, {
-                                                        fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1349,
-                                                        columnNumber: 33
-                                                    }, this),
-                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("li", {
-                                                        children: "\u2705 No teacher conflicts"
-                                                    }, void 0, false, {
-                                                        fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1350,
-                                                        columnNumber: 33
-                                                    }, this),
-                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("li", {
-                                                        children: "\u2705 Balanced workload"
-                                                    }, void 0, false, {
-                                                        fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1351,
-                                                        columnNumber: 33
-                                                    }, this)
-                                                ]
-                                            }, void 0, true, {
-                                                fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 1346,
-                                                columnNumber: 29
-                                            }, this)
-                                        ]
-                                    }, void 0, true, {
-                                        fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 1342,
+                                        lineNumber: 1413,
                                         columnNumber: 25
                                     }, this),
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -3623,7 +4120,7 @@ function AdminDashboard({ user, onLogout }) {
                                                         children: "Classes"
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1357,
+                                                        lineNumber: 1416,
                                                         columnNumber: 33
                                                     }, this),
                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -3631,13 +4128,13 @@ function AdminDashboard({ user, onLogout }) {
                                                         children: classes.length
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1358,
+                                                        lineNumber: 1417,
                                                         columnNumber: 33
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 1356,
+                                                lineNumber: 1415,
                                                 columnNumber: 29
                                             }, this),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -3648,7 +4145,7 @@ function AdminDashboard({ user, onLogout }) {
                                                         children: "Teachers"
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1361,
+                                                        lineNumber: 1420,
                                                         columnNumber: 33
                                                     }, this),
                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -3656,13 +4153,13 @@ function AdminDashboard({ user, onLogout }) {
                                                         children: teachers.length
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1362,
+                                                        lineNumber: 1421,
                                                         columnNumber: 33
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 1360,
+                                                lineNumber: 1419,
                                                 columnNumber: 29
                                             }, this),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -3673,7 +4170,7 @@ function AdminDashboard({ user, onLogout }) {
                                                         children: "Subjects"
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1365,
+                                                        lineNumber: 1424,
                                                         columnNumber: 33
                                                     }, this),
                                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -3681,19 +4178,19 @@ function AdminDashboard({ user, onLogout }) {
                                                         children: subjects.length
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1366,
+                                                        lineNumber: 1425,
                                                         columnNumber: 33
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "src/components/AdminDashboard.jsx",
-                                                lineNumber: 1364,
+                                                lineNumber: 1423,
                                                 columnNumber: 29
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 1355,
+                                        lineNumber: 1414,
                                         columnNumber: 25
                                     }, this),
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
@@ -3703,19 +4200,19 @@ function AdminDashboard({ user, onLogout }) {
                                         children: loading ? "\u23F3 Generating..." : "\u26A1 Generate Timetable"
                                     }, void 0, false, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 1370,
+                                        lineNumber: 1429,
                                         columnNumber: 25
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "src/components/AdminDashboard.jsx",
-                                lineNumber: 1340,
+                                lineNumber: 1412,
                                 columnNumber: 21
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "src/components/AdminDashboard.jsx",
-                        lineNumber: 1334,
+                        lineNumber: 1406,
                         columnNumber: 17
                     }, this),
                     timetable && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -3730,7 +4227,7 @@ function AdminDashboard({ user, onLogout }) {
                                         children: "\uD83D\uDCCA"
                                     }, void 0, false, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 1384,
+                                        lineNumber: 1443,
                                         columnNumber: 29
                                     }, this),
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h2", {
@@ -3738,111 +4235,115 @@ function AdminDashboard({ user, onLogout }) {
                                         children: "Generated Timetables"
                                     }, void 0, false, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 1385,
+                                        lineNumber: 1444,
                                         columnNumber: 29
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "src/components/AdminDashboard.jsx",
-                                lineNumber: 1383,
+                                lineNumber: 1442,
                                 columnNumber: 25
                             }, this),
                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                 className: "card",
                                 children: [
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h3", {
-                                        children: "Class-wise Timetables"
+                                        children: "Time Tables"
                                     }, void 0, false, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 1390,
+                                        lineNumber: 1448,
                                         columnNumber: 29
                                     }, this),
-                                    classes.map((cls)=>/*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                            className: "timetable-container",
-                                            style: {
-                                                marginBottom: '40px'
-                                            },
-                                            children: [
-                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h4", {
-                                                    className: "timetable-title",
-                                                    children: [
-                                                        "Class: ",
-                                                        cls.name,
-                                                        " ",
-                                                        cls.hallNumber && `(${cls.hallNumber})`
-                                                    ]
-                                                }, void 0, true, {
-                                                    fileName: "src/components/AdminDashboard.jsx",
-                                                    lineNumber: 1393,
-                                                    columnNumber: 37
-                                                }, this),
-                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                                    id: `timetable-${cls.name}`,
-                                                    className: "timetable-export-wrapper",
-                                                    style: {
-                                                        width: '100%',
-                                                        overflow: 'visible',
-                                                        background: 'white',
-                                                        padding: '20px',
-                                                        marginBottom: '15px'
-                                                    },
-                                                    children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _timetableGridDefault.default), {
-                                                        timetable: timetable.classTimetables,
-                                                        className: cls.name
+                                    (()=>{
+                                        const sorted = [
+                                            ...classes
+                                        ].sort((a, b)=>(a.department || 'Unassigned').localeCompare(b.department || 'Unassigned') || a.name.localeCompare(b.name));
+                                        const groups = {};
+                                        sorted.forEach((cls)=>{
+                                            const dept = cls.department || 'Unassigned';
+                                            if (!groups[dept]) groups[dept] = [];
+                                            groups[dept].push(/*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                className: "timetable-container",
+                                                id: `timetable-export-${cls.id}`,
+                                                children: [
+                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h4", {
+                                                        className: "timetable-title",
+                                                        children: cls.name
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1409,
-                                                        columnNumber: 41
-                                                    }, this)
-                                                }, void 0, false, {
-                                                    fileName: "src/components/AdminDashboard.jsx",
-                                                    lineNumber: 1398,
-                                                    columnNumber: 37
-                                                }, this),
-                                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                                    className: "timetable-actions no-print",
-                                                    children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
-                                                        className: "btn btn-primary btn-sm",
-                                                        onClick: ()=>{
-                                                            // ✅ IMPROVED: Export specific timetable by ID
-                                                            const element = document.getElementById(`timetable-${cls.name}`);
-                                                            if (element) (0, _pdfUtils.exportToPDF)(`timetable-${cls.name}`, `${cls.name}_Timetable.pdf`, {
-                                                                filename: `${cls.name}_Timetable.pdf`,
-                                                                html2canvas: {
-                                                                    scale: 2,
-                                                                    useCORS: true,
-                                                                    logging: false,
-                                                                    width: element.scrollWidth,
-                                                                    height: element.scrollHeight
-                                                                },
-                                                                jsPDF: {
-                                                                    unit: 'mm',
-                                                                    format: 'a4',
-                                                                    orientation: 'landscape'
-                                                                }
-                                                            });
-                                                        },
-                                                        children: "\uD83D\uDCC4 Download PDF"
+                                                        lineNumber: 1457,
+                                                        columnNumber: 45
+                                                    }, this),
+                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                        className: "timetable-scroll",
+                                                        children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _timetableGridDefault.default), {
+                                                            timetable: timetable.classTimetables,
+                                                            className: cls.name
+                                                        }, void 0, false, {
+                                                            fileName: "src/components/AdminDashboard.jsx",
+                                                            lineNumber: 1459,
+                                                            columnNumber: 49
+                                                        }, this)
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1416,
-                                                        columnNumber: 41
+                                                        lineNumber: 1458,
+                                                        columnNumber: 45
+                                                    }, this),
+                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                        className: "timetable-actions no-print no-export",
+                                                        children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
+                                                            className: "btn btn-primary btn-sm",
+                                                            onClick: ()=>(0, _pdfUtils.exportToPDF)(`timetable-export-${cls.id}`, `${cls.name}_Timetable.pdf`, {
+                                                                    title: cls.name
+                                                                }),
+                                                            children: "\uD83D\uDCC4 Download PDF"
+                                                        }, void 0, false, {
+                                                            fileName: "src/components/AdminDashboard.jsx",
+                                                            lineNumber: 1462,
+                                                            columnNumber: 49
+                                                        }, this)
+                                                    }, void 0, false, {
+                                                        fileName: "src/components/AdminDashboard.jsx",
+                                                        lineNumber: 1461,
+                                                        columnNumber: 45
                                                     }, this)
-                                                }, void 0, false, {
-                                                    fileName: "src/components/AdminDashboard.jsx",
-                                                    lineNumber: 1415,
-                                                    columnNumber: 37
-                                                }, this)
-                                            ]
-                                        }, cls.id, true, {
-                                            fileName: "src/components/AdminDashboard.jsx",
-                                            lineNumber: 1392,
-                                            columnNumber: 33
-                                        }, this))
+                                                ]
+                                            }, cls.id, true, {
+                                                fileName: "src/components/AdminDashboard.jsx",
+                                                lineNumber: 1456,
+                                                columnNumber: 41
+                                            }, this));
+                                        });
+                                        return Object.keys(groups).filter((dept)=>groups[dept].length > 0).map((dept)=>/*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                className: "dept-group",
+                                                children: [
+                                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                        className: "dept-chip",
+                                                        children: dept
+                                                    }, void 0, false, {
+                                                        fileName: "src/components/AdminDashboard.jsx",
+                                                        lineNumber: 1471,
+                                                        columnNumber: 45
+                                                    }, this),
+                                                    groups[dept].map((node)=>/*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                                            className: "class-box",
+                                                            children: node
+                                                        }, node.key, false, {
+                                                            fileName: "src/components/AdminDashboard.jsx",
+                                                            lineNumber: 1473,
+                                                            columnNumber: 49
+                                                        }, this))
+                                                ]
+                                            }, `dept-block-${dept}`, true, {
+                                                fileName: "src/components/AdminDashboard.jsx",
+                                                lineNumber: 1470,
+                                                columnNumber: 41
+                                            }, this));
+                                    })()
                                 ]
                             }, void 0, true, {
                                 fileName: "src/components/AdminDashboard.jsx",
-                                lineNumber: 1389,
+                                lineNumber: 1447,
                                 columnNumber: 25
                             }, this),
                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -3852,14 +4353,14 @@ function AdminDashboard({ user, onLogout }) {
                                         children: "Staff-wise Timetables"
                                     }, void 0, false, {
                                         fileName: "src/components/AdminDashboard.jsx",
-                                        lineNumber: 1453,
+                                        lineNumber: 1481,
                                         columnNumber: 29
                                     }, this),
-                                    teachers.map((teacher)=>/*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                    [
+                                        ...teachers
+                                    ].sort((a, b)=>a.name.localeCompare(b.name)).map((teacher)=>/*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                             className: "timetable-container",
-                                            style: {
-                                                marginBottom: '40px'
-                                            },
+                                            id: `staff-timetable-export-${teacher.id}`,
                                             children: [
                                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h4", {
                                                     className: "timetable-title",
@@ -3869,89 +4370,64 @@ function AdminDashboard({ user, onLogout }) {
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "src/components/AdminDashboard.jsx",
-                                                    lineNumber: 1456,
+                                                    lineNumber: 1484,
                                                     columnNumber: 37
                                                 }, this),
                                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                                    id: `staff-timetable-${teacher.name.replace(/\s+/g, '-')}`,
-                                                    className: "timetable-export-wrapper",
-                                                    style: {
-                                                        width: '100%',
-                                                        overflow: 'visible',
-                                                        background: 'white',
-                                                        padding: '20px',
-                                                        marginBottom: '15px'
-                                                    },
+                                                    className: "timetable-scroll",
                                                     children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _staffTimetableGridDefault.default), {
                                                         timetable: timetable.staffTimetables,
                                                         staffName: teacher.name
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1472,
+                                                        lineNumber: 1486,
                                                         columnNumber: 41
                                                     }, this)
                                                 }, void 0, false, {
                                                     fileName: "src/components/AdminDashboard.jsx",
-                                                    lineNumber: 1461,
+                                                    lineNumber: 1485,
                                                     columnNumber: 37
                                                 }, this),
                                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                                    className: "timetable-actions no-print",
+                                                    className: "timetable-actions no-print no-export",
                                                     children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
                                                         className: "btn btn-primary btn-sm",
-                                                        onClick: ()=>{
-                                                            // ✅ IMPROVED: Export specific staff timetable by ID
-                                                            const safeName = teacher.name.replace(/\s+/g, '-');
-                                                            const element = document.getElementById(`staff-timetable-${safeName}`);
-                                                            if (element) (0, _pdfUtils.exportToPDF)(`staff-timetable-${safeName}`, `${teacher.name}_Timetable.pdf`, {
-                                                                filename: `${teacher.name}_Timetable.pdf`,
-                                                                html2canvas: {
-                                                                    scale: 2,
-                                                                    useCORS: true,
-                                                                    logging: false,
-                                                                    width: element.scrollWidth,
-                                                                    height: element.scrollHeight
-                                                                },
-                                                                jsPDF: {
-                                                                    unit: 'mm',
-                                                                    format: 'a4',
-                                                                    orientation: 'landscape'
-                                                                }
-                                                            });
-                                                        },
+                                                        onClick: ()=>(0, _pdfUtils.exportToPDF)(`staff-timetable-export-${teacher.id}`, `${teacher.name}_Timetable.pdf`, {
+                                                                title: `Staff Timetable \u{2014} ${teacher.name}`
+                                                            }),
                                                         children: "\uD83D\uDCC4 Download PDF"
                                                     }, void 0, false, {
                                                         fileName: "src/components/AdminDashboard.jsx",
-                                                        lineNumber: 1479,
+                                                        lineNumber: 1489,
                                                         columnNumber: 41
                                                     }, this)
                                                 }, void 0, false, {
                                                     fileName: "src/components/AdminDashboard.jsx",
-                                                    lineNumber: 1478,
+                                                    lineNumber: 1488,
                                                     columnNumber: 37
                                                 }, this)
                                             ]
                                         }, teacher.id, true, {
                                             fileName: "src/components/AdminDashboard.jsx",
-                                            lineNumber: 1455,
+                                            lineNumber: 1483,
                                             columnNumber: 33
                                         }, this))
                                 ]
                             }, void 0, true, {
                                 fileName: "src/components/AdminDashboard.jsx",
-                                lineNumber: 1452,
+                                lineNumber: 1480,
                                 columnNumber: 25
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "src/components/AdminDashboard.jsx",
-                        lineNumber: 1382,
+                        lineNumber: 1441,
                         columnNumber: 21
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "src/components/AdminDashboard.jsx",
-                lineNumber: 642,
+                lineNumber: 662,
                 columnNumber: 13
             }, this),
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _toast.ToastContainer), {
@@ -3959,13 +4435,13 @@ function AdminDashboard({ user, onLogout }) {
                 onRemove: removeToast
             }, void 0, false, {
                 fileName: "src/components/AdminDashboard.jsx",
-                lineNumber: 1519,
-                columnNumber: 13
+                lineNumber: 1499,
+                columnNumber: 11
             }, this)
         ]
     }, void 0, true);
 }
-_s(AdminDashboard, "d8vPdSe8q58cFK69hbSW5it64iw=");
+_s(AdminDashboard, "UTNPICe+d8WyX3o1Vwu20NTH6Qg=");
 _c = AdminDashboard;
 var _c;
 $RefreshReg$(_c, "AdminDashboard");
@@ -4050,8 +4526,10 @@ const Toast = ({ id, message, type, onRemove, undoAction })=>{
                             color: 'white',
                             cursor: 'pointer',
                             fontSize: '18px',
-                            padding: '0 4px'
+                            padding: '0 4px',
+                            lineHeight: '1'
                         },
+                        title: "Close",
                         children: "\xd7"
                     }, void 0, false, {
                         fileName: "src/components/Toast.jsx",
@@ -4090,12 +4568,12 @@ const ToastContainer = ({ toasts, onRemove })=>{
                 undoAction: toast.undoAction
             }, toast.id, false, {
                 fileName: "src/components/Toast.jsx",
-                lineNumber: 79,
+                lineNumber: 81,
                 columnNumber: 9
             }, undefined))
     }, void 0, false, {
         fileName: "src/components/Toast.jsx",
-        lineNumber: 68,
+        lineNumber: 70,
         columnNumber: 5
     }, undefined);
 };
@@ -4689,6 +5167,8 @@ class TimetableGenerator {
         this.teacherWeeklyCount = {};
         this.teacherDailyCount = {};
         this.subjectLastUsed = {}; // Track when subject was last used
+        this.classDailyLabCount = {};
+        this.staffSettings = {};
         this.DAYS = [
             'Monday',
             'Tuesday',
@@ -4755,7 +5235,13 @@ class TimetableGenerator {
     _initialize() {
         console.log("\u2699\uFE0F Initializing timetables...");
         this.classes.forEach((cls)=>{
-            if (cls && cls.name) this.classTimetables[cls.name] = this.DAYS.map(()=>Array(this.PERIODS).fill(null));
+            if (cls && cls.name) {
+                this.classTimetables[cls.name] = this.DAYS.map(()=>Array(this.PERIODS).fill(null));
+                this.classDailyLabCount[cls.name] = {};
+                this.DAYS.forEach((day)=>{
+                    this.classDailyLabCount[cls.name][day] = 0;
+                });
+            }
         });
         const staffMembers = this.staff.filter((s)=>s && s.role === 'staff');
         staffMembers.forEach((teacher)=>{
@@ -4766,6 +5252,10 @@ class TimetableGenerator {
                 this.DAYS.forEach((day)=>{
                     this.teacherDailyCount[teacher.name][day] = 0;
                 });
+                this.staffSettings[teacher.name] = {
+                    freePeriodMode: teacher.freePeriodMode || 'auto',
+                    manualFreePeriods: typeof teacher.manualFreePeriods === 'number' ? teacher.manualFreePeriods : 0
+                };
             }
         });
     }
@@ -4796,10 +5286,15 @@ class TimetableGenerator {
                         if (prevSlot && prevSlot.isLabContinuation) {
                             const labSubject = classSubjects.find((s)=>s.name === prevSlot.subject);
                             if (labSubject && labSubject.currentBlockRemaining > 0) {
-                                this._placeAt(className, dayIdx, period, labSubject, true);
-                                labSubject.currentBlockRemaining--;
-                                console.log(`    P${period + 1}: ${labSubject.name} (continuing lab block)`);
-                                continue;
+                                const tName = labSubject.teacher;
+                                const slotKey = `${day}-P${period + 1}`;
+                                if (this.teacherBusySlots[tName]?.[slotKey]) console.log(`    P${period + 1}: Teacher ${tName} busy, cannot continue lab block`);
+                                else {
+                                    this._placeAt(className, dayIdx, period, labSubject, true);
+                                    labSubject.currentBlockRemaining--;
+                                    console.log(`    P${period + 1}: ${labSubject.name} (continuing lab block)`);
+                                    continue;
+                                }
                             }
                         }
                     }
@@ -4808,9 +5303,29 @@ class TimetableGenerator {
                     if (bestSubject) {
                         // Check if starting a lab block
                         const isLabStart = bestSubject.isContinuous && period <= this.PERIODS - (bestSubject.blockSize || 2);
-                        if (isLabStart) bestSubject.currentBlockRemaining = (bestSubject.blockSize || 2) - 1;
-                        this._placeAt(className, dayIdx, period, bestSubject, isLabStart);
-                        console.log(`    P${period + 1}: ${bestSubject.name} ${isLabStart ? '(lab start)' : ''}`);
+                        if (isLabStart) {
+                            // Enforce teacher availability for all consecutive periods
+                            const blockSize = bestSubject.blockSize || 2;
+                            let teacherFreeForBlock = true;
+                            for(let i = 0; i < blockSize; i++){
+                                const k = `${day}-P${period + 1 + i}`;
+                                if (this.teacherBusySlots[bestSubject.teacher]?.[k]) {
+                                    teacherFreeForBlock = false;
+                                    break;
+                                }
+                            }
+                            if (!teacherFreeForBlock) console.log(`    P${period + 1}: Cannot start lab, teacher busy in block`);
+                            else {
+                                bestSubject.currentBlockRemaining = blockSize - 1;
+                                this._placeAt(className, dayIdx, period, bestSubject, true);
+                                console.log(`    P${period + 1}: ${bestSubject.name} (lab start)`);
+                                continue;
+                            }
+                        }
+                        if (!bestSubject.isContinuous) {
+                            this._placeAt(className, dayIdx, period, bestSubject, false);
+                            console.log(`    P${period + 1}: ${bestSubject.name}`);
+                        }
                     } else {
                         // Rule 12: Revision period if no subject available
                         const revisionSubject = this._getRevisionSubject(classSubjects);
@@ -4843,6 +5358,7 @@ class TimetableGenerator {
             // Skip if teacher unavailable (Rule 10 - but continue for class)
             const slotKey = `${day}-P${period + 1}`;
             const teacherBusy = this.teacherBusySlots[subject.teacher]?.[slotKey];
+            if (teacherBusy) continue;
             let score = 100; // Start with high score
             const reasons = [];
             // RULE 2: Do not place same subject as previous day same period (CRITICAL)
@@ -4886,6 +5402,19 @@ class TimetableGenerator {
                         score += 10;
                         reasons.push('Different difficulty +10');
                     }
+                    // Avoid >3 continuous theory of same subject
+                    if (!subject.isContinuous) {
+                        let sameStreak = 0;
+                        for(let i = 1; i <= 3; i++){
+                            const ps = this.classTimetables[className][dayIdx][period - i];
+                            if (ps && ps.subject === subject.name && !ps.isLabContinuation) sameStreak++;
+                            else break;
+                        }
+                        if (sameStreak >= 3) {
+                            score -= 50;
+                            reasons.push('Too many continuous theory periods -50');
+                        }
+                    }
                 }
             }
             // RULE 7: Priority to subjects with more remaining hours
@@ -4905,10 +5434,7 @@ class TimetableGenerator {
                 }
             }
             // Teacher availability check (warn but don't block - Rule 10)
-            if (teacherBusy) {
-                score -= 100; // Strong penalty but not impossible
-                reasons.push('Teacher busy -100 (will find alternative if needed)');
-            }
+            // Enforced above
             // Lab placement logic
             if (subject.isContinuous) {
                 const blockSize = subject.blockSize || 2;
@@ -4926,21 +5452,61 @@ class TimetableGenerator {
                     if (!blockFree) {
                         score = -1000;
                         reasons.push('Lab block periods not all free');
-                    } else // Prefer afternoon for labs
-                    if (period >= 3) {
-                        score += 20;
-                        reasons.push('Lab in afternoon +20');
+                    } else {
+                        // Prefer afternoon for labs
+                        if (period >= 3) {
+                            score += 20;
+                            reasons.push('Lab in afternoon +20');
+                        }
+                        // Avoid last period if possible
+                        if (period === this.PERIODS - 1) {
+                            score -= 30;
+                            reasons.push('Avoid lab at last period -30');
+                        }
+                        // Prefer only 1 lab per day, allow 2 with penalty
+                        const labsToday = this.classDailyLabCount[className][day] || 0;
+                        if (labsToday >= 1) {
+                            score -= 25;
+                            reasons.push('Second lab same day -25');
+                        }
                     }
                 }
             }
             // Core subjects prefer morning, electives prefer afternoon
             if (subject.subjectType === 'core' && period <= 2) {
-                score += 10;
-                reasons.push('Core in morning +10');
+                score += 5;
+                reasons.push('Core in morning +5');
             }
             if (subject.subjectType === 'elective' && period >= 3) {
                 score += 10;
                 reasons.push('Elective in afternoon +10');
+            }
+            // Prefer middle periods for theory (2–5)
+            if (!subject.isContinuous) {
+                if (period === 0 || period === this.PERIODS - 1) {
+                    score -= 10;
+                    reasons.push('Avoid edge periods for theory -10');
+                } else {
+                    score += 5;
+                    reasons.push('Middle period for theory +5');
+                }
+            }
+            // Teacher free period rules (auto/manual)
+            const tSettings = this.staffSettings[subject.teacher] || {
+                freePeriodMode: 'auto',
+                manualFreePeriods: 0
+            };
+            const usedTodayByTeacher = this.teacherDailyCount[subject.teacher][day] || 0;
+            if (tSettings.freePeriodMode === 'manual') {
+                const maxDaily = this.PERIODS - (tSettings.manualFreePeriods || 0);
+                if (usedTodayByTeacher >= maxDaily) {
+                    score = -1000;
+                    reasons.push('Manual free periods reached');
+                }
+            } else // Auto: prefer leaving one free period per day when possible
+            if (usedTodayByTeacher >= this.PERIODS - 1) {
+                score -= 40;
+                reasons.push('Prefer leaving one free period -40');
             }
             candidates.push({
                 subject,
@@ -5007,6 +5573,8 @@ class TimetableGenerator {
         if (!this.teacherDailyCount[subject.teacher]) this.teacherDailyCount[subject.teacher] = {};
         if (!this.teacherDailyCount[subject.teacher][day]) this.teacherDailyCount[subject.teacher][day] = 0;
         this.teacherDailyCount[subject.teacher][day]++;
+        // Track lab count per day when starting
+        if (subject.isContinuous && isLabContinuation) this.classDailyLabCount[className][day] = (this.classDailyLabCount[className][day] || 0) + 1;
     }
     _generateStaffTimetables() {
         console.log("\n\uD83D\uDC68\u200D\uD83C\uDFEB Generating staff timetables (free periods allowed)...");
@@ -5047,6 +5615,17 @@ class TimetableGenerator {
                 });
             });
             if (emptySlots > 0) warnings.push(`${cls.name}: ${emptySlots} empty periods (Rule 9 - should be filled)`);
+        });
+        // Weekly teacher hours should match assigned subject hours
+        const expectedTeacherHours = {};
+        this.subjects.forEach((s)=>{
+            if (!s || !s.teacher || !s.hoursPerWeek) return;
+            expectedTeacherHours[s.teacher] = (expectedTeacherHours[s.teacher] || 0) + s.hoursPerWeek;
+        });
+        Object.keys(expectedTeacherHours).forEach((t)=>{
+            const expected = expectedTeacherHours[t];
+            const actual = this.teacherWeeklyCount[t] || 0;
+            if (actual !== expected) warnings.push(`${t}: expected ${expected} hours, scheduled ${actual}`);
         });
         return {
             valid: warnings.length === 0,

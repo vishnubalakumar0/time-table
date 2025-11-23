@@ -1044,11 +1044,13 @@ function StaffDashboard({ user, onLogout }) {
                                             gap: '10px',
                                             justifyContent: 'center'
                                         },
-                                        className: "no-print",
+                                        className: "no-print no-export",
                                         children: [
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
                                                 className: "btn btn-primary btn-sm",
-                                                onClick: ()=>(0, _pdfUtils.exportToPDF)('staff-timetable-export', `${user.name}_Timetable.pdf`),
+                                                onClick: ()=>(0, _pdfUtils.exportToPDF)('staff-timetable-export', `${user.name}_Timetable.pdf`, {
+                                                        title: `Staff Timetable \u{2014} ${user.name}`
+                                                    }),
                                                 children: "\uD83D\uDCC4 Download PDF"
                                             }, void 0, false, {
                                                 fileName: "src/components/StaffDashboard.jsx",
