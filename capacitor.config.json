@@ -4,7 +4,6 @@
   "webDir": "dist",
   "bundledWebRuntime": false,
   "server": {
-    "url": "https://vishnu15.me",
-    "cleartext": false
+    "androidScheme": "https"
   }
 }
