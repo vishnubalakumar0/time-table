@@ -22,7 +22,6 @@ import {
 
 export default function AdminDashboard({ user, onLogout }) {
     const [classes, setClasses] = useState([]);
-    const [departments, setDepartments] = useState([]);
     const [staff, setStaff] = useState([]);
     const [subjects, setSubjects] = useState([]);
     const [timetable, setTimetable] = useState(null);
@@ -30,7 +29,6 @@ export default function AdminDashboard({ user, onLogout }) {
     const [loading, setLoading] = useState(true);
     const [showAddStaffForm, setShowAddStaffForm] = useState(false);
     const [showAddSubjectForm, setShowAddSubjectForm] = useState(false);
-    const [showAddDepartmentForm, setShowAddDepartmentForm] = useState(false);
     const [showAddClassForm, setShowAddClassForm] = useState(false);
 
     // Refs for scrolling
@@ -38,7 +36,7 @@ export default function AdminDashboard({ user, onLogout }) {
     const subjectFormRef = useRef(null);
 
     // Form Models
-    const [newClass, setNewClass] = useState({ name: '', hallNumber: '', department: '' });
+    const [newClass, setNewClass] = useState({ name: '', hallNumber: '' });
     const [newStaff, setNewStaff] = useState({
         id: null,
         name: '',
@@ -58,7 +56,6 @@ export default function AdminDashboard({ user, onLogout }) {
         teacher: ''
     });
 
-    const [newDepartment, setNewDepartment] = useState({ id: null, name: '' });
 
     const teachers = staff.filter(s => s.role === "staff");
 
@@ -119,18 +116,16 @@ export default function AdminDashboard({ user, onLogout }) {
         setLoading(true);
 
         try {
-            const [cls, st, sb, tt, dp] = await Promise.all([
+            const [cls, st, sb, tt] = await Promise.all([
                 getDocs(collection(db, 'classes')),
                 getDocs(collection(db, 'staff')),
                 getDocs(collection(db, 'subjects')),
-                getDocs(collection(db, 'timetable')),
-                getDocs(collection(db, 'departments'))
+                getDocs(collection(db, 'timetable'))
             ]);
 
             setClasses(cls.docs.map(doc => ({ id: doc.id, ...doc.data() })));
             setStaff(st.docs.map(doc => ({ id: doc.id, ...doc.data() })));
             setSubjects(sb.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-            setDepartments(dp.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
             if (!tt.empty) {
                 const ttData = tt.docs[0].data();
@@ -196,64 +191,30 @@ export default function AdminDashboard({ user, onLogout }) {
             if (newClass.id) {
                 await updateDoc(doc(db, 'classes', newClass.id), { 
                     name: newClass.name, 
-                    hallNumber: newClass.hallNumber,
-                    department: newClass.department || ''
+                    hallNumber: newClass.hallNumber
                 });
                 setClasses(classes.map(c => c.id === newClass.id ? { id: newClass.id, ...newClass } : c));
                 showToast("✅ Class updated!", "success");
             } else {
                 const docRef = await addDoc(collection(db, 'classes'), { 
                     name: newClass.name, 
-                    hallNumber: newClass.hallNumber || '',
-                    department: newClass.department || ''
+                    hallNumber: newClass.hallNumber || ''
                 });
-                setClasses([...classes, { id: docRef.id, name: newClass.name, hallNumber: newClass.hallNumber || '', department: newClass.department || '' }]);
+                setClasses([...classes, { id: docRef.id, name: newClass.name, hallNumber: newClass.hallNumber || '' }]);
                 showToast("✅ Class added!", "success");
             }
-            setNewClass({ name: '', hallNumber: '', department: '' });
+            setNewClass({ name: '', hallNumber: '' });
         } catch (error) {
             showToast("❌ Operation failed", "error");
         }
     };
 
     const editClass = (cls) => {
-        setNewClass({ id: cls.id, name: cls.name, hallNumber: cls.hallNumber || '', department: cls.department || '' });
+        setNewClass({ id: cls.id, name: cls.name, hallNumber: cls.hallNumber || '' });
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const addOrUpdateDepartment = async () => {
-        if (!newDepartment.name.trim()) return showToast("Enter department name", "error");
-        try {
-            if (newDepartment.id) {
-                await updateDoc(doc(db, 'departments', newDepartment.id), { name: newDepartment.name });
-                setDepartments(departments.map(d => d.id === newDepartment.id ? { ...d, name: newDepartment.name } : d));
-                showToast("✅ Department updated!", "success");
-            } else {
-                const ref = await addDoc(collection(db, 'departments'), { name: newDepartment.name });
-                setDepartments([...departments, { id: ref.id, name: newDepartment.name }]);
-                showToast("✅ Department added!", "success");
-            }
-            setNewDepartment({ id: null, name: '' });
-        } catch (error) {
-            showToast("❌ Operation failed", "error");
-        }
-    };
-
-    const editDepartment = (dept) => {
-        setNewDepartment({ id: dept.id, name: dept.name });
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
-    const deleteDepartment = async (id) => {
-        if (!window.confirm("Delete this department?")) return;
-        try {
-            await deleteDoc(doc(db, 'departments', id));
-            setDepartments(departments.filter(d => d.id !== id));
-            showToast("✅ Department deleted", "success");
-        } catch (error) {
-            showToast("❌ Failed to delete", "error");
-        }
-    };
+    // Department features removed
 
 // ==================== CLASS CRUD ====================
   const deleteClass = async (id) => {
@@ -664,102 +625,7 @@ return (
             </div>
 
             <div className="content">
-                {/* ==================== DEPARTMENTS SECTION ==================== */}
-                <div className="section">
-                    <div className="section-header">
-                        <span className="section-icon">🏢</span>
-                        <h2 className="section-title">Manage Departments</h2>
-                    </div>
-
-                    <div className="card">
-                        <h3>Existing Departments ({departments.length})</h3>
-                        {departments.length === 0 ? (
-                            <p style={{color: '#64748b', textAlign: 'center', padding: '20px'}}>
-                                No departments added yet
-                            </p>
-                        ) : (
-                            <>
-                                <div className="desktop-table">
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <th>#</th>
-                                                <th>Department</th>
-                                                <th>Classes</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {departments.map((d, idx) => {
-                                                const classCount = classes.filter(c => (c.department || '') === d.name).length;
-                                                return (
-                                                    <tr key={d.id}>
-                                                        <td>{idx + 1}</td>
-                                                        <td><strong>{d.name}</strong></td>
-                                                        <td>{classCount}</td>
-                                                        <td>
-                                                            <div className="action-buttons">
-                                                                <button className="btn-icon btn-icon-primary" onClick={() => { editDepartment(d); setShowAddDepartmentForm(true); }} title="Edit">✏️</button>
-                                                                <button className="btn-icon btn-icon-danger" onClick={() => deleteDepartment(d.id)} title="Delete">🗑️</button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                <div className="mobile-cards">
-                                    {departments.map((d, idx) => {
-                                        const classCount = classes.filter(c => (c.department || '') === d.name).length;
-                                        return (
-                                            <div key={d.id} className="mobile-card">
-                                                <div className="mobile-card-header">
-                                                    <span className="mobile-card-title">{d.name}</span>
-                                                    <span className="mobile-card-badge">#{idx + 1}</span>
-                                                </div>
-                                                <div className="mobile-card-body">
-                                                    <div className="mobile-card-row">
-                                                        <span className="mobile-card-label">Classes:</span>
-                                                        <span className="mobile-card-value">{classCount}</span>
-                                                    </div>
-                                                </div>
-                                                <div className="mobile-card-actions">
-                                                    <button className="btn btn-primary btn-sm" onClick={() => { editDepartment(d); setShowAddDepartmentForm(true); }}>✏️ Edit</button>
-                                                    <button className="btn btn-danger btn-sm" onClick={() => deleteDepartment(d.id)}>🗑️ Delete</button>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </>
-                        )}
-                        <button 
-                            className="btn btn-success btn-sm" 
-                            onClick={() => setShowAddDepartmentForm(true)}
-                            style={{marginTop: '15px'}}
-                        >
-                            ➕ Add Department
-                        </button>
-                    </div>
-
-                    {showAddDepartmentForm && (
-                        <div className="card">
-                            <h3>{newDepartment.id ? '✏️ Edit Department' : '➕ Add New Department'}</h3>
-                            <div className="grid-2">
-                                <div className="form-group">
-                                    <label>Department Name *</label>
-                                    <input type="text" value={newDepartment.name} onChange={e => setNewDepartment({ ...newDepartment, name: e.target.value })} placeholder="Computer Science" />
-                                </div>
-                            </div>
-                            <div style={{display: 'flex', gap: '10px'}}>
-                                <button className="btn btn-primary" onClick={addOrUpdateDepartment}>{newDepartment.id ? '💾 Save Changes' : '➕ Add Department'}</button>
-                                <button className="btn btn-secondary" onClick={() => { setNewDepartment({ id: null, name: '' }); setShowAddDepartmentForm(false); }}>❌ Cancel</button>
-                            </div>
-                        </div>
-                    )}
-                </div>
+                {/* Departments section removed */}
 
                 {/* ==================== CLASSES SECTION ==================== */}
                 <div className="section">
@@ -778,22 +644,18 @@ return (
                         ) : (
                             <>
                                 {(() => {
-                                    const sorted = [...classes].sort((a, b) => (a.department || 'Unassigned').localeCompare(b.department || 'Unassigned') || a.name.localeCompare(b.name));
-                                    const groups = {};
-                                    sorted.forEach(cls => {
-                                        const dept = cls.department || 'Unassigned';
-                                        if (!groups[dept]) groups[dept] = [];
-                                        groups[dept].push(cls);
-                                    });
-                                    return Object.keys(groups).filter(d => groups[d].length > 0).map(dept => (
-                                        <div key={`dept-classes-${dept}`} className="dept-group">
-                                            <div className="dept-chip">{dept}</div>
-                                            {groups[dept].map((cls, idx) => {
+                                    const sorted = [...classes].sort((a, b) => a.name.localeCompare(b.name));
+                                    return sorted.map((cls, idx) => (
+                                        <div key={`class-${cls.id}`} className="dept-group">
+                                            {sorted[idx] && <div className="dept-chip">Class</div>}
+                                            {[
+                                                cls
+                                            ].map((cls, idx2) => {
                                                 const classSubjects = subjects.filter(s => s.className === cls.name);
                                                 const totalHours = classSubjects.reduce((sum, s) => sum + s.hoursPerWeek, 0);
                                                 const progress = (totalHours / 30) * 100;
                                                 return (
-                                                    <div key={cls.id} className="class-box">
+                                                    <div key={`${cls.id}-${idx2}`} className="class-box">
                                                         <div style={{
                                                             marginBottom: '8px',
                                                             display: 'flex',
@@ -862,17 +724,11 @@ return (
 
                                 <div className="mobile-cards">
                                     {(() => {
-                                        const sorted = [...classes].sort((a, b) => (a.department || 'Unassigned').localeCompare(b.department || 'Unassigned') || a.name.localeCompare(b.name));
-                                        let currentDept = null;
+                                        const sorted = [...classes].sort((a, b) => a.name.localeCompare(b.name));
                                         const cards = [];
                                         sorted.forEach((cls, idx) => {
-                                            const dept = cls.department || 'Unassigned';
                                             const classSubjects = subjects.filter(s => s.className === cls.name);
                                             const totalHours = classSubjects.reduce((sum, s) => sum + s.hoursPerWeek, 0);
-                                            if (dept !== currentDept) {
-                                                currentDept = dept;
-                                                cards.push(<div key={`dept-mobile-${dept}`} className="group-header" style={{ fontWeight: 700, margin: '10px 0' }}>{dept}</div>);
-                                            }
                                             cards.push(
                                                 <div key={cls.id} className="mobile-card">
                                                     <div className="mobile-card-header">
@@ -908,7 +764,7 @@ return (
                         )}
                         <button 
                             className="btn btn-success btn-sm" 
-                            onClick={() => { setShowAddClassForm(true); setNewClass({ id: null, name: '', hallNumber: '', department: '' }); }}
+                            onClick={() => { setShowAddClassForm(true); setNewClass({ id: null, name: '', hallNumber: '' }); }}
                             style={{marginTop: '15px'}}
                         >
                             ➕ Add Class
@@ -938,21 +794,13 @@ return (
                                     placeholder="Hall 101"
                                 />
                             </div>
-                            <div className="form-group">
-                                <label>Department</label>
-                                <select value={newClass.department} onChange={e => setNewClass({ ...newClass, department: e.target.value })}>
-                                    <option value="">Unassigned</option>
-                                    {departments.map(d => (
-                                        <option key={d.id} value={d.name}>{d.name}</option>
-                                    ))}
-                                </select>
-                            </div>
+                            
                         </div>
                         <div style={{display: 'flex', gap: '10px'}}>
                             <button className="btn btn-primary" onClick={addClass}>
                                 {newClass.id ? '💾 Update Class' : '➕ Add Class'}
                             </button>
-                            <button className="btn btn-secondary" onClick={() => { setNewClass({ name: '', hallNumber: '', department: '' }); setShowAddClassForm(false); }}>
+                            <button className="btn btn-secondary" onClick={() => { setNewClass({ name: '', hallNumber: '' }); setShowAddClassForm(false); }}>
                                 ❌ Cancel
                             </button>
                         </div>
@@ -1450,35 +1298,17 @@ return (
 
                         <div className="card">
                             <h3>Time Tables</h3>
-                            {(() => {
-                                const sorted = [...classes].sort((a, b) => (a.department || 'Unassigned').localeCompare(b.department || 'Unassigned') || a.name.localeCompare(b.name));
-                                const groups = {};
-                                sorted.forEach(cls => {
-                                    const dept = cls.department || 'Unassigned';
-                                    if (!groups[dept]) groups[dept] = [];
-                                    groups[dept].push(
-                                        <div key={cls.id} className="timetable-container" id={`timetable-export-${cls.id}`}>
-                                            <h4 className="timetable-title">{cls.name}</h4>
-                                            <div className="timetable-scroll">
-                                                <TimetableGrid timetable={timetable.classTimetables} className={cls.name} />
-                                            </div>
-                                            <div className="timetable-actions no-print no-export">
-                                                <button className="btn btn-primary btn-sm" onClick={() => exportToPDF(`timetable-export-${cls.id}`, `${cls.name}_Timetable.pdf`, { title: cls.name })}>📄 Download PDF</button>
-                                            </div>
-                                        </div>
-                                    );
-                                });
-                                return Object.keys(groups)
-                                    .filter(dept => groups[dept].length > 0)
-                                    .map(dept => (
-                                        <div key={`dept-block-${dept}`} className="dept-group">
-                                            <div className="dept-chip">{dept}</div>
-                                            {groups[dept].map(node => (
-                                                <div key={node.key} className="class-box">{node}</div>
-                                            ))}
-                                        </div>
-                                    ));
-                            })()}
+                            {([...classes].sort((a, b) => a.name.localeCompare(b.name))).map(cls => (
+                                <div key={cls.id} className="timetable-container" id={`timetable-export-${cls.id}`}>
+                                    <h4 className="timetable-title">{cls.name}</h4>
+                                    <div className="timetable-scroll">
+                                        <TimetableGrid timetable={timetable.classTimetables} className={cls.name} />
+                                    </div>
+                                    <div className="timetable-actions no-print no-export">
+                                        <button className="btn btn-primary btn-sm" onClick={() => exportToPDF(`timetable-export-${cls.id}`, `${cls.name}_Timetable.pdf`, { title: cls.name })}>📄 Download PDF</button>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
 
                         <div className="card">
