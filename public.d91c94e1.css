@@ -1948,7 +1948,7 @@ td {
 
 .timetable-cell {
   text-align: center;
-  background: #fff;
+  background: none;
   border: 1px solid #e2e8f0;
   flex-direction: column;
   justify-content: center;
@@ -1962,9 +1962,8 @@ td {
 @media (width >= 769px) {
   .timetable-cell:hover {
     z-index: 10;
-    background: #f8fafc;
     transform: scale(1.02);
-    box-shadow: 0 4px 12px #0000001a;
+    box-shadow: 0 4px 12px #00000014;
   }
 }
 
@@ -2459,6 +2458,67 @@ html, * {
   * {
     -webkit-tap-highlight-color: #667eea33;
     tap-highlight-color: #667eea33;
+  }
+}
+
+.segmented-nav {
+  backdrop-filter: blur(10px);
+  background: #ffffff14;
+  border: 1px solid #ffffff26;
+  border-radius: 9999px;
+  gap: 2px;
+  width: fit-content;
+  margin: 18px auto 6px;
+  padding: 8px;
+  display: flex;
+}
+
+.segmented-item {
+  appearance: none;
+  color: #ffffffd9;
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-radius: 9999px;
+  outline: none;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  transition: all .2s;
+}
+
+.segmented-item:hover {
+  color: #fff;
+  background: #ffffff1a;
+}
+
+.segmented-item.active {
+  color: #fff;
+  background: linear-gradient(135deg, #a855f7, #6366f1);
+  box-shadow: 0 8px 20px #6366f159;
+}
+
+@media (width <= 768px) {
+  .segmented-nav {
+    backdrop-filter: none;
+    box-shadow: none;
+    background: #ffffff1f;
+    border: 1px solid #ffffff1a;
+    margin: 12px auto 0;
+    padding: 6px;
+  }
+
+  .segmented-item {
+    padding: 8px 12px;
+    font-size: 13px;
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .segmented-item, .btn, .card, .header, .timetable-cell {
+    transition: none !important;
+    animation: none !important;
   }
 }
 /*# sourceMappingURL=public.d91c94e1.css.map */
