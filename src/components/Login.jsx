@@ -74,7 +74,7 @@ export default function Login({ onLogin }) {
 
   return (
     <>
-      <AnimatedBackground />
+      <AnimatedBackground interactive variant="orbit" />
       <div className="login-container">
         <div className={`login-card enhanced ${mounted ? 'mounted' : ''}`}>
           {/* Animated Logo Section */}

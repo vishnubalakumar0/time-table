@@ -30,6 +30,7 @@ export default function AdminDashboard({ user, onLogout }) {
     const [showAddStaffForm, setShowAddStaffForm] = useState(false);
     const [showAddSubjectForm, setShowAddSubjectForm] = useState(false);
     const [showAddClassForm, setShowAddClassForm] = useState(false);
+    const [activeTab, setActiveTab] = useState('classes');
 
     // Refs for scrolling
     const staffFormRef = useRef(null);
@@ -608,7 +609,7 @@ const deleteStaff = async (id) => {
 
 return (
   <>
-    <AnimatedBackground />
+    <AnimatedBackground forceFull />
 
     {/* Global wrapper - DO NOT close this early */}
     <div className="min-h-screen relative z-10 text-white">
@@ -622,13 +623,52 @@ return (
                         </button>
                     </div>
                 </div>
+
+                {/* Top segmented navigation */}
+                <div className="segmented-nav">
+                    <button
+                        className={`segmented-item ${activeTab === 'classes' ? 'active' : ''}`}
+                        onClick={() => { setActiveTab('classes'); document.getElementById('classes-section')?.scrollIntoView({ behavior: 'smooth' }); }}
+                        title="Classes"
+                    >
+                        🎓 Classes
+                    </button>
+                    <button
+                        className={`segmented-item ${activeTab === 'staff' ? 'active' : ''}`}
+                        onClick={() => { setActiveTab('staff'); document.getElementById('staff-section')?.scrollIntoView({ behavior: 'smooth' }); }}
+                        title="Staff"
+                    >
+                        👥 Staff
+                    </button>
+                    <button
+                        className={`segmented-item ${activeTab === 'subjects' ? 'active' : ''}`}
+                        onClick={() => { setActiveTab('subjects'); document.getElementById('subject-section')?.scrollIntoView({ behavior: 'smooth' }); }}
+                        title="Subjects"
+                    >
+                        📖 Subjects
+                    </button>
+                    <button
+                        className={`segmented-item ${activeTab === 'generate' ? 'active' : ''}`}
+                        onClick={() => { setActiveTab('generate'); document.getElementById('generate-section')?.scrollIntoView({ behavior: 'smooth' }); }}
+                        title="Generate"
+                    >
+                        🔄 Generate
+                    </button>
+                    <button
+                        className={`segmented-item ${activeTab === 'results' ? 'active' : ''}`}
+                        onClick={() => { setActiveTab('results'); document.getElementById('view-timetables')?.scrollIntoView({ behavior: 'smooth' }); }}
+                        title="Results"
+                    >
+                        📅 Results
+                    </button>
+                </div>
             </div>
 
             <div className="content">
                 {/* Departments section removed */}
 
                 {/* ==================== CLASSES SECTION ==================== */}
-                <div className="section">
+                <div className="section" id="classes-section">
                     <div className="section-header">
                         <span className="section-icon">📚</span>
                         <h2 className="section-title">Manage Classes</h2>
@@ -809,7 +849,7 @@ return (
                 </div>
 
                 {/* ==================== STAFF SECTION ==================== */}
-                <div className="section">
+                <div className="section" id="staff-section">
                     <div className="section-header">
                         <span className="section-icon">👥</span>
                         <h2 className="section-title">Manage Staff</h2>
@@ -1255,7 +1295,7 @@ return (
                 </div>
 
                 {/* ==================== GENERATE TIMETABLE ==================== */}
-                <div className="section">
+                <div className="section" id="generate-section">
                     <div className="section-header">
                         <span className="section-icon">⚡</span>
                         <h2 className="section-title">Generate Timetable</h2>

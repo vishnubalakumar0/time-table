@@ -1,48 +1,26 @@
 /**
- * ========================================
- * BULLETPROOF TIMETABLE GENERATOR v2.0
- * ========================================
- * SIMPLE + GUARANTEED 100% placement
- * 
- * HARD CONSTRAINTS (NEVER VIOLATED):
- * 1. All subject hours MUST be placed
- * 2. Teacher cannot be double-booked (same day+period)
- * 3. Lab blocks are continuous
- * 4. Stay within defined days/periods
- * 
- * SOFT PREFERENCES (tried but relaxed if needed):
- * - Spread across days
- * - Mid-day preference
- * - Avoid same period repetition
+ * ══════════════════════════════════════════════════════════════
+ * TIMETABLE GENERATOR - FINAL VERSION
+ * All rules + Random lab positions + Aggressive placement
+ * ══════════════════════════════════════════════════════════════
  */
 
 export class TimetableGenerator {
-    constructor(classes, staff, subjects, config = {}) {
+    constructor(classes, staff, subjects) {
         this.classes = classes || [];
         this.staff = staff || [];
         this.subjects = subjects || [];
 
-        this.config = {
-            seed: config.seed || Date.now(),
-            MAX_ATTEMPTS: config.MAX_ATTEMPTS || 100,
-            ...config
-        };
-
         this.classTimetables = {};
         this.staffTimetables = {};
-        this.teacherSlots = {}; // Track: teacherName -> { 'Monday-P1': className, ... }
-
-        this.diagnostics = {
-            relaxationsApplied: [],
-            candidateCounts: {},
-            attempts: 0
-        };
+        this.teacherSlots = {};
 
         this.DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
         this.PERIODS = 6;
+        this.TOTAL_HOURS = 30;
 
-        // Seeded RNG
-        this._seed = this.config.seed;
+        this.labPositionsUsed = {};
+        this._seed = Date.now();
     }
 
     _random() {
@@ -61,307 +39,381 @@ export class TimetableGenerator {
 
     validate() {
         const errors = [];
+
         if (!this.classes?.length) errors.push('No classes defined');
         if (!this.staff?.filter(s => s?.role === 'staff').length) errors.push('No staff defined');
         if (!this.subjects?.length) errors.push('No subjects defined');
+
+        this.classes.forEach(cls => {
+            const classSubjects = this.subjects.filter(s => s?.className === cls.name);
+            const totalHours = classSubjects.reduce((sum, s) => sum + (s.hoursPerWeek || 0), 0);
+
+            if (totalHours !== this.TOTAL_HOURS) {
+                errors.push(`Class "${cls.name}": Total hours = ${totalHours}, MUST be ${this.TOTAL_HOURS}!`);
+            }
+        });
+
         return errors.length ? { valid: false, errors } : { valid: true };
     }
 
     generate() {
-        console.log('🚀 BULLETPROOF TIMETABLE GENERATOR v2.0');
-        console.log('='.repeat(70));
+        console.log('🚀 TIMETABLE GENERATOR - FINAL VERSION');
+        console.log('='.repeat(60));
 
-        try {
-            // Initialize empty timetables
-            this._initialize();
-
-            // Generate for each class
-            for (const cls of this.classes) {
-                if (!cls?.name) continue;
-
-                console.log(`\n📚 Generating for: ${cls.name}`);
-                console.log('-'.repeat(50));
-
-                const result = this._generateForClass(cls.name);
-
-                if (!result.success) {
-                    console.error(`❌ Failed for ${cls.name}: ${result.error}`);
-                    return {
-                        success: false,
-                        error: result.error,
-                        diagnostics: this.diagnostics
-                    };
-                }
-            }
-
-            // Generate staff timetables
-            this._generateStaffTimetables();
-
-            // Final validation
-            const validation = this._validateResult();
-
-            console.log('\n' + '='.repeat(70));
-            if (validation.valid) {
-                console.log('✅ SUCCESS: All hours placed!');
-            } else {
-                console.log('⚠️ WARNINGS:', validation.warnings);
-            }
-            console.log('='.repeat(70));
-
-            return {
-                success: true,
-                classTimetables: this.classTimetables,
-                staffTimetables: this.staffTimetables,
-                diagnostics: this.diagnostics
-            };
-
-        } catch (error) {
-            console.error('❌ Error:', error);
+        const validation = this.validate();
+        if (!validation.valid) {
+            console.error('❌ VALIDATION FAILED:');
+            validation.errors.forEach(e => console.error(`  • ${e}`));
             return {
                 success: false,
-                error: error.message,
-                diagnostics: this.diagnostics
+                error: validation.errors.join('; '),
+                classTimetables: {},
+                staffTimetables: {}
             };
         }
+
+        this._initialize();
+
+        let allSuccess = true;
+        for (const cls of this.classes) {
+            if (!cls?.name) continue;
+            console.log(`\n📚 Generating: ${cls.name}`);
+            this.labPositionsUsed[cls.name] = [];
+            const success = this._generateForClass(cls.name);
+            if (!success) allSuccess = false;
+        }
+
+        this._buildStaffTimetables();
+
+        return {
+            success: allSuccess,
+            classTimetables: this.classTimetables,
+            staffTimetables: this.staffTimetables
+        };
     }
 
     _initialize() {
-        // Create empty timetable grids
         this.classes.forEach(cls => {
             if (cls?.name) {
-                this.classTimetables[cls.name] = this.DAYS.map(() => 
-                    Array(this.PERIODS).fill(null)
-                );
+                this.classTimetables[cls.name] = this.DAYS.map(() => Array(this.PERIODS).fill(null));
             }
         });
 
-        // Initialize teacher slot tracking
-        this.staff.filter(s => s?.role === 'staff').forEach(teacher => {
-            if (teacher?.name) {
-                this.teacherSlots[teacher.name] = {};
-            }
+        this.staff.forEach(s => {
+            if (s?.name) this.teacherSlots[s.name] = {};
         });
     }
 
     _generateForClass(className) {
         const subjects = this.subjects.filter(s => s?.className === className);
-        if (!subjects.length) {
-            console.log('  No subjects for this class');
-            return { success: true };
-        }
+        if (!subjects.length) return true;
 
-        // Initialize subject tracking
-        const subjectQueue = [];
+        const labs = subjects.filter(s => s.isContinuous);
+        const theory = subjects.filter(s => !s.isContinuous);
 
-        subjects.forEach(s => {
-            if (!s) return;
+        const tracking = {
+            daysUsed: {},
+            dayPeriodMap: {},
+            periodWeeklyCount: {},
+            periodGlobalUsage: Array(6).fill(0),
+            hoursPlaced: {},
+        };
 
-            const hours = s.hoursPerWeek || 0;
-            const isLab = s.isContinuous === true;
-            const blockSize = isLab ? (s.blockSize || 2) : 1;
-
-            // For labs, calculate number of blocks needed
-            if (isLab) {
-                const numBlocks = Math.floor(hours / blockSize);
-                const remainder = hours % blockSize;
-
-                // Add lab blocks
-                for (let i = 0; i < numBlocks; i++) {
-                    subjectQueue.push({
-                        ...s,
-                        _isLabBlock: true,
-                        _blockSize: blockSize,
-                        _blockNum: i + 1
-                    });
-                }
-
-                // Add remainder as theory if any
-                for (let i = 0; i < remainder; i++) {
-                    subjectQueue.push({
-                        ...s,
-                        _isLabBlock: false,
-                        _blockSize: 1,
-                        _isRemainder: true
-                    });
-
-                    this.diagnostics.relaxationsApplied.push({
-                        type: 'lab_to_theory',
-                        subject: s.name,
-                        reason: `Converted ${remainder}h remainder to theory`
-                    });
-                }
-            } else {
-                // Theory: add individual hours
-                for (let i = 0; i < hours; i++) {
-                    subjectQueue.push({
-                        ...s,
-                        _isLabBlock: false,
-                        _blockSize: 1,
-                        _hourNum: i + 1
-                    });
-                }
-            }
+        theory.forEach(s => {
+            tracking.daysUsed[s.name] = new Set();
+            tracking.dayPeriodMap[s.name] = {};
+            tracking.periodWeeklyCount[s.name] = Array(6).fill(0);
+            tracking.hoursPlaced[s.name] = 0;
         });
 
-        console.log(`  Total placements needed: ${subjectQueue.length}`);
+        const labTracking = {
+            lastDay: {},
+            dayLabCount: {},
+            hoursPlaced: {}
+        };
+        this.DAYS.forEach(d => labTracking.dayLabCount[d] = 0);
+        labs.forEach(lab => labTracking.hoursPlaced[lab.name] = 0);
 
-        // Shuffle queue for variety
-        const shuffledQueue = this._shuffle(subjectQueue);
+        const daySubjectCount = {};
+        this.DAYS.forEach(d => daySubjectCount[d] = new Set());
 
-        // Track placements per subject per day
-        const dailyCount = {}; // subject -> day -> count
-        const periodCount = {}; // subject -> period -> count
-
-        // PHASE 1: Place labs first (need continuous blocks)
-        const labs = shuffledQueue.filter(s => s._isLabBlock);
-        const theory = shuffledQueue.filter(s => !s._isLabBlock);
-
-        console.log(`  Labs to place: ${labs.length} blocks`);
-        console.log(`  Theory to place: ${theory.length} hours`);
-
-        // Place labs
+        // PHASE 1: LABS
+        console.log('\n  🔬 Phase 1: Labs (random positions)...');
         for (const lab of labs) {
-            const placed = this._placeLabBlock(className, lab, dailyCount, periodCount);
-            if (!placed) {
-                console.warn(`  ⚠️ Could not place lab block: ${lab.name}`);
-                // Try converting to theory hours
-                for (let i = 0; i < lab._blockSize; i++) {
-                    theory.push({
-                        ...lab,
-                        _isLabBlock: false,
-                        _blockSize: 1,
-                        _convertedFromLab: true
-                    });
+            const hoursNeeded = lab.hoursPerWeek || 0;
+            const blocksNeeded = Math.floor(hoursNeeded / 2);
+
+            for (let i = 0; i < blocksNeeded; i++) {
+                const success = this._placeLabBlock(className, lab, labTracking, daySubjectCount);
+                if (!success) {
+                    console.error(`  ❌ Failed to place lab: ${lab.name}`);
+                    return false;
                 }
-                this.diagnostics.relaxationsApplied.push({
-                    type: 'lab_split',
-                    subject: lab.name,
-                    reason: 'Split lab block into theory hours'
-                });
+                labTracking.hoursPlaced[lab.name] += 2;
             }
         }
 
-        // Place theory
-        for (const subj of theory) {
-            const placed = this._placeTheoryHour(className, subj, dailyCount, periodCount);
-            if (!placed) {
-                // FORCE MODE: Find ANY free slot
-                const forcePlaced = this._forcePlaceHour(className, subj);
-                if (!forcePlaced) {
-                    return {
-                        success: false,
-                        error: `Cannot place ${subj.name}: No free slots with available teacher`
-                    };
+        // PHASE 2: THEORY FIRST-PASS
+        console.log('\n  📖 Phase 2: Theory spread (one per day)...');
+        const sortedTheory = [...theory].sort((a, b) => (b.hoursPerWeek || 0) - (a.hoursPerWeek || 0));
+
+        for (const subj of sortedTheory) {
+            const hours = subj.hoursPerWeek || 0;
+            const targetDays = Math.min(hours, 5);
+
+            for (let dayIdx = 0; dayIdx < 5 && tracking.hoursPlaced[subj.name] < targetDays; dayIdx++) {
+                if (tracking.daysUsed[subj.name].has(dayIdx)) continue;
+
+                const success = this._placeTheory(className, subj, tracking, dayIdx, daySubjectCount, 'strict');
+                if (success) {
+                    tracking.hoursPlaced[subj.name]++;
                 }
             }
         }
 
-        // Fill any remaining empty slots with revision
-        this._fillEmptySlots(className, subjects);
+        this._logProgress('After Phase 2', sortedTheory, tracking);
 
-        return { success: true };
+        // PHASE 3: REMAINING (strict frequency)
+        console.log('\n  📝 Phase 3: Remaining (with frequency limits)...');
+        for (const subj of sortedTheory) {
+            const target = subj.hoursPerWeek || 0;
+            let attempts = 0;
+            const maxAttempts = 50;
+
+            while (tracking.hoursPlaced[subj.name] < target && attempts < maxAttempts) {
+                const success = this._placeTheory(className, subj, tracking, null, daySubjectCount, 'strict');
+                if (success) {
+                    tracking.hoursPlaced[subj.name]++;
+                } else {
+                    attempts++;
+                }
+            }
+        }
+
+        this._logProgress('After Phase 3', sortedTheory, tracking);
+
+        // PHASE 4: RELAXED (remove frequency limits)
+        console.log('\n  ⚡ Phase 4: Relaxed (no frequency limits)...');
+        for (const subj of sortedTheory) {
+            const target = subj.hoursPerWeek || 0;
+            let attempts = 0;
+            const maxAttempts = 50;
+
+            while (tracking.hoursPlaced[subj.name] < target && attempts < maxAttempts) {
+                const success = this._placeTheory(className, subj, tracking, null, daySubjectCount, 'relaxed');
+                if (success) {
+                    tracking.hoursPlaced[subj.name]++;
+                    console.log(`    ⚡ ${subj.name}: ${tracking.hoursPlaced[subj.name]}/${target}`);
+                } else {
+                    attempts++;
+                }
+            }
+        }
+
+        this._logProgress('After Phase 4', sortedTheory, tracking);
+
+        // PHASE 5: FORCE (only hard constraints)
+        console.log('\n  🔥 Phase 5: Force placement...');
+        for (const subj of sortedTheory) {
+            const target = subj.hoursPerWeek || 0;
+            let attempts = 0;
+            const maxAttempts = 100;
+
+            while (tracking.hoursPlaced[subj.name] < target && attempts < maxAttempts) {
+                const success = this._forcePlaceTheory(className, subj, tracking, daySubjectCount);
+                if (success) {
+                    tracking.hoursPlaced[subj.name]++;
+                    console.log(`    🔥 ${subj.name}: FORCED ${tracking.hoursPlaced[subj.name]}/${target}`);
+                } else {
+                    attempts++;
+                }
+            }
+
+            // Final check
+            if (tracking.hoursPlaced[subj.name] < target) {
+                console.error(`  ❌ FAILED: ${subj.name} only ${tracking.hoursPlaced[subj.name]}/${target}`);
+            }
+        }
+
+        const totalPlaced = this._countPlacedHours(className);
+        console.log(`\n  ✓ Total: ${totalPlaced}/${this.TOTAL_HOURS} hours`);
+
+        if (totalPlaced < this.TOTAL_HOURS) {
+            console.error(`  ❌ WARNING: Missing ${this.TOTAL_HOURS - totalPlaced} hours!`);
+        }
+
+        this._checkDayVariety(daySubjectCount);
+
+        return totalPlaced === this.TOTAL_HOURS;
     }
 
-    _placeLabBlock(className, lab, dailyCount, periodCount) {
-        const blockSize = lab._blockSize || 2;
+    _logProgress(phase, subjects, tracking) {
+        console.log(`\n  📊 ${phase}:`);
+        subjects.forEach(subj => {
+            const target = subj.hoursPerWeek || 0;
+            const placed = tracking.hoursPlaced[subj.name];
+            const status = placed === target ? '✓' : '⚠️';
+            console.log(`    ${status} ${subj.name}: ${placed}/${target}`);
+        });
+    }
+
+    _countPlacedHours(className) {
+        const tt = this.classTimetables[className];
+        let count = 0;
+        for (let dayIdx = 0; dayIdx < 5; dayIdx++) {
+            for (let period = 0; period < this.PERIODS; period++) {
+                if (tt[dayIdx][period]) count++;
+            }
+        }
+        return count;
+    }
+
+    _checkDayVariety(daySubjectCount) {
+        this.DAYS.forEach(day => {
+            const count = daySubjectCount[day].size;
+            if (count < 3) {
+                console.warn(`    ⚠️ ${day}: Only ${count} different subjects`);
+            }
+        });
+    }
+
+    _placeLabBlock(className, lab, labTracking, daySubjectCount) {
         const teacher = lab.teacher;
-
-        // Try each day
-        const dayOrder = this._shuffle([0, 1, 2, 3, 4]);
-
-        for (const dayIdx of dayOrder) {
-            const day = this.DAYS[dayIdx];
-
-            // Try each starting period
-            for (let startPeriod = 0; startPeriod <= this.PERIODS - blockSize; startPeriod++) {
-                // Check if all periods in block are free
-                let canPlace = true;
-
-                for (let i = 0; i < blockSize; i++) {
-                    const period = startPeriod + i;
-
-                    // Check class slot free
-                    if (this.classTimetables[className][dayIdx][period]) {
-                        canPlace = false;
-                        break;
-                    }
-
-                    // HARD: Check teacher not double-booked
-                    const slotKey = `${day}-P${period + 1}`;
-                    if (this.teacherSlots[teacher]?.[slotKey]) {
-                        canPlace = false;
-                        break;
-                    }
-                }
-
-                if (canPlace) {
-                    // Place the lab block
-                    for (let i = 0; i < blockSize; i++) {
-                        const period = startPeriod + i;
-                        const slotKey = `${day}-P${period + 1}`;
-
-                        this.classTimetables[className][dayIdx][period] = {
-                            subject: lab.name,
-                            teacher: teacher,
-                            type: lab.subjectType || 'lab',
-                            isLab: true,
-                            isLabContinuation: i > 0
-                        };
-
-                        // Mark teacher busy
-                        if (!this.teacherSlots[teacher]) {
-                            this.teacherSlots[teacher] = {};
-                        }
-                        this.teacherSlots[teacher][slotKey] = className;
-                    }
-
-                    console.log(`  ✓ Lab ${lab.name}: ${day} P${startPeriod + 1}-P${startPeriod + blockSize}`);
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    _placeTheoryHour(className, subj, dailyCount, periodCount) {
-        const teacher = subj.teacher;
-        const name = subj.name;
-
-        // Initialize tracking
-        if (!dailyCount[name]) dailyCount[name] = {};
-        if (!periodCount[name]) periodCount[name] = {};
-
-        // Score all candidates
+        const tt = this.classTimetables[className];
         const candidates = [];
 
-        for (let dayIdx = 0; dayIdx < this.DAYS.length; dayIdx++) {
+        const labStartPositions = [0, 1, 2, 3, 4];
+        const shuffledPositions = this._shuffle([...labStartPositions]);
+
+        for (let dayIdx = 0; dayIdx < 5; dayIdx++) {
+            const day = this.DAYS[dayIdx];
+            let dayScore = 100;
+
+            if (labTracking.lastDay[lab.name] !== undefined) {
+                const gap = Math.abs(dayIdx - labTracking.lastDay[lab.name]);
+                if (gap >= 2) dayScore += 50;
+                else if (gap === 1) dayScore -= 20;
+            }
+
+            for (const startP of shuffledPositions) {
+                if (startP > this.PERIODS - 2) continue;
+                if (tt[dayIdx][startP] || tt[dayIdx][startP + 1]) continue;
+
+                const slot1 = `${day}-P${startP + 1}`;
+                const slot2 = `${day}-P${startP + 2}`;
+                if (this.teacherSlots[teacher]?.[slot1]) continue;
+                if (this.teacherSlots[teacher]?.[slot2]) continue;
+
+                let score = dayScore;
+
+                if (labTracking.dayLabCount[day] === 0) {
+                    score += 40;
+                } else if (labTracking.dayLabCount[day] === 1) {
+                    score -= 20;
+                }
+
+                const positionsUsed = this.labPositionsUsed[className] || [];
+                const positionUseCount = positionsUsed.filter(p => p === startP).length;
+
+                if (positionUseCount === 0) {
+                    score += 30;
+                } else {
+                    score -= 15 * positionUseCount;
+                }
+
+                if (startP >= 1 && startP <= 3) score += 10;
+
+                candidates.push({ dayIdx, startP, score, day });
+            }
+        }
+
+        if (candidates.length === 0) {
+            console.error(`      ❌ No slots for ${lab.name}`);
+            return false;
+        }
+
+        candidates.sort((a, b) => b.score - a.score);
+        const pick = candidates[0];
+
+        tt[pick.dayIdx][pick.startP] = {
+            subject: lab.name,
+            teacher: teacher,
+            type: lab.subjectType || 'lab',
+            isLab: true
+        };
+        tt[pick.dayIdx][pick.startP + 1] = {
+            subject: lab.name,
+            teacher: teacher,
+            type: lab.subjectType || 'lab',
+            isLab: true,
+            isLabContinuation: true
+        };
+
+        const slot1 = `${pick.day}-P${pick.startP + 1}`;
+        const slot2 = `${pick.day}-P${pick.startP + 2}`;
+        if (!this.teacherSlots[teacher]) this.teacherSlots[teacher] = {};
+        this.teacherSlots[teacher][slot1] = className;
+        this.teacherSlots[teacher][slot2] = className;
+
+        this.labPositionsUsed[className].push(pick.startP);
+        labTracking.lastDay[lab.name] = pick.dayIdx;
+        labTracking.dayLabCount[pick.day]++;
+        daySubjectCount[pick.day].add(lab.name);
+
+        console.log(`      ✓ ${lab.name}: ${pick.day} P${pick.startP + 1}-P${pick.startP + 2}`);
+        return true;
+    }
+
+    _placeTheory(className, subj, tracking, targetDayIdx, daySubjectCount, mode) {
+        const teacher = subj.teacher;
+        const tt = this.classTimetables[className];
+        const candidates = [];
+
+        const daysToTry = targetDayIdx !== null ? [targetDayIdx] : [0, 1, 2, 3, 4];
+
+        for (const dayIdx of daysToTry) {
             const day = this.DAYS[dayIdx];
 
             for (let period = 0; period < this.PERIODS; period++) {
-                // Check class slot free
-                if (this.classTimetables[className][dayIdx][period]) continue;
+                if (tt[dayIdx][period]) continue;
 
-                // HARD: Check teacher not double-booked
                 const slotKey = `${day}-P${period + 1}`;
                 if (this.teacherSlots[teacher]?.[slotKey]) continue;
 
-                // Calculate soft preference score
+                // Avoid same period as previous day
+                if (dayIdx > 0) {
+                    const prevPeriod = tracking.dayPeriodMap[subj.name]?.[dayIdx - 1];
+                    if (prevPeriod === period) continue;
+                }
+
+                // Max 2 continuous
+                if (this._wouldExceedContinuous(tt, dayIdx, period, subj.name, 2)) continue;
+
+                // Strict mode only: Max 2 in same period per week
+                if (mode === 'strict') {
+                    if (tracking.periodWeeklyCount[subj.name][period] >= 2) continue;
+                }
+
                 let score = 100;
 
-                // Prefer mid-day (P2-P5)
-                if (period >= 1 && period <= 4) score += 20;
+                if (!tracking.daysUsed[subj.name].has(dayIdx)) score += 40;
 
-                // Prefer spreading across days (fewer per day = better)
-                const dayCount = dailyCount[name]?.[day] || 0;
-                score -= dayCount * 30;
+                const weeklyUse = tracking.periodWeeklyCount[subj.name][period];
+                if (weeklyUse === 0) score += 30;
+                else score -= 25 * weeklyUse;
 
-                // Prefer variety in periods
-                const pCount = periodCount[name]?.[period] || 0;
-                score -= pCount * 20;
+                score -= tracking.periodGlobalUsage[period] * 5;
 
-                // Avoid more than 2 per day (soft)
-                if (dayCount >= 2) score -= 50;
+                if (!daySubjectCount[day].has(subj.name)) score += 20;
+
+                if (dayIdx > 0) {
+                    const prevPeriod = tracking.dayPeriodMap[subj.name]?.[dayIdx - 1];
+                    if (prevPeriod !== undefined && prevPeriod !== period) {
+                        score += 15;
+                    }
+                }
+
+                if (period >= 1 && period <= 4) score += 10;
 
                 candidates.push({ dayIdx, period, score, day });
             }
@@ -369,194 +421,85 @@ export class TimetableGenerator {
 
         if (candidates.length === 0) return false;
 
-        // Sort by score (best first)
         candidates.sort((a, b) => b.score - a.score);
+        const pick = candidates[0];
 
-        // Pick from top candidates with some randomness
-        const topN = Math.min(5, candidates.length);
-        const pickIdx = Math.floor(this._random() * topN);
-        const pick = candidates[pickIdx];
-
-        // Place it
         const slotKey = `${pick.day}-P${pick.period + 1}`;
-
-        this.classTimetables[className][pick.dayIdx][pick.period] = {
-            subject: name,
+        tt[pick.dayIdx][pick.period] = {
+            subject: subj.name,
             teacher: teacher,
-            type: subj.subjectType || 'core',
-            isLab: false
+            type: subj.subjectType || 'core'
         };
 
-        // Mark teacher busy
-        if (!this.teacherSlots[teacher]) {
-            this.teacherSlots[teacher] = {};
-        }
+        if (!this.teacherSlots[teacher]) this.teacherSlots[teacher] = {};
         this.teacherSlots[teacher][slotKey] = className;
 
-        // Update tracking
-        dailyCount[name][pick.day] = (dailyCount[name][pick.day] || 0) + 1;
-        periodCount[name][pick.period] = (periodCount[name][pick.period] || 0) + 1;
+        tracking.daysUsed[subj.name].add(pick.dayIdx);
+        tracking.dayPeriodMap[subj.name][pick.dayIdx] = pick.period;
+        tracking.periodWeeklyCount[subj.name][pick.period]++;
+        tracking.periodGlobalUsage[pick.period]++;
+        daySubjectCount[pick.day].add(subj.name);
 
         return true;
     }
 
-    _forcePlaceHour(className, subj) {
+    _wouldExceedContinuous(tt, dayIdx, period, subjectName, max) {
+        let count = 1;
+        for (let p = period - 1; p >= 0; p--) {
+            if (tt[dayIdx][p]?.subject === subjectName) count++;
+            else break;
+        }
+        for (let p = period + 1; p < this.PERIODS; p++) {
+            if (tt[dayIdx][p]?.subject === subjectName) count++;
+            else break;
+        }
+        return count > max;
+    }
+
+    _forcePlaceTheory(className, subj, tracking, daySubjectCount) {
         const teacher = subj.teacher;
+        const tt = this.classTimetables[className];
 
-        console.log(`  🔥 FORCE placing: ${subj.name}`);
-
-        // Find ANY free slot where teacher is available
-        for (let dayIdx = 0; dayIdx < this.DAYS.length; dayIdx++) {
+        // Try all possible slots
+        for (let dayIdx = 0; dayIdx < 5; dayIdx++) {
             const day = this.DAYS[dayIdx];
 
             for (let period = 0; period < this.PERIODS; period++) {
-                // Check class slot free
-                if (this.classTimetables[className][dayIdx][period]) continue;
+                if (tt[dayIdx][period]) continue;
 
-                // HARD: Check teacher not double-booked
                 const slotKey = `${day}-P${period + 1}`;
                 if (this.teacherSlots[teacher]?.[slotKey]) continue;
 
-                // Place it
-                this.classTimetables[className][dayIdx][period] = {
+                // Only check max 2 continuous (hard constraint)
+                if (this._wouldExceedContinuous(tt, dayIdx, period, subj.name, 2)) continue;
+
+                // PLACE IT
+                tt[dayIdx][period] = {
                     subject: subj.name,
                     teacher: teacher,
                     type: subj.subjectType || 'core',
-                    isLab: false,
                     isForced: true
                 };
 
-                // Mark teacher busy
-                if (!this.teacherSlots[teacher]) {
-                    this.teacherSlots[teacher] = {};
-                }
+                if (!this.teacherSlots[teacher]) this.teacherSlots[teacher] = {};
                 this.teacherSlots[teacher][slotKey] = className;
 
-                this.diagnostics.relaxationsApplied.push({
-                    type: 'force_place',
-                    subject: subj.name,
-                    slot: slotKey,
-                    reason: 'Forced placement (soft preferences ignored)'
-                });
+                tracking.daysUsed[subj.name].add(dayIdx);
+                tracking.dayPeriodMap[subj.name][dayIdx] = period;
+                tracking.periodWeeklyCount[subj.name][period]++;
+                tracking.periodGlobalUsage[period]++;
+                daySubjectCount[day].add(subj.name);
 
-                console.log(`    ✓ Forced: ${day} P${period + 1}`);
                 return true;
-            }
-        }
-
-        // Last resort: Check if there are ANY empty slots at all
-        for (let dayIdx = 0; dayIdx < this.DAYS.length; dayIdx++) {
-            for (let period = 0; period < this.PERIODS; period++) {
-                if (!this.classTimetables[className][dayIdx][period]) {
-                    console.log(`    Found empty slot at ${this.DAYS[dayIdx]} P${period + 1} but teacher ${teacher} is busy`);
-                }
             }
         }
 
         return false;
     }
 
-    _fillEmptySlots(className, subjects) {
-        // Find a subject to use for filling (prefer core subjects)
-        const fillSubject = subjects.find(s => s?.subjectType === 'core') || subjects[0];
-        if (!fillSubject) return;
-
-        let filled = 0;
-
-        for (let dayIdx = 0; dayIdx < this.DAYS.length; dayIdx++) {
-            const day = this.DAYS[dayIdx];
-
-            for (let period = 0; period < this.PERIODS; period++) {
-                if (this.classTimetables[className][dayIdx][period]) continue;
-
-                const slotKey = `${day}-P${period + 1}`;
-                const teacher = fillSubject.teacher;
-
-                // Check teacher availability
-                if (this.teacherSlots[teacher]?.[slotKey]) {
-                    // Teacher busy, try other subjects
-                    let placed = false;
-                    for (const altSubj of subjects) {
-                        if (!altSubj?.teacher) continue;
-                        if (this.teacherSlots[altSubj.teacher]?.[slotKey]) continue;
-
-                        this.classTimetables[className][dayIdx][period] = {
-                            subject: `${altSubj.name} (Revision)`,
-                            teacher: altSubj.teacher,
-                            type: 'revision',
-                            isRevision: true
-                        };
-
-                        if (!this.teacherSlots[altSubj.teacher]) {
-                            this.teacherSlots[altSubj.teacher] = {};
-                        }
-                        this.teacherSlots[altSubj.teacher][slotKey] = className;
-
-                        filled++;
-                        placed = true;
-                        break;
-                    }
-
-                    if (!placed) {
-                        // No teacher available - leave as study period
-                        this.classTimetables[className][dayIdx][period] = {
-                            subject: 'Study Period',
-                            teacher: '-',
-                            type: 'free',
-                            isStudyPeriod: true
-                        };
-                        filled++;
-                    }
-                } else {
-                    this.classTimetables[className][dayIdx][period] = {
-                        subject: `${fillSubject.name} (Revision)`,
-                        teacher: teacher,
-                        type: 'revision',
-                        isRevision: true
-                    };
-
-                    if (!this.teacherSlots[teacher]) {
-                        this.teacherSlots[teacher] = {};
-                    }
-                    this.teacherSlots[teacher][slotKey] = className;
-
-                    filled++;
-                }
-            }
-        }
-
-        if (filled > 0) {
-            console.log(`  📝 Filled ${filled} empty slots with revision/study`);
-        }
-    }
-
-    _validateResult() {
-        const warnings = [];
-
-        // Check for any null slots
-        Object.keys(this.classTimetables).forEach(className => {
-            const tt = this.classTimetables[className];
-            tt.forEach((daySlots, dayIdx) => {
-                daySlots.forEach((slot, period) => {
-                    if (!slot) {
-                        warnings.push(`Empty slot: ${className} ${this.DAYS[dayIdx]} P${period + 1}`);
-                    }
-                });
-            });
-        });
-
-        return {
-            valid: warnings.length === 0,
-            warnings
-        };
-    }
-
-    _generateStaffTimetables() {
-        const staff = this.staff.filter(s => s?.role === 'staff');
-
-        staff.forEach(teacher => {
+    _buildStaffTimetables() {
+        this.staff.forEach(teacher => {
             if (!teacher?.name) return;
-
             this.staffTimetables[teacher.name] = this.DAYS.map(() =>
                 Array(this.PERIODS).fill(null).map(() => ({
                     subject: 'FREE',
@@ -566,17 +509,15 @@ export class TimetableGenerator {
             );
         });
 
-        // Fill from class timetables
         Object.keys(this.classTimetables).forEach(className => {
             const tt = this.classTimetables[className];
-
             this.DAYS.forEach((day, dayIdx) => {
                 tt[dayIdx].forEach((slot, period) => {
-                    if (slot?.teacher && this.staffTimetables[slot.teacher]) {
+                    if (slot?.teacher && slot.teacher !== '-' && this.staffTimetables[slot.teacher]) {
                         this.staffTimetables[slot.teacher][dayIdx][period] = {
                             subject: slot.subject,
                             class: className,
-                            type: slot.type || 'core'
+                            type: slot.type
                         };
                     }
                 });
