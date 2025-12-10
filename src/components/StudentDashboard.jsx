@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AnimatedBackground from './AnimatedBackground';
 import TimetableGrid from './timetableGrid';
 import { Storage } from '../utils/storage';
@@ -9,15 +9,23 @@ export default function StudentDashboard({ user, onLogout }) {
     const [classes] = useState(Storage.get('classes') || []);
     const [selectedClass, setSelectedClass] = useState(classes[0]?.name || '');
 
+    useEffect(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }, []);
+
     return (
         <>
-            <AnimatedBackground />
+            <AnimatedBackground 
+  variant="flowing"
+  colorScheme="purple"
+  interactive={true}
+/>
             <div className="header">
-                <div className="header-content">
+                <div className="header-content glass-header">
                     <h1>🎓 Student Dashboard</h1>
                     <div className="header-actions">
-                        <button className="theme-toggle">🌙</button>
-                        <button className="btn btn-danger btn-sm" onClick={onLogout}>
+                        <button className="glass-btn-secondary">🌙</button>
+                        <button className="glass-btn-primary" onClick={onLogout}>
                             Logout
                         </button>
                     </div>
@@ -32,13 +40,13 @@ export default function StudentDashboard({ user, onLogout }) {
                     </div>
 
                     {classes.length > 0 && (
-                        <div className="card">
+                        <div className="glass-card">
                             <div className="form-group" style={{maxWidth: '400px'}}>
                                 <label>Select Your Class</label>
                                 <select
                                     value={selectedClass}
                                     onChange={(e) => setSelectedClass(e.target.value)}
-                                    style={{fontSize: '16px', padding: '15px'}}
+                                    className="glass-input"
                                 >
                                     {classes.map(cls => (
                                         <option key={cls.id} value={cls.name}>
@@ -50,7 +58,7 @@ export default function StudentDashboard({ user, onLogout }) {
                         </div>
                     )}
 
-                    <div className="card">
+                    <div className="glass-card">
                         {!timetable ? (
                             <div style={{padding: '60px 20px', textAlign: 'center'}}>
                                 <div style={{fontSize: '60px', marginBottom: '20px'}}>📋</div>
@@ -72,7 +80,7 @@ export default function StudentDashboard({ user, onLogout }) {
                                     className="no-print no-export"
                                 >
                                     <button 
-                                        className="btn btn-primary btn-sm"
+                                        className="glass-btn-primary"
                                         onClick={() => exportToPDF(
                                             'class-timetable-export', 
                                             `${selectedClass}_Timetable.pdf`,
@@ -82,7 +90,7 @@ export default function StudentDashboard({ user, onLogout }) {
                                         📄 Download PDF
                                     </button>
                                     <button 
-                                        className="btn btn-primary btn-sm"
+                                        className="glass-btn-secondary"
                                         onClick={() => window.print()}
                                     >
                                         🖨️ Print

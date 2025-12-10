@@ -16,6 +16,10 @@ export default function Login({ onLogin }) {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, []);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
@@ -73,8 +77,7 @@ export default function Login({ onLogin }) {
   };
 
   return (
-    <>
-      <AnimatedBackground interactive variant="orbit" />
+    <AnimatedBackground interactive variant="vortex">
       <div className="login-container">
         <div className={`login-card enhanced ${mounted ? 'mounted' : ''}`}>
           {/* Animated Logo Section */}
@@ -179,6 +182,6 @@ export default function Login({ onLogin }) {
           </form>
         </div>
       </div>
-    </>
+    </AnimatedBackground>
   );
 }

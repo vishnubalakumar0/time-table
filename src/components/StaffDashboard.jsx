@@ -10,6 +10,10 @@ export default function StaffDashboard({ user, onLogout }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }, []);
+
+    useEffect(() => {
         const fetchTimetable = async () => {
             try {
                 const ttSnap = await getDocs(collection(db, 'timetable'));
@@ -62,7 +66,11 @@ export default function StaffDashboard({ user, onLogout }) {
     if (loading) {
         return (
             <>
-                <AnimatedBackground />
+                <AnimatedBackground 
+  variant="waves"
+  colorScheme="green"
+  interactive={true}
+/>
                 <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh'}}>
                     <div style={{textAlign: 'center'}}>
                         <div style={{fontSize: '48px', marginBottom: '20px'}}>⏳</div>
@@ -75,9 +83,13 @@ export default function StaffDashboard({ user, onLogout }) {
 
     return (
         <>
-            <AnimatedBackground />
+            <AnimatedBackground 
+  variant="waves"
+  colorScheme="green"
+  interactive={true}
+/>
             <div className="header">
-                <div className="header-content">
+                <div className="header-content glass-header">
                     <h1>📘 Staff Dashboard</h1>
 
                     {user && user.name && (
@@ -85,7 +97,7 @@ export default function StaffDashboard({ user, onLogout }) {
                     )}
 
                     <div className="header-actions">
-                        <button className="btn btn-danger btn-sm" onClick={onLogout}>Logout</button>
+                        <button className="glass-btn-primary" onClick={onLogout}>Logout</button>
                     </div>
                 </div>
             </div>
@@ -97,7 +109,7 @@ export default function StaffDashboard({ user, onLogout }) {
                         <h2 className="section-title">My Timetable</h2>
                     </div>
 
-                    <div className="card">
+                    <div className="glass-card">
                         {!user || !user.name ? (
                             <div style={{padding: '60px 20px', textAlign: 'center'}}>
                                 <div style={{fontSize: '60px', marginBottom: '20px'}}>⚠️</div>
@@ -124,13 +136,13 @@ export default function StaffDashboard({ user, onLogout }) {
 
                                 <div style={{marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'center'}} className="no-print no-export">
                                     <button 
-                                        className="btn btn-primary btn-sm"
+                                        className="glass-btn-primary"
                                         onClick={() => exportToPDF('staff-timetable-export', `${user.name}_Timetable.pdf`, { title: `Staff Timetable — ${user.name}` })}
                                     >
                                         📄 Download PDF
                                     </button>
                                     <button 
-                                        className="btn btn-primary btn-sm"
+                                        className="glass-btn-secondary"
                                         onClick={() => window.print()}
                                     >
                                         🖨️ Print

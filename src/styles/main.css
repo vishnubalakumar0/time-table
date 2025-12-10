@@ -96,7 +96,7 @@
     font-size: 28px;
     font-weight: 700;
     margin: 0 0 8px 0;
-    color: #1e293b;
+    color: #a0a7b3;
 }
 
 .login-header p {
@@ -1363,6 +1363,31 @@ body {
     gap: 15px;
 }
 
+
+/* =================================================================
+   FIX: Admin Dashboard Title White Color
+   Add this at the END of your main.css file
+   ================================================================= */
+
+/* Override gradient text for header-content h1 */
+.header-content h1 {
+  color: white !important;
+  -webkit-text-fill-color: white !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  background: none !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Alternative: If you want to keep gradient for other h1 but not dashboard */
+.dashboard-title-white {
+  color: white !important;
+  -webkit-text-fill-color: white !important;
+  background: none !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+
 .header h1 {
     font-size: 1.6em;
     background: linear-gradient(135deg, #667eea, #764ba2);
@@ -1425,7 +1450,7 @@ body {
 
 .section-title {
     font-size: 1.6em;
-    color: #1e293b;
+    color: #e5e7eb;
     font-weight: 700;
 }
 
@@ -2260,12 +2285,19 @@ td {
    ═══════════════════════════════════════════════════════════════════════════════ */
 
 html {
-    scroll-behavior: smooth;
+    scroll-behavior: auto;
+    overflow-x: hidden;
+    height: 100%;
 }
 
-* {
-    scroll-behavior: smooth;
+body {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    height: 100%;
 }
+
+/* * { scroll-behavior: smooth; } */
 
 /* ═══════════════════════════════════════════════════════════════════════════════
    MOBILE RESPONSIVE - TABLET (768px)
@@ -2607,7 +2639,7 @@ html {
     .content,
     .card {
         -webkit-overflow-scrolling: touch;
-        scroll-behavior: smooth;
+        scroll-behavior: auto;
     }
 }
 
@@ -2675,6 +2707,32 @@ html {
 .segmented-item.active{color:#fff;background:linear-gradient(135deg,#a855f7,#6366f1);box-shadow:0 8px 20px rgba(99,102,241,.35)}
 @media (max-width:768px){.segmented-nav{margin:12px auto 0;padding:6px;backdrop-filter:none;box-shadow:none;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.10)}.segmented-item{padding:8px 12px;font-size:13px;transition:none}}
 
+
+/* Dashboard Content Z-Index and Positioning */
+.dashboard-content {
+  position: relative;
+  z-index: 1;
+}
+
+.student-dashboard,
+.staff-dashboard,
+.admin-dashboard,
+.login-container {
+  position: relative;
+  z-index: 1;
+}
+
 @media (prefers-reduced-motion: reduce){
   .segmented-item,.btn,.card,.header,.timetable-cell{transition:none !important;animation:none !important}
 }
+/* glass */
+.glass-card{background:rgba(255,255,255,0.10);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.20);border-radius:16px;padding:24px;box-shadow:0 20px 40px rgba(0,0,0,0.25)}
+.glass-card-secondary{background:rgba(255,255,255,0.05);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:16px}
+.glass-header{background:rgba(255,255,255,0.10);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.20);border-radius:12px;padding:16px}
+.glass-btn-primary{background:rgba(124,58,237,0.85);color:#fff;border:none;border-radius:10px;padding:12px 20px;font-weight:700;transition:transform .2s ease,box-shadow .2s ease}
+.glass-btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 25px rgba(124,58,237,0.45);background:#7c3aed}
+.glass-btn-secondary{background:rgba(255,255,255,0.10);color:#fff;border:1px solid rgba(255,255,255,0.20);border-radius:10px;padding:12px 20px;font-weight:700;transition:transform .2s ease,background .2s ease}
+.glass-btn-secondary:hover{transform:translateY(-2px);background:rgba(255,255,255,0.20)}
+.glass-input{background:rgba(255,255,255,0.06);color:#fff;border:1px solid rgba(255,255,255,0.20);border-radius:10px;padding:12px 14px}
+.glass-input::placeholder{color:rgba(255,255,255,0.5)}
+@media (max-width:768px){.glass-card{padding:16px}.glass-card-secondary{padding:12px}.glass-header{padding:12px}}
