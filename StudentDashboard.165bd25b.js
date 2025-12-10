@@ -739,60 +739,71 @@ function StudentDashboard({ user, onLogout }) {
     const [timetable] = (0, _react.useState)((0, _storage.Storage).get('timetable'));
     const [classes] = (0, _react.useState)((0, _storage.Storage).get('classes') || []);
     const [selectedClass, setSelectedClass] = (0, _react.useState)(classes[0]?.name || '');
+    (0, _react.useEffect)(()=>{
+        window.scrollTo({
+            top: 0,
+            left: 0,
+            behavior: 'auto'
+        });
+    }, []);
     return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _jsxDevRuntime.Fragment), {
         children: [
-            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _animatedBackgroundDefault.default), {}, void 0, false, {
+            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _animatedBackgroundDefault.default), {
+                variant: "flowing",
+                colorScheme: "purple",
+                interactive: true
+            }, void 0, false, {
                 fileName: "src/components/StudentDashboard.jsx",
-                lineNumber: 14,
+                lineNumber: 18,
                 columnNumber: 13
             }, this),
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                 className: "header",
                 children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                    className: "header-content",
+                    className: "header-content glass-header",
                     children: [
                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h1", {
                             children: "\uD83C\uDF93 Student Dashboard"
                         }, void 0, false, {
                             fileName: "src/components/StudentDashboard.jsx",
-                            lineNumber: 17,
+                            lineNumber: 25,
                             columnNumber: 21
                         }, this),
                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                             className: "header-actions",
                             children: [
                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
-                                    className: "theme-toggle",
+                                    className: "glass-btn-secondary",
                                     children: "\uD83C\uDF19"
                                 }, void 0, false, {
                                     fileName: "src/components/StudentDashboard.jsx",
-                                    lineNumber: 19,
+                                    lineNumber: 27,
                                     columnNumber: 25
                                 }, this),
                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
-                                    className: "btn btn-danger btn-sm",
+                                    className: "glass-btn-primary",
                                     onClick: onLogout,
                                     children: "Logout"
                                 }, void 0, false, {
                                     fileName: "src/components/StudentDashboard.jsx",
-                                    lineNumber: 20,
+                                    lineNumber: 28,
                                     columnNumber: 25
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "src/components/StudentDashboard.jsx",
-                            lineNumber: 18,
+                            lineNumber: 26,
                             columnNumber: 21
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "src/components/StudentDashboard.jsx",
-                    lineNumber: 16,
+                    lineNumber: 24,
                     columnNumber: 17
                 }, this)
             }, void 0, false, {
                 fileName: "src/components/StudentDashboard.jsx",
-                lineNumber: 15,
+                lineNumber: 23,
                 columnNumber: 13
             }, this),
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -808,7 +819,7 @@ function StudentDashboard({ user, onLogout }) {
                                     children: "\uD83D\uDCC5"
                                 }, void 0, false, {
                                     fileName: "src/components/StudentDashboard.jsx",
-                                    lineNumber: 30,
+                                    lineNumber: 38,
                                     columnNumber: 25
                                 }, this),
                                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h2", {
@@ -816,17 +827,17 @@ function StudentDashboard({ user, onLogout }) {
                                     children: "Class Timetable"
                                 }, void 0, false, {
                                     fileName: "src/components/StudentDashboard.jsx",
-                                    lineNumber: 31,
+                                    lineNumber: 39,
                                     columnNumber: 25
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "src/components/StudentDashboard.jsx",
-                            lineNumber: 29,
+                            lineNumber: 37,
                             columnNumber: 21
                         }, this),
                         classes.length > 0 && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                            className: "card",
+                            className: "glass-card",
                             children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                 className: "form-group",
                                 style: {
@@ -837,42 +848,39 @@ function StudentDashboard({ user, onLogout }) {
                                         children: "Select Your Class"
                                     }, void 0, false, {
                                         fileName: "src/components/StudentDashboard.jsx",
-                                        lineNumber: 37,
+                                        lineNumber: 45,
                                         columnNumber: 33
                                     }, this),
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("select", {
                                         value: selectedClass,
                                         onChange: (e)=>setSelectedClass(e.target.value),
-                                        style: {
-                                            fontSize: '16px',
-                                            padding: '15px'
-                                        },
+                                        className: "glass-input",
                                         children: classes.map((cls)=>/*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("option", {
                                                 value: cls.name,
                                                 children: cls.name
                                             }, cls.id, false, {
                                                 fileName: "src/components/StudentDashboard.jsx",
-                                                lineNumber: 44,
+                                                lineNumber: 52,
                                                 columnNumber: 41
                                             }, this))
                                     }, void 0, false, {
                                         fileName: "src/components/StudentDashboard.jsx",
-                                        lineNumber: 38,
+                                        lineNumber: 46,
                                         columnNumber: 33
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "src/components/StudentDashboard.jsx",
-                                lineNumber: 36,
+                                lineNumber: 44,
                                 columnNumber: 29
                             }, this)
                         }, void 0, false, {
                             fileName: "src/components/StudentDashboard.jsx",
-                            lineNumber: 35,
+                            lineNumber: 43,
                             columnNumber: 25
                         }, this),
                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                            className: "card",
+                            className: "glass-card",
                             children: !timetable ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                 style: {
                                     padding: '60px 20px',
@@ -887,7 +895,7 @@ function StudentDashboard({ user, onLogout }) {
                                         children: "\uD83D\uDCCB"
                                     }, void 0, false, {
                                         fileName: "src/components/StudentDashboard.jsx",
-                                        lineNumber: 56,
+                                        lineNumber: 64,
                                         columnNumber: 33
                                     }, this),
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h3", {
@@ -898,7 +906,7 @@ function StudentDashboard({ user, onLogout }) {
                                         children: "No Timetable Generated"
                                     }, void 0, false, {
                                         fileName: "src/components/StudentDashboard.jsx",
-                                        lineNumber: 57,
+                                        lineNumber: 65,
                                         columnNumber: 33
                                     }, this),
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
@@ -908,13 +916,13 @@ function StudentDashboard({ user, onLogout }) {
                                         children: "Please contact the administrator."
                                     }, void 0, false, {
                                         fileName: "src/components/StudentDashboard.jsx",
-                                        lineNumber: 60,
+                                        lineNumber: 68,
                                         columnNumber: 33
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "src/components/StudentDashboard.jsx",
-                                lineNumber: 55,
+                                lineNumber: 63,
                                 columnNumber: 29
                             }, this) : /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _jsxDevRuntime.Fragment), {
                                 children: [
@@ -923,7 +931,7 @@ function StudentDashboard({ user, onLogout }) {
                                         className: selectedClass
                                     }, void 0, false, {
                                         fileName: "src/components/StudentDashboard.jsx",
-                                        lineNumber: 66,
+                                        lineNumber: 74,
                                         columnNumber: 33
                                     }, this),
                                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
@@ -935,53 +943,53 @@ function StudentDashboard({ user, onLogout }) {
                                         className: "no-print no-export",
                                         children: [
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
-                                                className: "btn btn-primary btn-sm",
+                                                className: "glass-btn-primary",
                                                 onClick: ()=>(0, _pdfUtils.exportToPDF)('class-timetable-export', `${selectedClass}_Timetable.pdf`, {
                                                         title: selectedClass
                                                     }),
                                                 children: "\uD83D\uDCC4 Download PDF"
                                             }, void 0, false, {
                                                 fileName: "src/components/StudentDashboard.jsx",
-                                                lineNumber: 74,
+                                                lineNumber: 82,
                                                 columnNumber: 37
                                             }, this),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
-                                                className: "btn btn-primary btn-sm",
+                                                className: "glass-btn-secondary",
                                                 onClick: ()=>window.print(),
                                                 children: "\uD83D\uDDA8\uFE0F Print"
                                             }, void 0, false, {
                                                 fileName: "src/components/StudentDashboard.jsx",
-                                                lineNumber: 84,
+                                                lineNumber: 92,
                                                 columnNumber: 37
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/components/StudentDashboard.jsx",
-                                        lineNumber: 70,
+                                        lineNumber: 78,
                                         columnNumber: 33
                                     }, this)
                                 ]
                             }, void 0, true)
                         }, void 0, false, {
                             fileName: "src/components/StudentDashboard.jsx",
-                            lineNumber: 53,
+                            lineNumber: 61,
                             columnNumber: 21
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "src/components/StudentDashboard.jsx",
-                    lineNumber: 28,
+                    lineNumber: 36,
                     columnNumber: 17
                 }, this)
             }, void 0, false, {
                 fileName: "src/components/StudentDashboard.jsx",
-                lineNumber: 27,
+                lineNumber: 35,
                 columnNumber: 13
             }, this)
         ]
     }, void 0, true);
 }
-_s(StudentDashboard, "XvWOj7LaWFHK/gPVoW0TBWz9Us4=");
+_s(StudentDashboard, "Ip8q2VuunHzVFyozgVpLFdK3Gsk=");
 _c = StudentDashboard;
 var _c;
 $RefreshReg$(_c, "StudentDashboard");
@@ -991,7 +999,7 @@ $RefreshReg$(_c, "StudentDashboard");
   globalThis.$RefreshReg$ = prevRefreshReg;
   globalThis.$RefreshSig$ = prevRefreshSig;
 }
-},{"react/jsx-dev-runtime":"dVPUn","react":"jMk1U","./AnimatedBackground":"8BTPX","../utils/storage":"2BjnI","../utils/pdfUtils":"jSko5","@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT","@parcel/transformer-react-refresh-wrap/lib/helpers/helpers.js":"7h6Pi","./timetableGrid":"90aaK"}],"90aaK":[function(require,module,exports,__globalThis) {
+},{"react/jsx-dev-runtime":"dVPUn","react":"jMk1U","./AnimatedBackground":"8BTPX","./timetableGrid":"90aaK","../utils/storage":"2BjnI","../utils/pdfUtils":"jSko5","@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT","@parcel/transformer-react-refresh-wrap/lib/helpers/helpers.js":"7h6Pi"}],"90aaK":[function(require,module,exports,__globalThis) {
 var $parcel$ReactRefreshHelpers$9cd3 = require("@parcel/transformer-react-refresh-wrap/lib/helpers/helpers.js");
 $parcel$ReactRefreshHelpers$9cd3.init();
 var prevRefreshReg = globalThis.$RefreshReg$;

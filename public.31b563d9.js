@@ -726,7 +726,7 @@ var _jsxDevRuntime = require("react/jsx-dev-runtime");
 var _react = require("react");
 var _reactDefault = parcelHelpers.interopDefault(_react);
 var _client = require("react-dom/client");
-var _app = require("./App");
+var _app = require("./app");
 var _appDefault = parcelHelpers.interopDefault(_app);
 var _mainCss = require("./styles/main.css");
 const root = (0, _client.createRoot)(document.getElementById('root'));
@@ -741,7 +741,7 @@ root.render(/*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _appDefault.default), {
   globalThis.$RefreshReg$ = prevRefreshReg;
   globalThis.$RefreshSig$ = prevRefreshSig;
 }
-},{"react/jsx-dev-runtime":"dVPUn","react":"jMk1U","react-dom/client":"hrvwu","./App":"f8V2Q","./styles/main.css":"clPKd","@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT","@parcel/transformer-react-refresh-wrap/lib/helpers/helpers.js":"7h6Pi"}],"dVPUn":[function(require,module,exports,__globalThis) {
+},{"react/jsx-dev-runtime":"dVPUn","react":"jMk1U","react-dom/client":"hrvwu","./app":"2oUVH","./styles/main.css":"clPKd","@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT","@parcel/transformer-react-refresh-wrap/lib/helpers/helpers.js":"7h6Pi"}],"dVPUn":[function(require,module,exports,__globalThis) {
 'use strict';
 module.exports = require("ee51401569654d91");
 
@@ -24984,12 +24984,12 @@ module.exports = require("ef03b89c8fe2794e");
     /* global __REACT_DEVTOOLS_GLOBAL_HOOK__ */ if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ !== 'undefined' && typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop === 'function') __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop(new Error());
 })();
 
-},{}],"f8V2Q":[function(require,module,exports,__globalThis) {
-var $parcel$ReactRefreshHelpers$be2d = require("@parcel/transformer-react-refresh-wrap/lib/helpers/helpers.js");
-$parcel$ReactRefreshHelpers$be2d.init();
+},{}],"2oUVH":[function(require,module,exports,__globalThis) {
+var $parcel$ReactRefreshHelpers$8d18 = require("@parcel/transformer-react-refresh-wrap/lib/helpers/helpers.js");
+$parcel$ReactRefreshHelpers$8d18.init();
 var prevRefreshReg = globalThis.$RefreshReg$;
 var prevRefreshSig = globalThis.$RefreshSig$;
-$parcel$ReactRefreshHelpers$be2d.prelude(module);
+$parcel$ReactRefreshHelpers$8d18.prelude(module);
 
 try {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
@@ -25003,11 +25003,11 @@ var _loginDefault = parcelHelpers.interopDefault(_login);
 var _storage = require("./utils/storage");
 var _s = $RefreshSig$();
 // Import dashboards dynamically to keep bundle small
-const AdminDashboard = /*#__PURE__*/ (0, _reactDefault.default).lazy(()=>require("add519e9ee65ff59"));
+const AdminDashboard = /*#__PURE__*/ (0, _reactDefault.default).lazy(()=>require("2809f61f3f41ad55"));
 _c = AdminDashboard;
-const StaffDashboard = /*#__PURE__*/ (0, _reactDefault.default).lazy(()=>require("b2deb22dc5110565"));
+const StaffDashboard = /*#__PURE__*/ (0, _reactDefault.default).lazy(()=>require("372f419a4a126629"));
 _c1 = StaffDashboard;
-const StudentDashboard = /*#__PURE__*/ (0, _reactDefault.default).lazy(()=>require("9216d0b6b8457032"));
+const StudentDashboard = /*#__PURE__*/ (0, _reactDefault.default).lazy(()=>require("c51236fffd641ca7"));
 _c2 = StudentDashboard;
 function App() {
     _s();
@@ -25021,7 +25021,7 @@ function App() {
     if (!user) return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _loginDefault.default), {
         onLogin: setUser
     }, void 0, false, {
-        fileName: "src/App.jsx",
+        fileName: "src/app.jsx",
         lineNumber: 24,
         columnNumber: 16
     }, this);
@@ -25029,7 +25029,7 @@ function App() {
         fallback: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
             children: "Loading..."
         }, void 0, false, {
-            fileName: "src/App.jsx",
+            fileName: "src/app.jsx",
             lineNumber: 28,
             columnNumber: 35
         }, void 0),
@@ -25038,7 +25038,7 @@ function App() {
                 user: user,
                 onLogout: handleLogout
             }, void 0, false, {
-                fileName: "src/App.jsx",
+                fileName: "src/app.jsx",
                 lineNumber: 29,
                 columnNumber: 39
             }, this),
@@ -25046,7 +25046,7 @@ function App() {
                 user: user,
                 onLogout: handleLogout
             }, void 0, false, {
-                fileName: "src/App.jsx",
+                fileName: "src/app.jsx",
                 lineNumber: 30,
                 columnNumber: 39
             }, this),
@@ -25054,13 +25054,13 @@ function App() {
                 user: user,
                 onLogout: handleLogout
             }, void 0, false, {
-                fileName: "src/App.jsx",
+                fileName: "src/app.jsx",
                 lineNumber: 31,
                 columnNumber: 41
             }, this)
         ]
     }, void 0, true, {
-        fileName: "src/App.jsx",
+        fileName: "src/app.jsx",
         lineNumber: 28,
         columnNumber: 9
     }, this);
@@ -25073,12 +25073,12 @@ $RefreshReg$(_c1, "StaffDashboard");
 $RefreshReg$(_c2, "StudentDashboard");
 $RefreshReg$(_c3, "App");
 
-  $parcel$ReactRefreshHelpers$be2d.postlude(module);
+  $parcel$ReactRefreshHelpers$8d18.postlude(module);
 } finally {
   globalThis.$RefreshReg$ = prevRefreshReg;
   globalThis.$RefreshSig$ = prevRefreshSig;
 }
-},{"react/jsx-dev-runtime":"dVPUn","react":"jMk1U","./components/Login":"cBE9g","./utils/storage":"2BjnI","add519e9ee65ff59":"hZ41r","b2deb22dc5110565":"9338X","9216d0b6b8457032":"bQB7j","@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT","@parcel/transformer-react-refresh-wrap/lib/helpers/helpers.js":"7h6Pi"}],"cBE9g":[function(require,module,exports,__globalThis) {
+},{"react/jsx-dev-runtime":"dVPUn","react":"jMk1U","./components/Login":"cBE9g","./utils/storage":"2BjnI","2809f61f3f41ad55":"hZ41r","372f419a4a126629":"9338X","c51236fffd641ca7":"bQB7j","@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT","@parcel/transformer-react-refresh-wrap/lib/helpers/helpers.js":"7h6Pi"}],"cBE9g":[function(require,module,exports,__globalThis) {
 var $parcel$ReactRefreshHelpers$5b1d = require("@parcel/transformer-react-refresh-wrap/lib/helpers/helpers.js");
 $parcel$ReactRefreshHelpers$5b1d.init();
 var prevRefreshReg = globalThis.$RefreshReg$;
@@ -25108,6 +25108,13 @@ function Login({ onLogin }) {
     const [mounted, setMounted] = (0, _react.useState)(false);
     (0, _react.useEffect)(()=>{
         setMounted(true);
+    }, []);
+    (0, _react.useEffect)(()=>{
+        window.scrollTo({
+            top: 0,
+            left: 0,
+            behavior: 'auto'
+        });
     }, []);
     const handleLogin = async (e)=>{
         e.preventDefault();
@@ -25160,324 +25167,320 @@ function Login({ onLogin }) {
         setError(msg);
         setTimeout(()=>setError(''), 4000);
     };
-    return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _jsxDevRuntime.Fragment), {
-        children: [
-            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _animatedBackgroundDefault.default), {
-                interactive: true,
-                variant: "orbit"
-            }, void 0, false, {
-                fileName: "src/components/Login.jsx",
-                lineNumber: 77,
-                columnNumber: 7
-            }, this),
-            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                className: "login-container",
-                children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                    className: `login-card enhanced ${mounted ? 'mounted' : ''}`,
-                    children: [
-                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                            className: "login-logo-section",
-                            children: [
-                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                    className: "header-particle"
+    return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _animatedBackgroundDefault.default), {
+        interactive: true,
+        variant: "vortex",
+        children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+            className: "login-container",
+            children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                className: `login-card enhanced ${mounted ? 'mounted' : ''}`,
+                children: [
+                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                        className: "login-logo-section",
+                        children: [
+                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                className: "header-particle"
+                            }, void 0, false, {
+                                fileName: "src/components/Login.jsx",
+                                lineNumber: 86,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                className: "header-particle"
+                            }, void 0, false, {
+                                fileName: "src/components/Login.jsx",
+                                lineNumber: 87,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                className: "header-particle"
+                            }, void 0, false, {
+                                fileName: "src/components/Login.jsx",
+                                lineNumber: 88,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                className: "header-particle"
+                            }, void 0, false, {
+                                fileName: "src/components/Login.jsx",
+                                lineNumber: 89,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                className: "logo-circle",
+                                children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("img", {
+                                    className: "logo-img",
+                                    src: "https://img.icons8.com/fluency/96/calendar.png",
+                                    alt: "Calendar"
                                 }, void 0, false, {
                                     fileName: "src/components/Login.jsx",
-                                    lineNumber: 83,
-                                    columnNumber: 13
-                                }, this),
-                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                    className: "header-particle"
-                                }, void 0, false, {
-                                    fileName: "src/components/Login.jsx",
-                                    lineNumber: 84,
-                                    columnNumber: 13
-                                }, this),
-                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                    className: "header-particle"
-                                }, void 0, false, {
-                                    fileName: "src/components/Login.jsx",
-                                    lineNumber: 85,
-                                    columnNumber: 13
-                                }, this),
-                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                    className: "header-particle"
-                                }, void 0, false, {
-                                    fileName: "src/components/Login.jsx",
-                                    lineNumber: 86,
-                                    columnNumber: 13
-                                }, this),
-                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                    className: "logo-circle",
-                                    children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("img", {
-                                        className: "logo-img",
-                                        src: "https://img.icons8.com/fluency/96/calendar.png",
-                                        alt: "Calendar"
+                                    lineNumber: 92,
+                                    columnNumber: 15
+                                }, this)
+                            }, void 0, false, {
+                                fileName: "src/components/Login.jsx",
+                                lineNumber: 91,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h1", {
+                                className: "login-main-title",
+                                children: "Timetable Generator"
+                            }, void 0, false, {
+                                fileName: "src/components/Login.jsx",
+                                lineNumber: 98,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
+                                className: "login-tagline",
+                                children: "Smart Scheduling Made Simple"
+                            }, void 0, false, {
+                                fileName: "src/components/Login.jsx",
+                                lineNumber: 99,
+                                columnNumber: 13
+                            }, this)
+                        ]
+                    }, void 0, true, {
+                        fileName: "src/components/Login.jsx",
+                        lineNumber: 84,
+                        columnNumber: 11
+                    }, this),
+                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("form", {
+                        onSubmit: handleLogin,
+                        className: "login-form-enhanced",
+                        noValidate: true,
+                        children: [
+                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                className: "form-header",
+                                children: [
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h2", {
+                                        className: "form-title",
+                                        children: "Welcome Back"
                                     }, void 0, false, {
                                         fileName: "src/components/Login.jsx",
-                                        lineNumber: 89,
+                                        lineNumber: 105,
+                                        columnNumber: 15
+                                    }, this),
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
+                                        className: "form-subtitle",
+                                        children: "Sign in to continue"
+                                    }, void 0, false, {
+                                        fileName: "src/components/Login.jsx",
+                                        lineNumber: 106,
                                         columnNumber: 15
                                     }, this)
-                                }, void 0, false, {
-                                    fileName: "src/components/Login.jsx",
-                                    lineNumber: 88,
-                                    columnNumber: 13
-                                }, this),
-                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h1", {
-                                    className: "login-main-title",
-                                    children: "Timetable Generator"
-                                }, void 0, false, {
-                                    fileName: "src/components/Login.jsx",
-                                    lineNumber: 95,
-                                    columnNumber: 13
-                                }, this),
-                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
-                                    className: "login-tagline",
-                                    children: "Smart Scheduling Made Simple"
-                                }, void 0, false, {
-                                    fileName: "src/components/Login.jsx",
-                                    lineNumber: 96,
-                                    columnNumber: 13
-                                }, this)
-                            ]
-                        }, void 0, true, {
-                            fileName: "src/components/Login.jsx",
-                            lineNumber: 81,
-                            columnNumber: 11
-                        }, this),
-                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("form", {
-                            onSubmit: handleLogin,
-                            className: "login-form-enhanced",
-                            noValidate: true,
-                            children: [
-                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                    className: "form-header",
-                                    children: [
-                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h2", {
-                                            className: "form-title",
-                                            children: "Welcome Back"
+                                ]
+                            }, void 0, true, {
+                                fileName: "src/components/Login.jsx",
+                                lineNumber: 104,
+                                columnNumber: 13
+                            }, this),
+                            error && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                className: "error-alert animated",
+                                children: [
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                        className: "error-icon",
+                                        children: "\u26A0\uFE0F"
+                                    }, void 0, false, {
+                                        fileName: "src/components/Login.jsx",
+                                        lineNumber: 112,
+                                        columnNumber: 17
+                                    }, this),
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                        className: "error-text",
+                                        children: error
+                                    }, void 0, false, {
+                                        fileName: "src/components/Login.jsx",
+                                        lineNumber: 113,
+                                        columnNumber: 17
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "src/components/Login.jsx",
+                                lineNumber: 111,
+                                columnNumber: 15
+                            }, this),
+                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                className: "input-group enhanced",
+                                children: [
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                        className: "input-icon-wrapper",
+                                        children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                            className: "input-icon",
+                                            children: "\uD83D\uDC64"
                                         }, void 0, false, {
                                             fileName: "src/components/Login.jsx",
-                                            lineNumber: 102,
-                                            columnNumber: 15
-                                        }, this),
-                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
-                                            className: "form-subtitle",
-                                            children: "Sign in to continue"
-                                        }, void 0, false, {
-                                            fileName: "src/components/Login.jsx",
-                                            lineNumber: 103,
-                                            columnNumber: 15
-                                        }, this)
-                                    ]
-                                }, void 0, true, {
-                                    fileName: "src/components/Login.jsx",
-                                    lineNumber: 101,
-                                    columnNumber: 13
-                                }, this),
-                                error && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                    className: "error-alert animated",
-                                    children: [
-                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                            className: "error-icon",
-                                            children: "\u26A0\uFE0F"
-                                        }, void 0, false, {
-                                            fileName: "src/components/Login.jsx",
-                                            lineNumber: 109,
-                                            columnNumber: 17
-                                        }, this),
-                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                            className: "error-text",
-                                            children: error
-                                        }, void 0, false, {
-                                            fileName: "src/components/Login.jsx",
-                                            lineNumber: 110,
+                                            lineNumber: 120,
                                             columnNumber: 17
                                         }, this)
-                                    ]
-                                }, void 0, true, {
-                                    fileName: "src/components/Login.jsx",
-                                    lineNumber: 108,
-                                    columnNumber: 15
-                                }, this),
-                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                    className: "input-group enhanced",
+                                    }, void 0, false, {
+                                        fileName: "src/components/Login.jsx",
+                                        lineNumber: 119,
+                                        columnNumber: 15
+                                    }, this),
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("input", {
+                                        type: "text",
+                                        value: username,
+                                        onChange: (e)=>setUsername(e.target.value),
+                                        className: "input-field",
+                                        autoComplete: "username",
+                                        disabled: loading
+                                    }, void 0, false, {
+                                        fileName: "src/components/Login.jsx",
+                                        lineNumber: 122,
+                                        columnNumber: 15
+                                    }, this),
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("label", {
+                                        className: `floating-label ${username ? 'active' : ''}`,
+                                        children: "Username"
+                                    }, void 0, false, {
+                                        fileName: "src/components/Login.jsx",
+                                        lineNumber: 130,
+                                        columnNumber: 15
+                                    }, this),
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                        className: "input-underline"
+                                    }, void 0, false, {
+                                        fileName: "src/components/Login.jsx",
+                                        lineNumber: 133,
+                                        columnNumber: 15
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "src/components/Login.jsx",
+                                lineNumber: 118,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                className: "input-group enhanced",
+                                children: [
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                        className: "input-icon-wrapper",
+                                        children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                            className: "input-icon",
+                                            children: "\uD83D\uDD12"
+                                        }, void 0, false, {
+                                            fileName: "src/components/Login.jsx",
+                                            lineNumber: 139,
+                                            columnNumber: 17
+                                        }, this)
+                                    }, void 0, false, {
+                                        fileName: "src/components/Login.jsx",
+                                        lineNumber: 138,
+                                        columnNumber: 15
+                                    }, this),
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("input", {
+                                        type: showPassword ? 'text' : 'password',
+                                        value: password,
+                                        onChange: (e)=>setPassword(e.target.value),
+                                        className: "input-field",
+                                        autoComplete: "current-password",
+                                        disabled: loading
+                                    }, void 0, false, {
+                                        fileName: "src/components/Login.jsx",
+                                        lineNumber: 141,
+                                        columnNumber: 15
+                                    }, this),
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("label", {
+                                        className: `floating-label ${password ? 'active' : ''}`,
+                                        children: "Password"
+                                    }, void 0, false, {
+                                        fileName: "src/components/Login.jsx",
+                                        lineNumber: 149,
+                                        columnNumber: 15
+                                    }, this),
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
+                                        type: "button",
+                                        className: "password-toggle",
+                                        onClick: ()=>setShowPassword(!showPassword),
+                                        disabled: loading,
+                                        children: showPassword ? "\uD83D\uDC41\uFE0F" : "\uD83D\uDC41\uFE0F\u200D\uD83D\uDDE8\uFE0F"
+                                    }, void 0, false, {
+                                        fileName: "src/components/Login.jsx",
+                                        lineNumber: 152,
+                                        columnNumber: 15
+                                    }, this),
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                        className: "input-underline"
+                                    }, void 0, false, {
+                                        fileName: "src/components/Login.jsx",
+                                        lineNumber: 160,
+                                        columnNumber: 15
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "src/components/Login.jsx",
+                                lineNumber: 137,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
+                                type: "submit",
+                                className: `btn-login enhanced ${loading ? 'loading' : ''}`,
+                                disabled: loading,
+                                children: loading ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _jsxDevRuntime.Fragment), {
                                     children: [
-                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                            className: "input-icon-wrapper",
-                                            children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                                className: "input-icon",
-                                                children: "\uD83D\uDC64"
-                                            }, void 0, false, {
-                                                fileName: "src/components/Login.jsx",
-                                                lineNumber: 117,
-                                                columnNumber: 17
-                                            }, this)
+                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                            className: "spinner-circle"
                                         }, void 0, false, {
                                             fileName: "src/components/Login.jsx",
-                                            lineNumber: 116,
-                                            columnNumber: 15
+                                            lineNumber: 172,
+                                            columnNumber: 19
                                         }, this),
-                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("input", {
-                                            type: "text",
-                                            value: username,
-                                            onChange: (e)=>setUsername(e.target.value),
-                                            className: "input-field",
-                                            autoComplete: "username",
-                                            disabled: loading
+                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                            children: "Signing in..."
                                         }, void 0, false, {
                                             fileName: "src/components/Login.jsx",
-                                            lineNumber: 119,
-                                            columnNumber: 15
-                                        }, this),
-                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("label", {
-                                            className: `floating-label ${username ? 'active' : ''}`,
-                                            children: "Username"
-                                        }, void 0, false, {
-                                            fileName: "src/components/Login.jsx",
-                                            lineNumber: 127,
-                                            columnNumber: 15
-                                        }, this),
-                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                            className: "input-underline"
-                                        }, void 0, false, {
-                                            fileName: "src/components/Login.jsx",
-                                            lineNumber: 130,
-                                            columnNumber: 15
+                                            lineNumber: 173,
+                                            columnNumber: 19
                                         }, this)
                                     ]
-                                }, void 0, true, {
-                                    fileName: "src/components/Login.jsx",
-                                    lineNumber: 115,
-                                    columnNumber: 13
-                                }, this),
-                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                    className: "input-group enhanced",
+                                }, void 0, true) : /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _jsxDevRuntime.Fragment), {
                                     children: [
-                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                            className: "input-icon-wrapper",
-                                            children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                                className: "input-icon",
-                                                children: "\uD83D\uDD12"
-                                            }, void 0, false, {
-                                                fileName: "src/components/Login.jsx",
-                                                lineNumber: 136,
-                                                columnNumber: 17
-                                            }, this)
+                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                            children: "Sign In"
                                         }, void 0, false, {
                                             fileName: "src/components/Login.jsx",
-                                            lineNumber: 135,
-                                            columnNumber: 15
+                                            lineNumber: 177,
+                                            columnNumber: 19
                                         }, this),
-                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("input", {
-                                            type: showPassword ? 'text' : 'password',
-                                            value: password,
-                                            onChange: (e)=>setPassword(e.target.value),
-                                            className: "input-field",
-                                            autoComplete: "current-password",
-                                            disabled: loading
+                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                            className: "btn-arrow",
+                                            children: "\u2192"
                                         }, void 0, false, {
                                             fileName: "src/components/Login.jsx",
-                                            lineNumber: 138,
-                                            columnNumber: 15
-                                        }, this),
-                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("label", {
-                                            className: `floating-label ${password ? 'active' : ''}`,
-                                            children: "Password"
-                                        }, void 0, false, {
-                                            fileName: "src/components/Login.jsx",
-                                            lineNumber: 146,
-                                            columnNumber: 15
-                                        }, this),
-                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
-                                            type: "button",
-                                            className: "password-toggle",
-                                            onClick: ()=>setShowPassword(!showPassword),
-                                            disabled: loading,
-                                            children: showPassword ? "\uD83D\uDC41\uFE0F" : "\uD83D\uDC41\uFE0F\u200D\uD83D\uDDE8\uFE0F"
-                                        }, void 0, false, {
-                                            fileName: "src/components/Login.jsx",
-                                            lineNumber: 149,
-                                            columnNumber: 15
-                                        }, this),
-                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                                            className: "input-underline"
-                                        }, void 0, false, {
-                                            fileName: "src/components/Login.jsx",
-                                            lineNumber: 157,
-                                            columnNumber: 15
+                                            lineNumber: 178,
+                                            columnNumber: 19
                                         }, this)
                                     ]
-                                }, void 0, true, {
-                                    fileName: "src/components/Login.jsx",
-                                    lineNumber: 134,
-                                    columnNumber: 13
-                                }, this),
-                                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
-                                    type: "submit",
-                                    className: `btn-login enhanced ${loading ? 'loading' : ''}`,
-                                    disabled: loading,
-                                    children: loading ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _jsxDevRuntime.Fragment), {
-                                        children: [
-                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                                className: "spinner-circle"
-                                            }, void 0, false, {
-                                                fileName: "src/components/Login.jsx",
-                                                lineNumber: 169,
-                                                columnNumber: 19
-                                            }, this),
-                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                                children: "Signing in..."
-                                            }, void 0, false, {
-                                                fileName: "src/components/Login.jsx",
-                                                lineNumber: 170,
-                                                columnNumber: 19
-                                            }, this)
-                                        ]
-                                    }, void 0, true) : /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _jsxDevRuntime.Fragment), {
-                                        children: [
-                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                                children: "Sign In"
-                                            }, void 0, false, {
-                                                fileName: "src/components/Login.jsx",
-                                                lineNumber: 174,
-                                                columnNumber: 19
-                                            }, this),
-                                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
-                                                className: "btn-arrow",
-                                                children: "\u2192"
-                                            }, void 0, false, {
-                                                fileName: "src/components/Login.jsx",
-                                                lineNumber: 175,
-                                                columnNumber: 19
-                                            }, this)
-                                        ]
-                                    }, void 0, true)
-                                }, void 0, false, {
-                                    fileName: "src/components/Login.jsx",
-                                    lineNumber: 162,
-                                    columnNumber: 13
-                                }, this)
-                            ]
-                        }, void 0, true, {
-                            fileName: "src/components/Login.jsx",
-                            lineNumber: 100,
-                            columnNumber: 11
-                        }, this)
-                    ]
-                }, void 0, true, {
-                    fileName: "src/components/Login.jsx",
-                    lineNumber: 79,
-                    columnNumber: 9
-                }, this)
-            }, void 0, false, {
+                                }, void 0, true)
+                            }, void 0, false, {
+                                fileName: "src/components/Login.jsx",
+                                lineNumber: 165,
+                                columnNumber: 13
+                            }, this)
+                        ]
+                    }, void 0, true, {
+                        fileName: "src/components/Login.jsx",
+                        lineNumber: 103,
+                        columnNumber: 11
+                    }, this)
+                ]
+            }, void 0, true, {
                 fileName: "src/components/Login.jsx",
-                lineNumber: 78,
-                columnNumber: 7
+                lineNumber: 82,
+                columnNumber: 9
             }, this)
-        ]
-    }, void 0, true);
+        }, void 0, false, {
+            fileName: "src/components/Login.jsx",
+            lineNumber: 81,
+            columnNumber: 7
+        }, this)
+    }, void 0, false, {
+        fileName: "src/components/Login.jsx",
+        lineNumber: 80,
+        columnNumber: 5
+    }, this);
 }
-_s(Login, "+m2qiZtu/x1dJnioDZF3FlsvWH0=");
+_s(Login, "LSlPwYP74f0Q4jjQn0Jl1znLj2Q=");
 _c = Login;
 var _c;
 $RefreshReg$(_c, "Login");
@@ -25502,406 +25505,102 @@ var _jsxDevRuntime = require("react/jsx-dev-runtime");
 var _react = require("react");
 var _reactDefault = parcelHelpers.interopDefault(_react);
 var _s = $RefreshSig$();
-function AnimatedBackground({ interactive = false, forceFull = false, variant = 'network' }) {
+function AnimatedBackground({ children }) {
     _s();
     const canvasRef = (0, _react.useRef)(null);
-    const [perfFriendly, setPerfFriendly] = (0, _react.useState)(false);
-    const [pointer, setPointer] = (0, _react.useState)({
-        x: null,
-        y: null,
-        active: false
-    });
-    const [impulse, setImpulse] = (0, _react.useState)(0);
-    const rippleRef = (0, _react.useRef)({
-        active: false,
-        x: 0,
-        y: 0,
-        r: 0,
-        alpha: 0
-    });
-    // Static decorative particles
-    const particles = (0, _react.useMemo)(()=>{
-        return Array.from({
-            length: 40
-        }, (_, i)=>({
-                id: i,
-                left: Math.random() * 100,
-                delay: Math.random() * 60,
-                size: Math.random() * 20 + 5,
-                duration: Math.random() * 20 + 30
-            }));
-    }, []);
-    (0, _react.useEffect)(()=>{
-        try {
-            const reduce = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-            const mobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-            setPerfFriendly(!!(reduce || mobile && !forceFull));
-        } catch  {}
-    }, [
-        forceFull
-    ]);
     (0, _react.useEffect)(()=>{
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        // Particle system
-        const particlesArray = [];
-        const isOrbit = variant === 'orbit';
-        const particleCount = perfFriendly ? interactive ? isOrbit ? 40 : 30 : 0 : isOrbit ? 100 : 80;
-        const maxDistance = perfFriendly ? 80 : 120;
-        const centers = isOrbit ? Array.from({
-            length: perfFriendly ? 3 : 6
-        }, ()=>({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height
-            })) : null;
-        class Particle {
-            constructor(){
-                this.size = Math.random() * 3 + 1;
-                this.color = `rgba(255, 255, 255, ${Math.random() * 0.5 + 0.3})`;
-                if (isOrbit) {
-                    const c = centers[Math.floor(Math.random() * centers.length)];
-                    this.cx = c.x;
-                    this.cy = c.y;
-                    this.r = Math.random() * (perfFriendly ? 90 : 140) + 40;
-                    this.a = Math.random() * Math.PI * 2;
-                    this.speed = (perfFriendly ? 0.004 : 0.008) * (0.6 + Math.random() * 0.8);
-                    this.x = this.cx + Math.cos(this.a) * this.r;
-                    this.y = this.cy + Math.sin(this.a) * this.r;
-                } else {
-                    this.x = Math.random() * canvas.width;
-                    this.y = Math.random() * canvas.height;
-                    this.speedX = (Math.random() - 0.5) * (perfFriendly ? 0.3 : 0.6);
-                    this.speedY = (Math.random() - 0.5) * (perfFriendly ? 0.3 : 0.6);
-                }
-            }
-            update() {
-                if (isOrbit) {
-                    this.a += this.speed;
-                    const tx = this.cx + Math.cos(this.a) * this.r;
-                    const ty = this.cy + Math.sin(this.a) * this.r;
-                    this.x += (tx - this.x) * 0.1;
-                    this.y += (ty - this.y) * 0.1;
-                    if (interactive && pointer.active && pointer.x != null && pointer.y != null) {
-                        const dcx = pointer.x - this.cx;
-                        const dcy = pointer.y - this.cy;
-                        const d = Math.hypot(dcx, dcy) || 1;
-                        const influence = Math.min(1, 200 / d);
-                        this.speed += (perfFriendly ? 0.0004 : 0.0008) * influence;
-                        if (impulse > 0) this.r += (perfFriendly ? 0.4 : 0.8) * influence;
-                    }
-                } else {
-                    this.x += this.speedX;
-                    this.y += this.speedY;
-                    this.speedX *= perfFriendly ? 0.985 : 0.98;
-                    this.speedY *= perfFriendly ? 0.985 : 0.98;
-                    if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
-                    if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
-                    if (interactive && pointer.active && pointer.x != null && pointer.y != null) {
-                        const dx = pointer.x - this.x;
-                        const dy = pointer.y - this.y;
-                        const dist = Math.hypot(dx, dy) || 1;
-                        const tx = -dy / dist;
-                        const ty = dx / dist;
-                        const swirl = perfFriendly ? 0.02 : 0.04;
-                        const attract = perfFriendly ? 0.01 : 0.02;
-                        this.speedX += tx * swirl + dx / dist * attract;
-                        this.speedY += ty * swirl + dy / dist * attract;
-                        if (impulse > 0) {
-                            const ex = -(dx / dist) * impulse * (perfFriendly ? 0.2 : 0.4);
-                            const ey = -(dy / dist) * impulse * (perfFriendly ? 0.2 : 0.4);
-                            this.speedX += ex;
-                            this.speedY += ey;
-                        }
-                    }
-                }
-            }
-            draw() {
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-        // Initialize particles
-        for(let i = 0; i < particleCount; i++)particlesArray.push(new Particle());
-        // Connect particles with lines
-        function connectParticles() {
-            for(let i = 0; i < particlesArray.length; i++)for(let j = i + 1; j < particlesArray.length; j++){
-                const dx = particlesArray[i].x - particlesArray[j].x;
-                const dy = particlesArray[i].y - particlesArray[j].y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                if (distance < maxDistance) {
-                    const opacity = 1 - distance / maxDistance;
-                    ctx.strokeStyle = `rgba(255, 255, 255, ${opacity * 0.3})`;
-                    ctx.lineWidth = 1;
-                    ctx.beginPath();
-                    ctx.moveTo(particlesArray[i].x, particlesArray[i].y);
-                    ctx.lineTo(particlesArray[j].x, particlesArray[j].y);
-                    ctx.stroke();
-                }
-            }
-        }
+        // Set canvas size
+        const resize = ()=>{
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        };
+        resize();
+        // Create simple particles
+        const particles = [];
+        const particleCount = 50;
+        for(let i = 0; i < particleCount; i++)particles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            vx: (Math.random() - 0.5) * 0.5,
+            vy: (Math.random() - 0.5) * 0.5,
+            size: Math.random() * 2 + 1
+        });
         // Animation loop
         function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            particlesArray.forEach((particle)=>{
-                particle.update();
-                particle.draw();
-            });
-            if (!isOrbit && particleCount > 0) connectParticles();
-            if (rippleRef.current.active) {
-                const rp = rippleRef.current;
+            // Clear with black background
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Update and draw particles
+            particles.forEach((p)=>{
+                // Update position
+                p.x += p.vx;
+                p.y += p.vy;
+                // Wrap around edges
+                if (p.x < 0) p.x = canvas.width;
+                if (p.x > canvas.width) p.x = 0;
+                if (p.y < 0) p.y = canvas.height;
+                if (p.y > canvas.height) p.y = 0;
+                // Draw particle
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
                 ctx.beginPath();
-                ctx.arc(rp.x, rp.y, rp.r, 0, Math.PI * 2);
-                ctx.strokeStyle = `rgba(255,255,255,${rp.alpha})`;
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                rp.r += perfFriendly ? 2 : 4;
-                rp.alpha -= perfFriendly ? 0.02 : 0.03;
-                if (rp.alpha <= 0) rp.active = false;
-            }
-            if (impulse > 0) setImpulse((prev)=>Math.max(prev - 0.02, 0));
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
             requestAnimationFrame(animate);
         }
         animate();
         // Handle resize
-        const handleResize = ()=>{
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        };
-        window.addEventListener('resize', handleResize);
-        function onMove(e) {
-            let x, y;
-            if (e.touches && e.touches[0]) {
-                x = e.touches[0].clientX;
-                y = e.touches[0].clientY;
-            } else {
-                x = e.clientX;
-                y = e.clientY;
-            }
-            setPointer({
-                x,
-                y,
-                active: true
-            });
-        }
-        function onLeave() {
-            setPointer({
-                x: null,
-                y: null,
-                active: false
-            });
-        }
-        function onPulse(e) {
-            let x, y;
-            if (e && e.touches && e.touches[0]) {
-                x = e.touches[0].clientX;
-                y = e.touches[0].clientY;
-            } else if (e) {
-                x = e.clientX;
-                y = e.clientY;
-            } else {
-                x = canvas.width / 2;
-                y = canvas.height / 2;
-            }
-            rippleRef.current = {
-                active: true,
-                x,
-                y,
-                r: 0,
-                alpha: 0.6
-            };
-            setImpulse(1);
-        }
-        if (interactive) {
-            window.addEventListener('mousemove', onMove, {
-                passive: true
-            });
-            window.addEventListener('touchmove', onMove, {
-                passive: true
-            });
-            window.addEventListener('mouseleave', onLeave, {
-                passive: true
-            });
-            window.addEventListener('touchend', onLeave, {
-                passive: true
-            });
-            window.addEventListener('click', onPulse, {
-                passive: true
-            });
-            window.addEventListener('touchstart', onPulse, {
-                passive: true
-            });
-        }
+        window.addEventListener('resize', resize);
         return ()=>{
-            window.removeEventListener('resize', handleResize);
-            if (interactive) {
-                window.removeEventListener('mousemove', onMove);
-                window.removeEventListener('touchmove', onMove);
-                window.removeEventListener('mouseleave', onLeave);
-                window.removeEventListener('touchend', onLeave);
-                window.removeEventListener('click', onPulse);
-                window.removeEventListener('touchstart', onPulse);
-            }
+            window.removeEventListener('resize', resize);
         };
-    }, [
-        perfFriendly,
-        interactive,
-        pointer.active,
-        impulse,
-        variant
-    ]);
+    }, []);
     return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-        className: "animated-bg enhanced",
-        children: perfFriendly && !interactive ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-            className: "gradient-overlay"
-        }, void 0, false, {
-            fileName: "src/components/AnimatedBackground.jsx",
-            lineNumber: 234,
-            columnNumber: 9
-        }, this) : /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _jsxDevRuntime.Fragment), {
-            children: [
-                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("canvas", {
-                    ref: canvasRef,
-                    className: "particle-canvas"
-                }, void 0, false, {
-                    fileName: "src/components/AnimatedBackground.jsx",
-                    lineNumber: 237,
-                    columnNumber: 11
-                }, this),
-                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                    className: "gradient-overlay animated"
-                }, void 0, false, {
-                    fileName: "src/components/AnimatedBackground.jsx",
-                    lineNumber: 238,
-                    columnNumber: 11
-                }, this),
-                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                    className: "blob blob-1"
-                }, void 0, false, {
-                    fileName: "src/components/AnimatedBackground.jsx",
-                    lineNumber: 239,
-                    columnNumber: 11
-                }, this),
-                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                    className: "blob blob-2"
-                }, void 0, false, {
-                    fileName: "src/components/AnimatedBackground.jsx",
-                    lineNumber: 240,
-                    columnNumber: 11
-                }, this),
-                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                    className: "blob blob-3"
-                }, void 0, false, {
-                    fileName: "src/components/AnimatedBackground.jsx",
-                    lineNumber: 241,
-                    columnNumber: 11
-                }, this),
-                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                    className: "blob blob-4"
-                }, void 0, false, {
-                    fileName: "src/components/AnimatedBackground.jsx",
-                    lineNumber: 242,
-                    columnNumber: 11
-                }, this),
-                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                    className: "blob blob-5"
-                }, void 0, false, {
-                    fileName: "src/components/AnimatedBackground.jsx",
-                    lineNumber: 243,
-                    columnNumber: 11
-                }, this),
-                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                    className: "ring ring-1"
-                }, void 0, false, {
-                    fileName: "src/components/AnimatedBackground.jsx",
-                    lineNumber: 244,
-                    columnNumber: 11
-                }, this),
-                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                    className: "ring ring-2"
-                }, void 0, false, {
-                    fileName: "src/components/AnimatedBackground.jsx",
-                    lineNumber: 245,
-                    columnNumber: 11
-                }, this),
-                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                    className: "ring ring-3"
-                }, void 0, false, {
-                    fileName: "src/components/AnimatedBackground.jsx",
-                    lineNumber: 246,
-                    columnNumber: 11
-                }, this),
-                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                    className: "waves",
-                    children: [
-                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                            className: "wave wave-1"
-                        }, void 0, false, {
-                            fileName: "src/components/AnimatedBackground.jsx",
-                            lineNumber: 248,
-                            columnNumber: 13
-                        }, this),
-                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                            className: "wave wave-2"
-                        }, void 0, false, {
-                            fileName: "src/components/AnimatedBackground.jsx",
-                            lineNumber: 249,
-                            columnNumber: 13
-                        }, this),
-                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                            className: "wave wave-3"
-                        }, void 0, false, {
-                            fileName: "src/components/AnimatedBackground.jsx",
-                            lineNumber: 250,
-                            columnNumber: 13
-                        }, this)
-                    ]
-                }, void 0, true, {
-                    fileName: "src/components/AnimatedBackground.jsx",
-                    lineNumber: 247,
-                    columnNumber: 11
-                }, this),
-                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                    className: "particles-container",
-                    children: particles.map((particle)=>/*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                            className: "particle",
-                            style: {
-                                left: `${particle.left}%`,
-                                animationDelay: `${particle.delay}s`,
-                                width: `${particle.size}px`,
-                                height: `${particle.size}px`,
-                                animationDuration: `${particle.duration}s`
-                            }
-                        }, particle.id, false, {
-                            fileName: "src/components/AnimatedBackground.jsx",
-                            lineNumber: 254,
-                            columnNumber: 15
-                        }, this))
-                }, void 0, false, {
-                    fileName: "src/components/AnimatedBackground.jsx",
-                    lineNumber: 252,
-                    columnNumber: 11
-                }, this),
-                /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
-                    className: "grid-pattern"
-                }, void 0, false, {
-                    fileName: "src/components/AnimatedBackground.jsx",
-                    lineNumber: 267,
-                    columnNumber: 11
-                }, this)
-            ]
-        }, void 0, true)
-    }, void 0, false, {
+        style: {
+            position: 'relative',
+            width: '100%',
+            height: '100%'
+        },
+        children: [
+            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("canvas", {
+                ref: canvasRef,
+                style: {
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    zIndex: 0
+                }
+            }, void 0, false, {
+                fileName: "src/components/AnimatedBackground.jsx",
+                lineNumber: 74,
+                columnNumber: 7
+            }, this),
+            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                style: {
+                    position: 'relative',
+                    zIndex: 10,
+                    width: '100%',
+                    height: '100%'
+                },
+                children: children
+            }, void 0, false, {
+                fileName: "src/components/AnimatedBackground.jsx",
+                lineNumber: 87,
+                columnNumber: 7
+            }, this)
+        ]
+    }, void 0, true, {
         fileName: "src/components/AnimatedBackground.jsx",
-        lineNumber: 232,
+        lineNumber: 72,
         columnNumber: 5
     }, this);
 }
-_s(AnimatedBackground, "4ESsNQn8X+IARU+STREwuAZW1Sw=");
+_s(AnimatedBackground, "UJgi7ynoup7eqypjnwyX/s32POg=");
 _c = AnimatedBackground;
 var _c;
 $RefreshReg$(_c, "AnimatedBackground");
