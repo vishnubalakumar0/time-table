@@ -109,6 +109,50 @@ export default function AdminDashboard({ user, onLogout }) {
     return nested;
   };
 
+  const serializeClassTimetables = (nested) => {
+    if (!nested) return {};
+    const out = {};
+    Object.keys(nested).forEach(className => {
+      const days = nested[className] || [];
+      const flat = [];
+      days.forEach((day, dayIndex) => {
+        (day || []).forEach((period, periodIndex) => {
+          flat.push({
+            day: dayIndex,
+            period: periodIndex,
+            subject: period?.subject || null,
+            teacher: period?.teacher || null,
+            type: period?.type || null
+          });
+        });
+      });
+      out[className] = flat;
+    });
+    return out;
+  };
+
+  const serializeStaffTimetables = (nested) => {
+    if (!nested) return {};
+    const out = {};
+    Object.keys(nested).forEach(staffName => {
+      const days = nested[staffName] || [];
+      const flat = [];
+      days.forEach((day, dayIndex) => {
+        (day || []).forEach((period, periodIndex) => {
+          flat.push({
+            day: dayIndex,
+            period: periodIndex,
+            subject: period?.subject || null,
+            class: period?.class || null,
+            type: period?.type || null
+          });
+        });
+      });
+      out[staffName] = flat;
+    });
+    return out;
+  };
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -132,7 +176,7 @@ export default function AdminDashboard({ user, onLogout }) {
         setTimetable(convertedData);
       }
     } catch (error) {
-      showToast('❌ Error loading data: ' + error.message, 'error');
+      showToast('âŒ Error loading data: ' + error.message, 'error');
       console.error(error);
     }
     setLoading(false);
@@ -172,7 +216,7 @@ export default function AdminDashboard({ user, onLogout }) {
 
         if (!existing.empty) {
           await updateDoc(doc(db, 'timetable', existing.docs[0].id), {
-            classTimetables: updatedClassTimetables
+            classTimetables: serializeClassTimetables(updatedClassTimetables)
           });
         }
 
@@ -183,10 +227,10 @@ export default function AdminDashboard({ user, onLogout }) {
       }
     
       await fetchData();
-      showToast('✅ Data restored!', 'success');
+      showToast('âœ… Data restored!', 'success');
     } catch (error) {
       console.error('Restore error:', error);
-      showToast('❌ Restore failed: ' + error.message, 'error');
+      showToast('âŒ Restore failed: ' + error.message, 'error');
     }
   };
 
@@ -202,19 +246,19 @@ export default function AdminDashboard({ user, onLogout }) {
           hallNumber: newClass.hallNumber
         });
         setClasses(classes.map(c => c.id === newClass.id ? { id: newClass.id, ...newClass } : c));
-        showToast("✅ Class updated!", "success");
+        showToast("âœ… Class updated!", "success");
       } else {
         const docRef = await addDoc(collection(db, 'classes'), {
           name: newClass.name,
           hallNumber: newClass.hallNumber || ''
         });
         setClasses([...classes, { id: docRef.id, name: newClass.name, hallNumber: newClass.hallNumber || '' }]);
-        showToast("✅ Class added!", "success");
+        showToast("âœ… Class added!", "success");
       }
       setNewClass({ name: '', hallNumber: '' });
       setShowAddClassForm(false);
     } catch (error) {
-      showToast("❌ Operation failed", "error");
+      showToast("âŒ Operation failed", "error");
     }
   };
 
@@ -225,17 +269,52 @@ export default function AdminDashboard({ user, onLogout }) {
   };
 
   const deleteClass = async (id) => {
-    if (!window.confirm("Delete this class?")) return;
+    if (!window.confirm("Delete this class?\nThis will also remove its subjects and timetable.")) return;
     try {
       const classToDelete = classes.find(c => c.id === id);
       if (!classToDelete) return;
       const undoItem = { type: 'class', data: { ...classToDelete } };
       await deleteDoc(doc(db, 'classes', id));
+      const relatedSubjects = subjects.filter(s => s.className === classToDelete.name);
+      if (relatedSubjects.length) {
+        await Promise.all(relatedSubjects.map(s => deleteDoc(doc(db, 'subjects', s.id))));
+      }
+      const updatedSubjects = subjects.filter(s => s.className !== classToDelete.name);
+      let updatedClassTimetables = timetable?.classTimetables ? { ...timetable.classTimetables } : null;
+      let updatedStaffTimetables = timetable?.staffTimetables ? { ...timetable.staffTimetables } : null;
+      if (updatedClassTimetables && updatedClassTimetables[classToDelete.name]) {
+        delete updatedClassTimetables[classToDelete.name];
+      }
+      if (updatedStaffTimetables) {
+        Object.keys(updatedStaffTimetables).forEach(staffName => {
+          updatedStaffTimetables[staffName] = updatedStaffTimetables[staffName].map(day =>
+            day.map(p => (p?.class === classToDelete.name ? { subject: 'FREE', class: '-', type: 'free' } : p))
+          );
+        });
+      }
+      if (updatedClassTimetables || updatedStaffTimetables) {
+        const ttRef = collection(db, 'timetable');
+        const existing = await getDocs(ttRef);
+        if (!existing.empty) {
+          await updateDoc(doc(db, 'timetable', existing.docs[0].id), {
+            ...(updatedClassTimetables ? { classTimetables: serializeClassTimetables(updatedClassTimetables) } : {}),
+            ...(updatedStaffTimetables ? { staffTimetables: serializeStaffTimetables(updatedStaffTimetables) } : {})
+          });
+        }
+      }
       setClasses(classes.filter(c => c.id !== id));
-      showToast('✅ Class deleted', 'success', 5000, () => restoreFromUndo(undoItem));
+      setSubjects(updatedSubjects);
+      if (timetable) {
+        setTimetable({
+          ...timetable,
+          ...(updatedClassTimetables ? { classTimetables: updatedClassTimetables } : {}),
+          ...(updatedStaffTimetables ? { staffTimetables: updatedStaffTimetables } : {})
+        });
+      }
+      showToast('âœ… Class deleted', 'success', 5000, () => restoreFromUndo(undoItem));
     } catch (error) {
       console.error('Delete error:', error);
-      showToast("❌ Failed to delete", "error");
+      showToast("âŒ Failed to delete", "error");
     }
   };
 
@@ -274,9 +353,9 @@ export default function AdminDashboard({ user, onLogout }) {
             passwordLastChanged: new Date().toISOString(),
             needsPasswordChange: true
           });
-          showToast("✅ Temporary password set. Share it with staff.", "success");
+          showToast("âœ… Temporary password set. Share it with staff.", "success");
         } else {
-          showToast("✅ Staff updated!", "success");
+          showToast("âœ… Staff updated!", "success");
         }
 
         setStaff(staff.map(s => s.id === newStaff.id ? { ...s, ...firestoreUpdateData } : s));
@@ -309,9 +388,9 @@ export default function AdminDashboard({ user, onLogout }) {
       setStaff([...staff, { id: docRef.id, ...staffData }]);
       resetStaffForm();
       setShowAddStaffForm(false);
-      showToast("✅ Staff added!", "success");
+      showToast("âœ… Staff added!", "success");
     } catch (error) {
-      showToast("❌ Operation failed: " + error.message, "error");
+      showToast("âŒ Operation failed: " + error.message, "error");
       console.error(error);
     }
   };
@@ -346,10 +425,10 @@ export default function AdminDashboard({ user, onLogout }) {
         await deleteDoc(doc(db, 'users', staffToDelete.firebaseUid));
       }
       setStaff(staff.filter(x => x.id !== id));
-      showToast('✅ Staff deleted', 'success', 5000, () => restoreFromUndo(undoItem));
+      showToast('âœ… Staff deleted', 'success', 5000, () => restoreFromUndo(undoItem));
     } catch (error) {
       console.error('Delete staff error:', error);
-      showToast('❌ Failed to delete', 'error');
+      showToast('âŒ Failed to delete', 'error');
     }
   };
 
@@ -371,17 +450,17 @@ export default function AdminDashboard({ user, onLogout }) {
       if (newSubject.id) {
         await updateDoc(doc(db, 'subjects', newSubject.id), subjectData);
         setSubjects(subjects.map(s => s.id === newSubject.id ? { id: newSubject.id, ...subjectData } : s));
-        showToast("✅ Subject updated!", "success");
+        showToast("âœ… Subject updated!", "success");
       } else {
         const docRef = await addDoc(collection(db, 'subjects'), subjectData);
         setSubjects([...subjects, { id: docRef.id, ...subjectData }]);
-        showToast("✅ Subject added!", "success");
+        showToast("âœ… Subject added!", "success");
       }
 
       resetSubjectForm();
       setShowAddSubjectForm(false);
     } catch (error) {
-      showToast("❌ Operation failed", "error");
+      showToast("âŒ Operation failed", "error");
       console.error(error);
     }
   };
@@ -424,10 +503,10 @@ export default function AdminDashboard({ user, onLogout }) {
       const undoItem = { type: 'subject', data: { ...subjectToDelete } };
       await deleteDoc(doc(db, 'subjects', id));
       setSubjects(subjects.filter(s => s.id !== id));
-      showToast('✅ Subject deleted', 'success', 5000, () => restoreFromUndo(undoItem));
+      showToast('âœ… Subject deleted', 'success', 5000, () => restoreFromUndo(undoItem));
     } catch (error) {
       console.error('Delete subject error:', error);
-      showToast('❌ Failed to delete', 'error');
+      showToast('âŒ Failed to delete', 'error');
     }
   };
 
@@ -459,7 +538,7 @@ export default function AdminDashboard({ user, onLogout }) {
 
       if (!existing.empty) {
         await updateDoc(doc(db, 'timetable', existing.docs[0].id), {
-          classTimetables: updatedClassTimetables
+          classTimetables: serializeClassTimetables(updatedClassTimetables)
         });
       }
 
@@ -487,7 +566,7 @@ export default function AdminDashboard({ user, onLogout }) {
 
       const validation = generator.validate();
       if (!validation.valid) {
-        showToast('❌ Validation: ' + validation.errors[0], 'error');
+        showToast('âŒ Validation: ' + validation.errors[0], 'error');
         setLoading(false);
         return;
       }
@@ -602,7 +681,7 @@ export default function AdminDashboard({ user, onLogout }) {
 
         setActiveTab('results');
 
-        showToast('✅ Timetable generated & saved!', 'success');
+        showToast('âœ… Timetable generated & saved!', 'success');
 
         setTimeout(() => {
           document.getElementById('view-timetables')?.scrollIntoView({ 
@@ -611,10 +690,10 @@ export default function AdminDashboard({ user, onLogout }) {
         }, 300);
 
       } else {
-        showToast('❌ Failed: ' + result.error, 'error');
+        showToast('âŒ Failed: ' + result.error, 'error');
       }
     } catch (error) {
-      showToast('❌ Error: ' + error.message, 'error');
+      showToast('âŒ Error: ' + error.message, 'error');
       console.error(error);
     }
     setLoading(false);
@@ -679,7 +758,7 @@ export default function AdminDashboard({ user, onLogout }) {
         <div className="content">
           <div className="section" id="classes-section">
             <div className="section-header">
-              <span className="section-icon">📚</span>
+              <span className="section-icon">ðŸ“š</span>
               <h2 className="section-title">Manage Classes</h2>
             </div>
 
@@ -790,7 +869,7 @@ export default function AdminDashboard({ user, onLogout }) {
 
           <div className="section" id="staff-section">
             <div className="section-header">
-              <span className="section-icon">👥</span>
+              <span className="section-icon">ðŸ‘¥</span>
               <h2 className="section-title">Manage Staff</h2>
             </div>
 
@@ -909,7 +988,7 @@ export default function AdminDashboard({ user, onLogout }) {
 
           <div className="section" id="subject-section">
             <div className="section-header">
-              <span className="section-icon">📖</span>
+              <span className="section-icon">ðŸ“–</span>
               <h2 className="section-title">Manage Subjects</h2>
             </div>
 
@@ -1070,7 +1149,7 @@ export default function AdminDashboard({ user, onLogout }) {
 
           <div className="section" id="generate-section">
             <div className="section-header">
-              <span className="section-icon">⚡</span>
+              <span className="section-icon">âš¡</span>
               <h2 className="section-title">Generate Timetable</h2>
             </div>
             <div className="card">
@@ -1098,13 +1177,16 @@ export default function AdminDashboard({ user, onLogout }) {
           {timetable && (
             <div className="section" id="view-timetables">
               <div className="section-header">
-                <span className="section-icon">📊</span>
+                <span className="section-icon">ðŸ“Š</span>
                 <h2 className="section-title">Generated Timetables</h2>
               </div>
 
               <div className="card">
                 <h3>Class Timetables</h3>
-                {[...classes].sort((a, b) => a.name.localeCompare(b.name)).map(cls => (
+                {[...classes]
+  .sort((a, b) => a.name.localeCompare(b.name))
+  .filter(cls => timetable.classTimetables?.[cls.name])
+  .map(cls => (
                   <div key={cls.id} className="timetable-container" id={`timetable-export-${cls.id}`}>
                     <h4 className="timetable-title">{cls.name}</h4>
                     <div className="timetable-scroll">
