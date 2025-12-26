@@ -129,10 +129,12 @@ export default function StaffDashboard({ user, onLogout }) {
                                     <p>Your teaching timetable for the week</p>
                                 </div>
 
-                                <StaffTimetableGrid 
-                                    timetable={timetableData} 
-                                    staffName={user.name} 
-                                />
+                                <div className="timetable-scroll">
+                                    <StaffTimetableGrid 
+                                        timetable={timetableData} 
+                                        staffName={user.name} 
+                                    />
+                                </div>
 
                                 <div style={{marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'center'}} className="no-print no-export">
                                     <button 

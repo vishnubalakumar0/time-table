@@ -71,10 +71,12 @@ export default function StudentDashboard({ user, onLogout }) {
                             </div>
                         ) : (
                             <>
-                                <TimetableGrid 
-                                    timetable={timetable.classTimetables} 
-                                    className={selectedClass} 
-                                />
+                                <div className="timetable-scroll">
+                                    <TimetableGrid 
+                                        timetable={timetable.classTimetables} 
+                                        className={selectedClass} 
+                                    />
+                                </div>
                                 <div 
                                     style={{marginTop: '20px', display: 'flex', gap: '10px'}} 
                                     className="no-print no-export"

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import AnimatedBackground from './AnimatedBackground';
+import ConfirmationModal from './ConfirmationModal';
 import { ToastContainer } from './Toast';
 import HoursTracker from './HoursTracker';
 import TimetableGrid from './timetableGrid';
@@ -29,6 +30,40 @@ export default function AdminDashboard({ user, onLogout }) {
   const [showAddSubjectForm, setShowAddSubjectForm] = useState(false);
   const [showAddClassForm, setShowAddClassForm] = useState(false);
   const [activeTab, setActiveTab] = useState('classes');
+  
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'danger',
+    confirmText: 'Confirm'
+  });
+
+  const openConfirmModal = (title, message, onConfirm, type = 'danger', confirmText = 'Confirm') => {
+    setConfirmModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm,
+      type,
+      confirmText
+    });
+  };
+
+  const closeConfirmModal = () => {
+    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+  };
+
+  const handleLogout = () => {
+    openConfirmModal(
+      "Logout",
+      "Are you sure you want to logout?",
+      onLogout,
+      "danger",
+      "Logout"
+    );
+  };
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
@@ -176,7 +211,7 @@ export default function AdminDashboard({ user, onLogout }) {
         setTimetable(convertedData);
       }
     } catch (error) {
-      showToast('âŒ Error loading data: ' + error.message, 'error');
+      showToast('❌ Error loading data: ' + error.message, 'error');
       console.error(error);
     }
     setLoading(false);
@@ -227,7 +262,7 @@ export default function AdminDashboard({ user, onLogout }) {
       }
     
       await fetchData();
-      showToast('âœ… Data restored!', 'success');
+      showToast(' Data restored!', 'success');
     } catch (error) {
       console.error('Restore error:', error);
       showToast('âŒ Restore failed: ' + error.message, 'error');
@@ -246,19 +281,19 @@ export default function AdminDashboard({ user, onLogout }) {
           hallNumber: newClass.hallNumber
         });
         setClasses(classes.map(c => c.id === newClass.id ? { id: newClass.id, ...newClass } : c));
-        showToast("âœ… Class updated!", "success");
+        showToast("✅ Class updated!", "success");
       } else {
         const docRef = await addDoc(collection(db, 'classes'), {
           name: newClass.name,
           hallNumber: newClass.hallNumber || ''
         });
         setClasses([...classes, { id: docRef.id, name: newClass.name, hallNumber: newClass.hallNumber || '' }]);
-        showToast("âœ… Class added!", "success");
+        showToast("✅ Class added!", "success");
       }
       setNewClass({ name: '', hallNumber: '' });
       setShowAddClassForm(false);
     } catch (error) {
-      showToast("âŒ Operation failed", "error");
+      showToast("❌ Operation failed", "error");
     }
   };
 
@@ -268,54 +303,61 @@ export default function AdminDashboard({ user, onLogout }) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const deleteClass = async (id) => {
-    if (!window.confirm("Delete this class?\nThis will also remove its subjects and timetable.")) return;
-    try {
-      const classToDelete = classes.find(c => c.id === id);
-      if (!classToDelete) return;
-      const undoItem = { type: 'class', data: { ...classToDelete } };
-      await deleteDoc(doc(db, 'classes', id));
-      const relatedSubjects = subjects.filter(s => s.className === classToDelete.name);
-      if (relatedSubjects.length) {
-        await Promise.all(relatedSubjects.map(s => deleteDoc(doc(db, 'subjects', s.id))));
-      }
-      const updatedSubjects = subjects.filter(s => s.className !== classToDelete.name);
-      let updatedClassTimetables = timetable?.classTimetables ? { ...timetable.classTimetables } : null;
-      let updatedStaffTimetables = timetable?.staffTimetables ? { ...timetable.staffTimetables } : null;
-      if (updatedClassTimetables && updatedClassTimetables[classToDelete.name]) {
-        delete updatedClassTimetables[classToDelete.name];
-      }
-      if (updatedStaffTimetables) {
-        Object.keys(updatedStaffTimetables).forEach(staffName => {
-          updatedStaffTimetables[staffName] = updatedStaffTimetables[staffName].map(day =>
-            day.map(p => (p?.class === classToDelete.name ? { subject: 'FREE', class: '-', type: 'free' } : p))
-          );
-        });
-      }
-      if (updatedClassTimetables || updatedStaffTimetables) {
-        const ttRef = collection(db, 'timetable');
-        const existing = await getDocs(ttRef);
-        if (!existing.empty) {
-          await updateDoc(doc(db, 'timetable', existing.docs[0].id), {
-            ...(updatedClassTimetables ? { classTimetables: serializeClassTimetables(updatedClassTimetables) } : {}),
-            ...(updatedStaffTimetables ? { staffTimetables: serializeStaffTimetables(updatedStaffTimetables) } : {})
-          });
+  const deleteClass = (id) => {
+    openConfirmModal(
+      "Delete Class?",
+      "This will also remove its subjects and timetable. This action cannot be undone.",
+      async () => {
+        try {
+          const classToDelete = classes.find(c => c.id === id);
+          if (!classToDelete) return;
+          const undoItem = { type: 'class', data: { ...classToDelete } };
+          await deleteDoc(doc(db, 'classes', id));
+          const relatedSubjects = subjects.filter(s => s.className === classToDelete.name);
+          if (relatedSubjects.length) {
+            await Promise.all(relatedSubjects.map(s => deleteDoc(doc(db, 'subjects', s.id))));
+          }
+          const updatedSubjects = subjects.filter(s => s.className !== classToDelete.name);
+          let updatedClassTimetables = timetable?.classTimetables ? { ...timetable.classTimetables } : null;
+          let updatedStaffTimetables = timetable?.staffTimetables ? { ...timetable.staffTimetables } : null;
+          if (updatedClassTimetables && updatedClassTimetables[classToDelete.name]) {
+            delete updatedClassTimetables[classToDelete.name];
+          }
+          if (updatedStaffTimetables) {
+            Object.keys(updatedStaffTimetables).forEach(staffName => {
+              updatedStaffTimetables[staffName] = updatedStaffTimetables[staffName].map(day =>
+                day.map(p => (p?.class === classToDelete.name ? { subject: 'FREE', class: '-', type: 'free' } : p))
+              );
+            });
+          }
+          if (updatedClassTimetables || updatedStaffTimetables) {
+            const ttRef = collection(db, 'timetable');
+            const existing = await getDocs(ttRef);
+            if (!existing.empty) {
+              await updateDoc(doc(db, 'timetable', existing.docs[0].id), {
+                ...(updatedClassTimetables ? { classTimetables: serializeClassTimetables(updatedClassTimetables) } : {}),
+                ...(updatedStaffTimetables ? { staffTimetables: serializeStaffTimetables(updatedStaffTimetables) } : {})
+              });
+            }
+          }
+          setClasses(classes.filter(c => c.id !== id));
+          setSubjects(updatedSubjects);
+          if (timetable) {
+            setTimetable({
+              ...timetable,
+              ...(updatedClassTimetables ? { classTimetables: updatedClassTimetables } : {}),
+              ...(updatedStaffTimetables ? { staffTimetables: updatedStaffTimetables } : {})
+            });
+          }
+          showToast('✅ Class deleted', 'success', 5000, () => restoreFromUndo(undoItem));
+        } catch (error) {
+          console.error('Delete error:', error);
+          showToast("❌ Failed to delete", "error");
         }
-      }
-      setClasses(classes.filter(c => c.id !== id));
-      setSubjects(updatedSubjects);
-      if (timetable) {
-        setTimetable({
-          ...timetable,
-          ...(updatedClassTimetables ? { classTimetables: updatedClassTimetables } : {}),
-          ...(updatedStaffTimetables ? { staffTimetables: updatedStaffTimetables } : {})
-        });
-      }
-      showToast('âœ… Class deleted', 'success', 5000, () => restoreFromUndo(undoItem));
-    } catch (error) {
-      console.error('Delete error:', error);
-      showToast("âŒ Failed to delete", "error");
-    }
+      },
+      "danger",
+      "Delete"
+    );
   };
 
   const addOrUpdateStaff = async () => {
@@ -353,9 +395,9 @@ export default function AdminDashboard({ user, onLogout }) {
             passwordLastChanged: new Date().toISOString(),
             needsPasswordChange: true
           });
-          showToast("âœ… Temporary password set. Share it with staff.", "success");
+          showToast("✅ Temporary password set. Share it with staff.", "success");
         } else {
-          showToast("âœ… Staff updated!", "success");
+          showToast("✅ Staff updated!", "success");
         }
 
         setStaff(staff.map(s => s.id === newStaff.id ? { ...s, ...firestoreUpdateData } : s));
@@ -388,9 +430,9 @@ export default function AdminDashboard({ user, onLogout }) {
       setStaff([...staff, { id: docRef.id, ...staffData }]);
       resetStaffForm();
       setShowAddStaffForm(false);
-      showToast("âœ… Staff added!", "success");
+      showToast("✅ Staff added!", "success");
     } catch (error) {
-      showToast("âŒ Operation failed: " + error.message, "error");
+      showToast("❌ Operation failed: " + error.message, "error");
       console.error(error);
     }
   };
@@ -414,22 +456,29 @@ export default function AdminDashboard({ user, onLogout }) {
     });
   };
 
-  const deleteStaff = async (id) => {
-    if (!window.confirm("Delete this staff member?")) return;
-    try {
-      const staffToDelete = staff.find(s => s.id === id);
-      if (!staffToDelete) return;
-      const undoItem = { type: 'staff', data: { ...staffToDelete } };
-      await deleteDoc(doc(db, 'staff', id));
-      if (staffToDelete.firebaseUid) {
-        await deleteDoc(doc(db, 'users', staffToDelete.firebaseUid));
-      }
-      setStaff(staff.filter(x => x.id !== id));
-      showToast('âœ… Staff deleted', 'success', 5000, () => restoreFromUndo(undoItem));
-    } catch (error) {
-      console.error('Delete staff error:', error);
-      showToast('âŒ Failed to delete', 'error');
-    }
+  const deleteStaff = (id) => {
+    openConfirmModal(
+      "Delete Staff?",
+      "Are you sure you want to delete this staff member?",
+      async () => {
+        try {
+          const staffToDelete = staff.find(s => s.id === id);
+          if (!staffToDelete) return;
+          const undoItem = { type: 'staff', data: { ...staffToDelete } };
+          await deleteDoc(doc(db, 'staff', id));
+          if (staffToDelete.firebaseUid) {
+            await deleteDoc(doc(db, 'users', staffToDelete.firebaseUid));
+          }
+          setStaff(staff.filter(x => x.id !== id));
+          showToast('✅ Staff deleted', 'success', 5000, () => restoreFromUndo(undoItem));
+        } catch (error) {
+          console.error('Delete staff error:', error);
+          showToast('❌ Failed to delete', 'error');
+        }
+      },
+      "danger",
+      "Delete"
+    );
   };
 
   const addOrUpdateSubject = async () => {
@@ -450,17 +499,17 @@ export default function AdminDashboard({ user, onLogout }) {
       if (newSubject.id) {
         await updateDoc(doc(db, 'subjects', newSubject.id), subjectData);
         setSubjects(subjects.map(s => s.id === newSubject.id ? { id: newSubject.id, ...subjectData } : s));
-        showToast("âœ… Subject updated!", "success");
+        showToast("✅ Subject updated!", "success");
       } else {
         const docRef = await addDoc(collection(db, 'subjects'), subjectData);
         setSubjects([...subjects, { id: docRef.id, ...subjectData }]);
-        showToast("âœ… Subject added!", "success");
+        showToast("✅ Subject added!", "success");
       }
 
       resetSubjectForm();
       setShowAddSubjectForm(false);
     } catch (error) {
-      showToast("âŒ Operation failed", "error");
+      showToast("❌ Operation failed", "error");
       console.error(error);
     }
   };
@@ -495,64 +544,91 @@ export default function AdminDashboard({ user, onLogout }) {
     });
   };
 
-  const deleteSubject = async (id) => {
-    if (!window.confirm("Delete this subject?")) return;
-    try {
-      const subjectToDelete = subjects.find(s => s.id === id);
-      if (!subjectToDelete) return;
-      const undoItem = { type: 'subject', data: { ...subjectToDelete } };
-      await deleteDoc(doc(db, 'subjects', id));
-      setSubjects(subjects.filter(s => s.id !== id));
-      showToast('âœ… Subject deleted', 'success', 5000, () => restoreFromUndo(undoItem));
-    } catch (error) {
-      console.error('Delete subject error:', error);
-      showToast('âŒ Failed to delete', 'error');
-    }
+  const deleteSubject = (id) => {
+    openConfirmModal(
+      "Delete Subject?",
+      "Are you sure you want to delete this subject?",
+      async () => {
+        try {
+          const subjectToDelete = subjects.find(s => s.id === id);
+          if (!subjectToDelete) return;
+          const undoItem = { type: 'subject', data: { ...subjectToDelete } };
+          await deleteDoc(doc(db, 'subjects', id));
+          setSubjects(subjects.filter(s => s.id !== id));
+          showToast('✅ Subject deleted', 'success', 5000, () => restoreFromUndo(undoItem));
+        } catch (error) {
+          console.error('Delete subject error:', error);
+          showToast('❌ Failed to delete', 'error');
+        }
+      },
+      "danger",
+      "Delete"
+    );
   };
 
 
   // Delete Class Timetable (like class/staff/subject delete)
-  const deleteClassTimetable = async (className) => {
-    if (!window.confirm(`Delete timetable for ${className}?\nThis will only delete the class timetable, not staff timetables.`)) return;
+  const deleteClassTimetable = (className) => {
+    openConfirmModal(
+      `Delete timetable for ${className}?`,
+      "This will delete the class timetable and update staff timetables accordingly.",
+      async () => {
+        try {
+          if (!timetable || !timetable.classTimetables || !timetable.classTimetables[className]) {
+            return showToast('Timetable not found', 'error');
+          }
 
-    try {
-      if (!timetable || !timetable.classTimetables || !timetable.classTimetables[className]) {
-        return showToast('Timetable not found', 'error');
-      }
+          // Save for undo
+          const deletedTimetableData = timetable.classTimetables[className];
+          const undoItem = {
+            type: 'classTimetable',
+            className: className,
+            data: deletedTimetableData
+          };
 
-      // Save for undo
-      const deletedTimetableData = timetable.classTimetables[className];
-      const undoItem = {
-        type: 'classTimetable',
-        className: className,
-        data: deletedTimetableData
-      };
+          // Remove from timetable
+          const updatedClassTimetables = { ...timetable.classTimetables };
+          delete updatedClassTimetables[className];
 
-      // Remove from timetable
-      const updatedClassTimetables = { ...timetable.classTimetables };
-      delete updatedClassTimetables[className];
+          // Update staff timetables to remove references to this class
+          const updatedStaffTimetables = timetable?.staffTimetables
+            ? Object.fromEntries(
+                Object.entries(timetable.staffTimetables).map(([staffName, days]) => [
+                  staffName,
+                  days.map(day =>
+                    day.map(p => (p?.class === className ? { subject: 'FREE', class: '-', type: 'free' } : p))
+                  )
+                ])
+              )
+            : null;
 
-      // Update Firebase
-      const ttRef = collection(db, 'timetable');
-      const existing = await getDocs(ttRef);
+          // Update Firebase
+          const ttRef = collection(db, 'timetable');
+          const existing = await getDocs(ttRef);
 
-      if (!existing.empty) {
-        await updateDoc(doc(db, 'timetable', existing.docs[0].id), {
-          classTimetables: serializeClassTimetables(updatedClassTimetables)
-        });
-      }
+          if (!existing.empty) {
+            await updateDoc(doc(db, 'timetable', existing.docs[0].id), {
+              classTimetables: serializeClassTimetables(updatedClassTimetables),
+              ...(updatedStaffTimetables ? { staffTimetables: serializeStaffTimetables(updatedStaffTimetables) } : {})
+            });
+          }
 
-      // Update state
-      setTimetable({
-        ...timetable,
-        classTimetables: updatedClassTimetables
-      });
+          // Update state
+          setTimetable({
+            ...timetable,
+            classTimetables: updatedClassTimetables,
+            ...(updatedStaffTimetables ? { staffTimetables: updatedStaffTimetables } : {})
+          });
 
-      showToast(`Timetable for ${className} deleted`, 'success', 5000, () => restoreFromUndo(undoItem));
-    } catch (error) {
-      console.error('Delete timetable error:', error);
-      showToast('Failed to delete timetable', 'error');
-    }
+          showToast(`Timetable for ${className} deleted`, 'success', 5000, () => restoreFromUndo(undoItem));
+        } catch (error) {
+          console.error('Delete timetable error:', error);
+          showToast('Failed to delete timetable', 'error');
+        }
+      },
+      "danger",
+      "Delete"
+    );
   };
 
   const generateTimetable = async () => {
@@ -566,7 +642,7 @@ export default function AdminDashboard({ user, onLogout }) {
 
       const validation = generator.validate();
       if (!validation.valid) {
-        showToast('âŒ Validation: ' + validation.errors[0], 'error');
+        showToast('❌ Validation: ' + validation.errors[0], 'error');
         setLoading(false);
         return;
       }
@@ -681,7 +757,7 @@ export default function AdminDashboard({ user, onLogout }) {
 
         setActiveTab('results');
 
-        showToast('âœ… Timetable generated & saved!', 'success');
+        showToast('✅ Timetable generated & saved!', 'success');
 
         setTimeout(() => {
           document.getElementById('view-timetables')?.scrollIntoView({ 
@@ -690,10 +766,10 @@ export default function AdminDashboard({ user, onLogout }) {
         }, 300);
 
       } else {
-        showToast('âŒ Failed: ' + result.error, 'error');
+        showToast('❌ Failed: ' + result.error, 'error');
       }
     } catch (error) {
-      showToast('âŒ Error: ' + error.message, 'error');
+      showToast('❌ Error: ' + error.message, 'error');
       console.error(error);
     }
     setLoading(false);
@@ -716,7 +792,7 @@ export default function AdminDashboard({ user, onLogout }) {
         <div className="header-content">
           <h1 className="text-white">Admin Dashboard</h1>
           <div className="header-actions">
-            <button className="btn btn-danger btn-sm" onClick={onLogout}>
+            <button className="btn btn-danger btn-sm" onClick={handleLogout}>
               Logout
             </button>
           </div>
@@ -758,7 +834,7 @@ export default function AdminDashboard({ user, onLogout }) {
         <div className="content">
           <div className="section" id="classes-section">
             <div className="section-header">
-              <span className="section-icon">ðŸ“š</span>
+              <span className="section-icon">📚</span>
               <h2 className="section-title">Manage Classes</h2>
             </div>
 
@@ -820,6 +896,24 @@ export default function AdminDashboard({ user, onLogout }) {
                               </tbody>
                             </table>
                           </div>
+
+                          <div className="mobile-cards">
+                            <div className="mobile-card">
+                              <div className="mobile-card-header">
+                                <strong>Hall: {cls.hallNumber || '-'}</strong>
+                                <span className={`badge ${totalHours === 30 ? 'badge-success' : 'badge-danger'}`}>
+                                  {totalHours}/30h
+                                </span>
+                              </div>
+                              <div className="mobile-card-body">
+                                <p><span>Subjects</span> <strong>{classSubjects.length}</strong></p>
+                              </div>
+                              <div className="mobile-card-actions">
+                                <button className="btn-icon btn-icon-primary" onClick={() => editClass(cls)} title="Edit">✏️</button>
+                                <button className="btn-icon btn-icon-danger" onClick={() => deleteClass(cls.id)} title="Delete">🗑️</button>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       );
                     });
@@ -878,6 +972,7 @@ export default function AdminDashboard({ user, onLogout }) {
               {teachers.length === 0 ? (
                 <p style={{ color: '#64748b', textAlign: 'center', padding: '20px' }}>No staff added yet</p>
               ) : (
+                <>
                 <div className="desktop-table">
                   <table>
                     <thead>
@@ -911,6 +1006,26 @@ export default function AdminDashboard({ user, onLogout }) {
                     </tbody>
                   </table>
                 </div>
+
+                <div className="mobile-cards">
+                  {teachers.map((s, idx) => (
+                    <div className="mobile-card" key={s.id}>
+                      <div className="mobile-card-header">
+                         <strong>{s.name}</strong>
+                         <span className="staff-badge">S{idx + 1}</span>
+                      </div>
+                      <div className="mobile-card-body">
+                         <p><span>Username</span> <strong>{s.username}</strong></p>
+                         <p><span>Mode</span> <strong>{s.freePeriodMode === 'manual' ? `Manual (${s.manualFreePeriods})` : 'Auto'}</strong></p>
+                      </div>
+                      <div className="mobile-card-actions">
+                         <button className="btn-icon btn-icon-primary" onClick={() => editStaff(s)} title="Edit">✏️</button>
+                         <button className="btn-icon btn-icon-danger" onClick={() => deleteStaff(s.id)} title="Delete">🗑️</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                </>
               )}
 
               <button className="btn btn-success btn-sm" onClick={() => { setShowAddStaffForm(true); resetStaffForm(); }} style={{ marginTop: '15px' }}>
@@ -988,7 +1103,7 @@ export default function AdminDashboard({ user, onLogout }) {
 
           <div className="section" id="subject-section">
             <div className="section-header">
-              <span className="section-icon">ðŸ“–</span>
+              <span className="section-icon">📖</span>
               <h2 className="section-title">Manage Subjects</h2>
             </div>
 
@@ -1051,6 +1166,26 @@ export default function AdminDashboard({ user, onLogout }) {
                               ))}
                             </tbody>
                           </table>
+                        </div>
+
+                        <div className="mobile-cards">
+                          {classSubjects.map(sub => (
+                            <div className="mobile-card" key={sub.id}>
+                              <div className="mobile-card-header">
+                                <strong>{sub.name}</strong>
+                                <span className="badge badge-primary">{sub.subjectType}</span>
+                              </div>
+                              <div className="mobile-card-body">
+                                <p><span>Hours</span> <strong>{sub.hoursPerWeek}h</strong></p>
+                                <p><span>Teacher</span> <strong>{sub.teacher}</strong></p>
+                                <p><span>Continuous</span> <strong>{sub.isContinuous ? `Yes (${sub.blockSize}p)` : 'No'}</strong></p>
+                              </div>
+                              <div className="mobile-card-actions">
+                                <button className="btn-icon btn-icon-primary" onClick={() => editSubject(sub)} title="Edit">✏️</button>
+                                <button className="btn-icon btn-icon-danger" onClick={() => deleteSubject(sub.id)} title="Delete">🗑️</button>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     );
@@ -1149,7 +1284,7 @@ export default function AdminDashboard({ user, onLogout }) {
 
           <div className="section" id="generate-section">
             <div className="section-header">
-              <span className="section-icon">âš¡</span>
+              <span className="section-icon">⚡</span>
               <h2 className="section-title">Generate Timetable</h2>
             </div>
             <div className="card">
@@ -1177,7 +1312,7 @@ export default function AdminDashboard({ user, onLogout }) {
           {timetable && (
             <div className="section" id="view-timetables">
               <div className="section-header">
-                <span className="section-icon">ðŸ“Š</span>
+                <span className="section-icon">📊</span>
                 <h2 className="section-title">Generated Timetables</h2>
               </div>
 
@@ -1235,6 +1370,16 @@ export default function AdminDashboard({ user, onLogout }) {
         </div>
 
         <ToastContainer toasts={toasts} onRemove={removeToast} />
+        
+        <ConfirmationModal 
+          isOpen={confirmModal.isOpen}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          onConfirm={confirmModal.onConfirm}
+          onClose={closeConfirmModal}
+          type={confirmModal.type}
+          confirmText={confirmModal.confirmText}
+        />
       </div>
     </AnimatedBackground>
   );
