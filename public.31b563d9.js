@@ -207,11 +207,11 @@
       });
     }
   }
-})({"cUORn":[function(require,module,exports,__globalThis) {
+})({"5j6Kf":[function(require,module,exports,__globalThis) {
 var global = arguments[3];
 var HMR_HOST = null;
 var HMR_PORT = null;
-var HMR_SERVER_PORT = 53381;
+var HMR_SERVER_PORT = 1234;
 var HMR_SECURE = false;
 var HMR_ENV_HASH = "439701173a9199ea";
 var HMR_USE_SSE = false;
@@ -65989,6 +65989,6 @@ module.exports = Promise.all([
     import("./StudentDashboard.165bd25b.js")
 ]).then(()=>module.bundle.root('3UFQw'));
 
-},{"3UFQw":"3UFQw"}],"clPKd":[function() {},{}]},["cUORn","a0t4e"], "a0t4e", "parcelRequireb79f", {}, null, null, "http://localhost:53381")
+},{"3UFQw":"3UFQw"}],"clPKd":[function() {},{}]},["5j6Kf","a0t4e"], "a0t4e", "parcelRequireb79f", {}, null, null, "http://localhost:1234")
 
 //# sourceMappingURL=public.31b563d9.js.map

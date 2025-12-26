@@ -207,11 +207,11 @@
       });
     }
   }
-})({"3vdQv":[function(require,module,exports,__globalThis) {
+})({"12u2v":[function(require,module,exports,__globalThis) {
 var global = arguments[3];
 var HMR_HOST = null;
 var HMR_PORT = null;
-var HMR_SERVER_PORT = 53381;
+var HMR_SERVER_PORT = 1234;
 var HMR_SECURE = false;
 var HMR_ENV_HASH = "439701173a9199ea";
 var HMR_USE_SSE = false;
@@ -926,9 +926,16 @@ function StudentDashboard({ user, onLogout }) {
                                 columnNumber: 29
                             }, this) : /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _jsxDevRuntime.Fragment), {
                                 children: [
-                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _timetableGridDefault.default), {
-                                        timetable: timetable.classTimetables,
-                                        className: selectedClass
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                        className: "timetable-scroll",
+                                        children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _timetableGridDefault.default), {
+                                            timetable: timetable.classTimetables,
+                                            className: selectedClass
+                                        }, void 0, false, {
+                                            fileName: "src/components/StudentDashboard.jsx",
+                                            lineNumber: 75,
+                                            columnNumber: 37
+                                        }, this)
                                     }, void 0, false, {
                                         fileName: "src/components/StudentDashboard.jsx",
                                         lineNumber: 74,
@@ -950,7 +957,7 @@ function StudentDashboard({ user, onLogout }) {
                                                 children: "\uD83D\uDCC4 Download PDF"
                                             }, void 0, false, {
                                                 fileName: "src/components/StudentDashboard.jsx",
-                                                lineNumber: 82,
+                                                lineNumber: 84,
                                                 columnNumber: 37
                                             }, this),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
@@ -959,13 +966,13 @@ function StudentDashboard({ user, onLogout }) {
                                                 children: "\uD83D\uDDA8\uFE0F Print"
                                             }, void 0, false, {
                                                 fileName: "src/components/StudentDashboard.jsx",
-                                                lineNumber: 92,
+                                                lineNumber: 94,
                                                 columnNumber: 37
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/components/StudentDashboard.jsx",
-                                        lineNumber: 78,
+                                        lineNumber: 80,
                                         columnNumber: 33
                                     }, this)
                                 ]
@@ -1148,6 +1155,6 @@ $RefreshReg$(_c, "TimetableGrid");
   globalThis.$RefreshReg$ = prevRefreshReg;
   globalThis.$RefreshSig$ = prevRefreshSig;
 }
-},{"react/jsx-dev-runtime":"dVPUn","react":"jMk1U","@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT","@parcel/transformer-react-refresh-wrap/lib/helpers/helpers.js":"7h6Pi"}]},["3vdQv"], null, "parcelRequireb79f", {})
+},{"react/jsx-dev-runtime":"dVPUn","react":"jMk1U","@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT","@parcel/transformer-react-refresh-wrap/lib/helpers/helpers.js":"7h6Pi"}]},["12u2v"], null, "parcelRequireb79f", {})
 
 //# sourceMappingURL=StudentDashboard.165bd25b.js.map

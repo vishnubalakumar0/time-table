@@ -207,11 +207,11 @@
       });
     }
   }
-})({"jbpiD":[function(require,module,exports,__globalThis) {
+})({"l3HP0":[function(require,module,exports,__globalThis) {
 var global = arguments[3];
 var HMR_HOST = null;
 var HMR_PORT = null;
-var HMR_SERVER_PORT = 53381;
+var HMR_SERVER_PORT = 1234;
 var HMR_SECURE = false;
 var HMR_ENV_HASH = "439701173a9199ea";
 var HMR_USE_SSE = false;
@@ -1044,9 +1044,16 @@ function StaffDashboard({ user, onLogout }) {
                                         lineNumber: 127,
                                         columnNumber: 33
                                     }, this),
-                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _staffTimetableGridDefault.default), {
-                                        timetable: timetableData,
-                                        staffName: user.name
+                                    /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                        className: "timetable-scroll",
+                                        children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _staffTimetableGridDefault.default), {
+                                            timetable: timetableData,
+                                            staffName: user.name
+                                        }, void 0, false, {
+                                            fileName: "src/components/StaffDashboard.jsx",
+                                            lineNumber: 133,
+                                            columnNumber: 37
+                                        }, this)
                                     }, void 0, false, {
                                         fileName: "src/components/StaffDashboard.jsx",
                                         lineNumber: 132,
@@ -1069,7 +1076,7 @@ function StaffDashboard({ user, onLogout }) {
                                                 children: "\uD83D\uDCC4 Download PDF"
                                             }, void 0, false, {
                                                 fileName: "src/components/StaffDashboard.jsx",
-                                                lineNumber: 138,
+                                                lineNumber: 140,
                                                 columnNumber: 37
                                             }, this),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
@@ -1078,13 +1085,13 @@ function StaffDashboard({ user, onLogout }) {
                                                 children: "\uD83D\uDDA8\uFE0F Print"
                                             }, void 0, false, {
                                                 fileName: "src/components/StaffDashboard.jsx",
-                                                lineNumber: 144,
+                                                lineNumber: 146,
                                                 columnNumber: 37
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/components/StaffDashboard.jsx",
-                                        lineNumber: 137,
+                                        lineNumber: 139,
                                         columnNumber: 33
                                     }, this)
                                 ]
@@ -1338,6 +1345,6 @@ $RefreshReg$(_c, "StaffTimetableGrid");
   globalThis.$RefreshReg$ = prevRefreshReg;
   globalThis.$RefreshSig$ = prevRefreshSig;
 }
-},{"react/jsx-dev-runtime":"dVPUn","react":"jMk1U","@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT","@parcel/transformer-react-refresh-wrap/lib/helpers/helpers.js":"7h6Pi"}]},["jbpiD"], null, "parcelRequireb79f", {})
+},{"react/jsx-dev-runtime":"dVPUn","react":"jMk1U","@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT","@parcel/transformer-react-refresh-wrap/lib/helpers/helpers.js":"7h6Pi"}]},["l3HP0"], null, "parcelRequireb79f", {})
 
 //# sourceMappingURL=StaffDashboard.5eaff32e.js.map
