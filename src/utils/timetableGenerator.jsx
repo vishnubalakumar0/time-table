@@ -1,11 +1,12 @@
 /**
- * PRACTICAL TIMETABLE GENERATOR - Reliable with Good Distribution
+ * ULTRA-STRICT TIMETABLE GENERATOR - Zero Tolerance for Vertical/Diagonal
  * 
- * Philosophy:
- * - Will ALWAYS succeed in placing all subjects
- * - Prefers period variety but doesn't force it
- * - Much more flexible constraint relaxation
- * - Optimized for real-world teacher/lab constraints
+ * Features:
+ * - ALWAYS blocks vertical (same period on consecutive days) - NO EXCEPTIONS
+ * - ALWAYS blocks diagonal (±1 period on consecutive days) - NO EXCEPTIONS
+ * - Maximum retry attempts to find valid solution
+ * - Only relaxes adjacent-subject rule in final desperate phase
+ * - Maintains all period distribution preferences
  */
 
 export class TimetableGenerator {
@@ -22,7 +23,7 @@ export class TimetableGenerator {
     this.MAX_TEACHER_HOURS = 30;
     this.globalLabDayCount = {};
     this._seed = Date.now();
-    this.maxRetries = 10; // More retries
+    this.maxRetries = 15; // More retries for strict constraints
   }
 
   _random() {
@@ -97,7 +98,7 @@ export class TimetableGenerator {
   }
 
   generate() {
-    console.log('TimetableGenerator: start generate (PRACTICAL MODE)');
+    console.log('TimetableGenerator: ULTRA-STRICT MODE (Zero Vertical/Diagonal)');
     const v = this.validate();
     if (!v.valid) {
       console.error('Validation failed:', v.errors);
@@ -140,7 +141,7 @@ export class TimetableGenerator {
     }
 
     console.error('Failed to generate timetable after all attempts');
-    return { success: false, error: 'Unable to generate valid timetable after multiple attempts' };
+    return { success: false, error: 'Unable to generate valid timetable after multiple attempts. Try adjusting subject hours or teacher availability.' };
   }
 
   _buildStaffTimetables() {
@@ -178,6 +179,22 @@ export class TimetableGenerator {
       }
     }
     if (!conflicts) console.log('No teacher conflicts');
+  }
+
+  // Helper to check if slot violates vertical/diagonal rule
+  _isVerticalOrDiagonal(dayIdx, period, subjectName, tracking) {
+    if (dayIdx === 0) return false; // First day, no previous day to check
+
+    const prevDayPeriod = tracking.dayPeriodMap[subjectName]?.[dayIdx - 1];
+    if (prevDayPeriod === null || prevDayPeriod === undefined) return false;
+
+    // Vertical: same period
+    if (period === prevDayPeriod) return true;
+
+    // Diagonal: ±1 period
+    if (period === prevDayPeriod - 1 || period === prevDayPeriod + 1) return true;
+
+    return false;
   }
 
   _generateForClass(className) {
@@ -250,15 +267,15 @@ export class TimetableGenerator {
       }
     }
 
-    // PHASE B: Theory subjects with practical approach
+    // PHASE B: Ultra-strict placement - NEVER vertical/diagonal
     const dailyFirst = theory.filter(s => (s.hoursPerWeek || 0) >= 5);
     const otherTheory = theory.filter(s => (s.hoursPerWeek || 0) < 5);
 
-    // Place daily subjects first
+    // Place daily subjects
     for (const subj of dailyFirst) {
       for (let dayIdx = 0; dayIdx < this.DAYS.length; dayIdx++) {
         if (tracking.hoursPlaced[subj.name] >= subj.hoursPerWeek) break;
-        const res = this._placeTheoryFlexible(className, subj, tt, tracking, labTracking, dayIdx);
+        const res = this._placeTheoryUltraStrict(className, subj, tt, tracking, labTracking, dayIdx);
         if (res) tracking.hoursPlaced[subj.name] += 1;
       }
     }
@@ -267,8 +284,8 @@ export class TimetableGenerator {
     const lowFirstSorted = [...otherTheory].sort((a, b) => (a.hoursPerWeek || 0) - (b.hoursPerWeek || 0));
     for (const s of lowFirstSorted) {
       let attempts = 0;
-      while (tracking.hoursPlaced[s.name] < (s.hoursPerWeek || 0) && attempts < 100) {
-        const ok = this._placeTheoryFlexible(className, s, tt, tracking, labTracking);
+      while (tracking.hoursPlaced[s.name] < (s.hoursPerWeek || 0) && attempts < 200) {
+        const ok = this._placeTheoryUltraStrict(className, s, tt, tracking, labTracking);
         if (!ok) attempts++;
         else tracking.hoursPlaced[s.name]++;
       }
@@ -278,18 +295,18 @@ export class TimetableGenerator {
     const allTheory = [...dailyFirst, ...otherTheory];
     for (const s of allTheory) {
       let attempts = 0;
-      while (tracking.hoursPlaced[s.name] < (s.hoursPerWeek || 0) && attempts < 300) {
-        const ok = this._placeTheoryFlexible(className, s, tt, tracking, labTracking)
-          || this._placeTheoryAny(className, s, tt, tracking, labTracking);
+      while (tracking.hoursPlaced[s.name] < (s.hoursPerWeek || 0) && attempts < 600) {
+        const ok = this._placeTheoryUltraStrict(className, s, tt, tracking, labTracking)
+          || this._placeTheoryStrictRelaxed(className, s, tt, tracking, labTracking);
         if (!ok) attempts++;
         else tracking.hoursPlaced[s.name]++;
       }
 
-      // Final fallback - just find ANY slot
+      // Final phase - only relax adjacent rule, KEEP vertical/diagonal blocking
       while (tracking.hoursPlaced[s.name] < (s.hoursPerWeek || 0)) {
-        const placed = this._placeTheoryAny(className, s, tt, tracking, labTracking);
+        const placed = this._placeTheoryStrictFallback(className, s, tt, tracking, labTracking);
         if (!placed) {
-          console.error(`FAILED: Cannot place ${s.name} in ${className}`);
+          console.error(`IMPOSSIBLE: Cannot place ${s.name} in ${className} without violating vertical/diagonal rules`);
           return false;
         }
         tracking.hoursPlaced[s.name]++;
@@ -416,9 +433,9 @@ export class TimetableGenerator {
     return true;
   }
 
-  // ==================== PRACTICAL: Good preference with high flexibility ====================
+  // ==================== ULTRA-STRICT: ALWAYS block vertical/diagonal ====================
 
-  _placeTheoryFlexible(className, subj, tt, tracking, labTracking, preferredDayIdx = null) {
+  _placeTheoryUltraStrict(className, subj, tt, tracking, labTracking, preferredDayIdx = null) {
     const teacher = subj.teacher;
     const candidates = [];
 
@@ -431,41 +448,41 @@ export class TimetableGenerator {
         const slotKey = `${this.DAYS[dayIdx]}-P${p + 1}`;
         if (this.teacherSlots[teacher]?.[slotKey]) continue;
 
-        // Avoid adjacent same subject (keep this rule)
+        // ALWAYS avoid adjacent same subject
         if (p > 0 && tt[dayIdx][p - 1] && this._isSameBase(tt[dayIdx][p - 1].subject, subj.name)) continue;
         if (p < this.PERIODS - 1 && tt[dayIdx][p + 1] && this._isSameBase(tt[dayIdx][p + 1].subject, subj.name)) continue;
 
+        // ALWAYS block vertical/diagonal - NO EXCEPTIONS
+        if (this._isVerticalOrDiagonal(dayIdx, p, subj.name, tracking)) continue;
+
+        // Period usage limits
+        const useCount = tracking.periodWeeklyCount[subj.name][p] || 0;
+        const totalPlaced = tracking.hoursPlaced[subj.name];
+        const hoursNeeded = subj.hoursPerWeek || 0;
+
+        if (totalPlaced < hoursNeeded * 0.7) {
+          if (useCount >= 2) continue; // Early: max 2
+        } else {
+          if (useCount >= 3) continue; // Later: max 3
+        }
+
         let score = 100;
 
-        // MODERATE preference for period variety (not blocking)
-        const useCount = tracking.periodWeeklyCount[subj.name][p] || 0;
+        // Period variety
         if (useCount === 0) {
-          score += 80; // Good bonus
+          score += 130;
         } else if (useCount === 1) {
-          score -= 20; // Small penalty
-        } else if (useCount === 2) {
-          score -= 40; // Moderate penalty
+          score -= 40;
         } else {
-          score -= 60; // Larger penalty but still allows
+          score -= 80 * useCount;
         }
 
-        // Bonus for new day
-        if (!tracking.daysUsed[subj.name].has(dayIdx)) score += 30;
+        // New day bonus
+        if (!tracking.daysUsed[subj.name].has(dayIdx)) score += 50;
 
-        // Bonus for new zone
+        // New zone bonus
         const z = this._zone(p);
-        if (!tracking.zonesUsed[subj.name].has(z)) score += 20;
-
-        // Small penalty for vertical same period
-        if (dayIdx > 0 && tracking.dayPeriodMap[subj.name]?.[dayIdx - 1] === p) {
-          score -= 15; // Small penalty, not blocking
-        }
-
-        // Small penalty for diagonal
-        const prevP = tracking.dayPeriodMap[subj.name]?.[dayIdx - 1];
-        if (prevP !== undefined && prevP !== null && (p === prevP - 1 || p === prevP + 1)) {
-          score -= 10; // Small penalty, not blocking
-        }
+        if (!tracking.zonesUsed[subj.name].has(z)) score += 35;
 
         candidates.push({ dayIdx, p, score });
       }
@@ -474,7 +491,7 @@ export class TimetableGenerator {
     if (!candidates.length) return false;
 
     candidates.sort((a, b) => b.score - a.score);
-    const pick = this._pickRandomFromTopN(candidates, 8); // Wider selection
+    const pick = this._pickRandomFromTopN(candidates, 6);
     if (!pick) return false;
 
     tt[pick.dayIdx][pick.p] = { subject: subj.name, teacher, type: subj.subjectType || 'core' };
@@ -493,39 +510,67 @@ export class TimetableGenerator {
     return true;
   }
 
-  _placeTheoryAny(className, subj, tt, tracking, labTracking) {
+  _placeTheoryStrictRelaxed(className, subj, tt, tracking, labTracking) {
     const teacher = subj.teacher;
+    const candidates = [];
 
-    // Just find ANY available slot
-    for (let dayIdx = 0; dayIdx < 5; dayIdx++) {
-      for (let p = 0; p < this.PERIODS; p++) {
+    for (const dayIdx of this._shuffle([0, 1, 2, 3, 4])) {
+      for (const p of this._shuffle([0, 1, 2, 3, 4, 5])) {
         if (tt[dayIdx][p]) continue;
 
         const slotKey = `${this.DAYS[dayIdx]}-P${p + 1}`;
         if (this.teacherSlots[teacher]?.[slotKey]) continue;
 
-        // Only avoid adjacent same subject
+        // Still avoid adjacent
         if (p > 0 && tt[dayIdx][p - 1] && this._isSameBase(tt[dayIdx][p - 1].subject, subj.name)) continue;
         if (p < this.PERIODS - 1 && tt[dayIdx][p + 1] && this._isSameBase(tt[dayIdx][p + 1].subject, subj.name)) continue;
 
-        // Place it!
-        tt[dayIdx][p] = { subject: subj.name, teacher, type: subj.subjectType || 'core' };
+        // ALWAYS block vertical/diagonal
+        if (this._isVerticalOrDiagonal(dayIdx, p, subj.name, tracking)) continue;
 
-        if (!this.teacherSlots[teacher]) this.teacherSlots[teacher] = {};
-        this.teacherSlots[teacher][slotKey] = className;
+        // Relax period limits to 4
+        const useCount = tracking.periodWeeklyCount[subj.name][p] || 0;
+        if (useCount >= 4) continue;
 
-        tracking.daysUsed[subj.name].add(dayIdx);
-        tracking.dayPeriodMap[subj.name][dayIdx] = p;
-        tracking.periodWeeklyCount[subj.name][p] = (tracking.periodWeeklyCount[subj.name][p] || 0) + 1;
-        tracking.zonesUsed[subj.name].add(this._zone(p));
-        tracking.lastPeriod[subj.name] = p;
-        tracking.subjectBaseDays[this._getBaseSubjectName(subj.name)].add(dayIdx);
+        let score = 70;
 
-        return true;
+        if (useCount === 0) score += 100;
+        else if (useCount === 1) score -= 30;
+        else score -= 50 * useCount;
+
+        if (!tracking.daysUsed[subj.name].has(dayIdx)) score += 35;
+
+        candidates.push({ dayIdx, p, score });
       }
     }
 
-    // ULTRA desperate - allow even adjacent if needed
+    if (!candidates.length) return false;
+
+    candidates.sort((a, b) => b.score - a.score);
+    const pick = this._pickRandomFromTopN(candidates, 9);
+    if (!pick) return false;
+
+    tt[pick.dayIdx][pick.p] = { subject: subj.name, teacher, type: subj.subjectType || 'core' };
+
+    const slotKey = `${this.DAYS[pick.dayIdx]}-P${pick.p + 1}`;
+    if (!this.teacherSlots[teacher]) this.teacherSlots[teacher] = {};
+    this.teacherSlots[teacher][slotKey] = className;
+
+    tracking.daysUsed[subj.name].add(pick.dayIdx);
+    tracking.dayPeriodMap[subj.name][pick.dayIdx] = pick.p;
+    tracking.periodWeeklyCount[subj.name][pick.p] = (tracking.periodWeeklyCount[subj.name][pick.p] || 0) + 1;
+    tracking.zonesUsed[subj.name].add(this._zone(pick.p));
+    tracking.lastPeriod[subj.name] = pick.p;
+    tracking.subjectBaseDays[this._getBaseSubjectName(subj.name)].add(pick.dayIdx);
+
+    return true;
+  }
+
+  _placeTheoryStrictFallback(className, subj, tt, tracking, labTracking) {
+    const teacher = subj.teacher;
+
+    // Final fallback: STILL maintain vertical/diagonal blocking
+    // Only relax: adjacent same subject rule
     for (let dayIdx = 0; dayIdx < 5; dayIdx++) {
       for (let p = 0; p < this.PERIODS; p++) {
         if (tt[dayIdx][p]) continue;
@@ -533,7 +578,13 @@ export class TimetableGenerator {
         const slotKey = `${this.DAYS[dayIdx]}-P${p + 1}`;
         if (this.teacherSlots[teacher]?.[slotKey]) continue;
 
-        tt[dayIdx][p] = { subject: subj.name, teacher, type: subj.subjectType || 'core' };
+        // ALWAYS block vertical/diagonal - even in fallback
+        if (this._isVerticalOrDiagonal(dayIdx, p, subj.name, tracking)) continue;
+
+        // Allow adjacent same subject in desperate mode
+        // (this is the only relaxation)
+
+        tt[dayIdx][p] = { subject: subj.name, teacher, type: subj.subjectType || 'core', isStrictFallback: true };
 
         if (!this.teacherSlots[teacher]) this.teacherSlots[teacher] = {};
         this.teacherSlots[teacher][slotKey] = className;
